@@ -116,6 +116,10 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in HINSTANCE hDll, __in
 int sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, ...);
 int vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList);
 
+//only on XP or later
+int swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, ...);
+int vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, __in va_list lpArgList);
+
 LONG GetProcessorArchitecture();
 
 HANDLE OpenProcess(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in DWORD dwProcessId);
@@ -139,6 +143,7 @@ VOID MemFree(__in LPVOID lpPtr);
 VOID MemSet(__out void *lpDest, __in int nVal, __in SIZE_T nCount);
 VOID MemCopy(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount);
 SIZE_T TryMemCopy(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount);
+VOID MemMove(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount);
 int MemCompare(__in const void *lpBuf1, __in const void *lpBuf2, __in SIZE_T nCount);
 
 VOID DebugPrint(__in LPCSTR szFormatA, ...);

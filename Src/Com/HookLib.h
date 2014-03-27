@@ -89,24 +89,29 @@ public:
 
 public:
   STDMETHOD(Hook)(__in VARIANT itemsToHook, __in LONG flags);
-
   STDMETHOD(RemoteHook)(__in VARIANT itemsToHook, __in LONG pid, __in LONG flags);
 
   STDMETHOD(Unhook)(__in VARIANT itemsToUnhook);
-
   STDMETHOD(UnhookProcess)(__in LONG pid);
-
   STDMETHOD(UnhookAll)();
 
   STDMETHOD(EnableHook)(__in VARIANT items, __in VARIANT_BOOL enable);
 
-  STDMETHOD(put_SuspendThreadsWhileHooking)(__in VARIANT_BOOL enable);
+  STDMETHOD(RemoveHook)(__in VARIANT items, __in VARIANT_BOOL disable);
 
+  STDMETHOD(put_SuspendThreadsWhileHooking)(__in VARIANT_BOOL enable);
   STDMETHOD(get_SuspendThreadsWhileHooking)(__out VARIANT_BOOL *enable);
 
   STDMETHOD(put_ShowDebugOutput)(__in VARIANT_BOOL enable);
-
   STDMETHOD(get_ShowDebugOutput)(__out VARIANT_BOOL *enable);
+
+  STDMETHOD(GetModuleBaseAddress)(__in BSTR moduleName, __out my_ssize_t *baseAddress);
+  STDMETHOD(GetRemoteModuleBaseAddress)(__in LONG pid, __in BSTR moduleName, __in VARIANT_BOOL scanMappedImages,
+                                        __out my_ssize_t *baseAddress);
+
+  STDMETHOD(GetProcedureAddress)(__in my_ssize_t moduleBaseAddress, __in BSTR procName, __out my_ssize_t *funcAddress);
+  STDMETHOD(GetRemoteProcedureAddress)(__in LONG pid, __in my_ssize_t moduleBaseAddress, __in BSTR procName,
+                                       __out my_ssize_t *funcAddress);
 
 private:
   friend class CNktHookInfoImpl;

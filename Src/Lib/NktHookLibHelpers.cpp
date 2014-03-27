@@ -33,11 +33,6 @@
 
 #pragma intrinsic (_InterlockedIncrement)
 
-extern "C" {
-  size_t __stdcall NktHookLib_TryMemCopy(__out const void *lpDest, __in const void *lpSrc, __in size_t nCount);
-  SIZE_T __stdcall NktHookLib_TryCallOneParam(__in LPVOID lpFunc, __in SIZE_T nParam1, __in BOOL bIsCDecl);
-};
-
 using namespace NktHookLib;
 
 //-----------------------------------------------------------
@@ -61,11 +56,13 @@ typedef struct {
 
 //-----------------------------------------------------------
 
-extern "C"
-{
+extern "C" {
+  size_t __stdcall NktHookLib_TryMemCopy(__out const void *lpDest, __in const void *lpSrc, __in size_t nCount);
+  SIZE_T __stdcall NktHookLib_TryCallOneParam(__in LPVOID lpFunc, __in SIZE_T nParam1, __in BOOL bIsCDecl);
   int NktHookLib_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA,
                            __in va_list lpArgList);
   int NktHookLib_sprintf(__out_z char *lpDest, __in_z const char *szFormatA, ...);
+  extern void* volatile NktHookLib_fn_vsnwprintf;
 };
 
 //-----------------------------------------------------------
@@ -107,9 +104,35 @@ int sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *sz
 int vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList)
 {
   //NOTE: To simplify C <-> C++ jumping (because C usage of vsnprintf), we do a lightweight call to
-  //      RtlNtStatusToDosError to ensure 'vsnprintf' routine was gathered.
+  //      RtlNtStatusToDosError to ensure 'vsnprintf' routine was loaded.
   NktRtlNtStatusToDosError(0);
   return NktHookLib_vsnprintf(lpDest, nMaxCount, szFormatA, lpArgList);
+}
+
+int swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, ...)
+{
+  va_list argptr;
+  int ret;
+
+  va_start(argptr, szFormatW);
+  ret = vsnwprintf(lpDest, nMaxCount, szFormatW, argptr);
+  va_end(argptr);
+  return ret;
+}
+
+int vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, __in va_list lpArgList)
+{
+  typedef int (__cdecl *lpfn_vsnwprintf)(_Out_cap_(_MaxCount) wchar_t * _DstBuf, _In_ size_t _MaxCount,
+                                         _In_z_ _Printf_format_string_ const wchar_t * _Format, va_list _ArgList);
+
+  //NOTE: To simplify C <-> C++ jumping (because C usage of vsnprintf), we do a lightweight call to
+  //      RtlNtStatusToDosError to ensure 'vsnwprintf' routine was loaded.
+  NktRtlNtStatusToDosError(0);
+  if (lpDest != NULL && nMaxCount > 0)
+    *lpDest = 0;
+  if (NktHookLib_fn_vsnwprintf == NULL)
+    return 0;
+  return ((lpfn_vsnwprintf)NktHookLib_fn_vsnwprintf)(lpDest, nMaxCount, szFormatW, lpArgList);
 }
 
 LONG GetProcessorArchitecture()
@@ -379,6 +402,67 @@ VOID MemCopy(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount)
   {
     *d++ = *s++;
     nCount--;
+  }
+  return;
+}
+
+VOID MemMove(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount)
+{
+  LPBYTE s, d;
+
+  s = (LPBYTE)lpSrc;
+  d = (LPBYTE)lpDest;
+  if (d <= s || d >= (s+nCount))
+  {
+    //dest is before source or non-overlapping buffers
+    //copy from lower to higher addresses
+    if (d+sizeof(SIZE_T) <= s && XISALIGNED(s) && XISALIGNED(d))
+    {
+      while (nCount >= sizeof(SIZE_T))
+      {
+        *((SIZE_T*)d) = *((SIZE_T*)s);
+        s += sizeof(SIZE_T);
+        d += sizeof(SIZE_T);
+        nCount -= sizeof(SIZE_T);
+      }
+    }
+    while ((nCount--) > 0)
+      *d++ = *s++;
+  }
+  else
+  {
+    //dest is past source or overlapping buffers
+    //copy from higher to lower addresses
+    if (nCount >= sizeof(SIZE_T) && XISALIGNED(s) && XISALIGNED(d))
+    {
+      s += nCount;
+      d += nCount;
+      while (nCount>0 && (!XISALIGNED(nCount))) {
+        --s;
+        --d;
+        *d = *s;
+        nCount--;
+      }
+      while (nCount > 0)
+      {
+        s -= sizeof(SIZE_T);
+        d -= sizeof(SIZE_T);
+        *((SIZE_T*)d) = *((SIZE_T*)s);
+        nCount -= sizeof(SIZE_T);
+      }
+    }
+    else
+    {
+      s += nCount;
+      d += nCount;
+      while (nCount > 0)
+      {
+        --s;
+        --d;
+        *d = *s;
+        nCount--;
+      }
+    }
   }
   return;
 }

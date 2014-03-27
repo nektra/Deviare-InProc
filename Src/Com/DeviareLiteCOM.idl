@@ -72,6 +72,10 @@ interface INktHookLib : IDispatch
    helpstring("Enable/disable a set of hooks")]
   HRESULT EnableHook([in] VARIANT items, [in] VARIANT_BOOL enable);
 
+  [id(dispidNktHookLibRemoveHook),
+   helpstring("Detaches a set of hooks without unhooking them and optionally disabled them")]
+  HRESULT RemoveHook([in] VARIANT items, [in] VARIANT_BOOL disable);
+
   [propput, id(dispidNktHookLibSuspendThreadsWhileHooking),
    helpstring("Suspend process' threads while hooking")]
   HRESULT SuspendThreadsWhileHooking([in] VARIANT_BOOL enable);
@@ -87,6 +91,23 @@ interface INktHookLib : IDispatch
   [propget, id(dispidNktHookLibShowDebugOutput),
    helpstring("Show/hide debug output")]
   HRESULT ShowDebugOutput([out,retval] VARIANT_BOOL *enable);
+
+  [id(dispidNktHookLibGetModuleBaseAddress),
+   helpstring("Gets the base address of a module")]
+  HRESULT GetModuleBaseAddress([in] BSTR moduleName, [out,retval] my_ssize_t *baseAddress);
+
+  [id(dispidNktHookLibGetRemoteModuleBaseAddress),
+   helpstring("Gets the base address of a module in another process")]
+  HRESULT GetRemoteModuleBaseAddress([in] LONG pid, [in] BSTR moduleName, [in] VARIANT_BOOL scanMappedImages,
+                                     [out,retval] my_ssize_t *baseAddress);
+
+  [id(dispidNktHookLibGetProcedureAddress),
+   helpstring("Gets the address of an exported function")]
+  HRESULT GetProcedureAddress([in] my_ssize_t moduleBaseAddress, [in] BSTR procName, [out,retval] my_ssize_t *funcAddress);
+
+  [id(dispidNktHookLibGetRemoteProcedureAddress),
+   helpstring("Gets the address of an exported function of another process' module")]
+  HRESULT GetRemoteProcedureAddress([in] LONG pid, [in] my_ssize_t moduleBaseAddress, [in] BSTR procName, [out,retval] my_ssize_t *funcAddress);
 };
 
 //-----------------------------------------------------------
