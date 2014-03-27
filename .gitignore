@@ -10,7 +10,9 @@ Libs/2008/*.idb
 Libs/2012/*.idb
 Samples/C/ApiHook/vs2008/obj/
 Samples/C/ApiHook/vs2012/obj/
-Samples/CSharp/
+Samples/CSharp/ApiHook/vs2008/obj/
+Samples/CSharp/ApiHook/vs2012/obj/
+Samples/CSharp/MethodHook/
 Src/Com/DeviareLiteCOM_i*.*
 Src/Com/DeviareLiteCOM_p*.*
 Src/Com/dlldata_*.*

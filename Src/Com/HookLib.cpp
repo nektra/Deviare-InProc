@@ -19,6 +19,10 @@ __inline HRESULT NKT_HRESULT_FROM_WIN32(DWORD dwOsErr)
 
 //-----------------------------------------------------------
 
+static LPSTR Wide2Ansi(__in_nz_opt LPCWSTR szSrcW);
+
+//-----------------------------------------------------------
+
 STDMETHODIMP CNktHookLibImpl::InterfaceSupportsErrorInfo(REFIID riid)
 {
   static const IID* arr[] = { &IID_INktHookLib, NULL };
@@ -87,6 +91,20 @@ STDMETHODIMP CNktHookLibImpl::EnableHook(__in VARIANT items, __in VARIANT_BOOL e
   return hRes;
 }
 
+STDMETHODIMP CNktHookLibImpl::RemoveHook(__in VARIANT items, __in VARIANT_BOOL disable)
+{
+  CHookInfo cHkInfo;
+  HRESULT hRes;
+
+  hRes = cHkInfo.Init(items);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = NKT_HRESULT_FROM_WIN32(cHookLib.RemoveHook(cHkInfo.lpInfo, cHkInfo.nCount,
+                                                      (disable != VARIANT_FALSE) ? TRUE : FALSE));
+  }
+  return hRes;
+}
+
 STDMETHODIMP CNktHookLibImpl::put_SuspendThreadsWhileHooking(__in VARIANT_BOOL enable)
 {
   cHookLib.SetSuspendThreadsWhileHooking((enable != VARIANT_FALSE) ? TRUE : FALSE);
@@ -112,6 +130,99 @@ STDMETHODIMP CNktHookLibImpl::get_ShowDebugOutput(__out VARIANT_BOOL *enable)
   if (enable == NULL)
     return E_POINTER;
   *enable = (cHookLib.GetEnableDebugOutput() != FALSE) ? VARIANT_TRUE : VARIANT_FALSE;
+  return S_OK;
+}
+
+STDMETHODIMP CNktHookLibImpl::GetModuleBaseAddress(__in BSTR moduleName, __out my_ssize_t *baseAddress)
+{
+  if (baseAddress == NULL)
+    return E_POINTER;
+  *baseAddress = 0;
+  if (moduleName == NULL)
+    return E_POINTER;
+  *baseAddress = (my_ssize_t)NktHookLibHelpers::GetModuleBaseAddress(moduleName);
+  return S_OK;
+}
+
+STDMETHODIMP CNktHookLibImpl::GetRemoteModuleBaseAddress(__in LONG pid, __in BSTR moduleName,
+                                                         __in VARIANT_BOOL scanMappedImages,
+                                                         __out my_ssize_t *baseAddress)
+{
+  HANDLE hProc;
+
+  if (baseAddress == NULL)
+    return E_POINTER;
+  *baseAddress = 0;
+  if (moduleName == NULL)
+    return E_POINTER;
+  hProc = ::OpenProcess(PROCESS_VM_OPERATION|PROCESS_VM_READ|PROCESS_DUP_HANDLE|PROCESS_QUERY_INFORMATION, FALSE,
+                        (DWORD)pid);
+  if (hProc == NULL)
+  {
+    hProc = ::OpenProcess(PROCESS_VM_OPERATION|PROCESS_VM_READ|PROCESS_DUP_HANDLE|PROCESS_QUERY_LIMITED_INFORMATION,
+                          FALSE, (DWORD)pid);
+  }
+  if (hProc == NULL)
+    return NKT_HRESULT_FROM_WIN32(::GetLastError());
+  *baseAddress = (my_ssize_t)NktHookLibHelpers::GetRemoteModuleBaseAddress(hProc, moduleName,
+                                                         (scanMappedImages != VARIANT_FALSE) ? TRUE : FALSE);
+  ::CloseHandle(hProc);
+  return S_OK;
+
+}
+
+STDMETHODIMP CNktHookLibImpl::GetProcedureAddress(__in my_ssize_t moduleBaseAddress, __in BSTR procName,
+                                                  __out my_ssize_t *funcAddress)
+{
+  LPSTR szProcNameA;
+
+  if (funcAddress == NULL)
+    return E_POINTER;
+  *funcAddress = 0;
+  if (moduleBaseAddress == NULL)
+    return E_INVALIDARG;
+  if (procName == NULL)
+    return E_POINTER;
+  szProcNameA = Wide2Ansi(procName);
+  if (szProcNameA == NULL)
+    return E_OUTOFMEMORY;
+  *funcAddress = (my_ssize_t)NktHookLibHelpers::GetProcedureAddress((HINSTANCE)moduleBaseAddress, szProcNameA);
+  free(szProcNameA);
+  return S_OK;
+}
+
+STDMETHODIMP CNktHookLibImpl::GetRemoteProcedureAddress(__in LONG pid, __in my_ssize_t moduleBaseAddress,
+                                                        __in BSTR procName, __out my_ssize_t *funcAddress)
+{
+  HANDLE hProc;
+  LPSTR szProcNameA;
+
+  if (funcAddress == NULL)
+    return E_POINTER;
+  *funcAddress = 0;
+  if (moduleBaseAddress == NULL)
+    return E_INVALIDARG;
+  if (procName == NULL)
+    return E_POINTER;
+  hProc = ::OpenProcess(PROCESS_VM_OPERATION|PROCESS_VM_READ|PROCESS_DUP_HANDLE|PROCESS_QUERY_INFORMATION, FALSE,
+                        (DWORD)pid);
+  if (hProc == NULL)
+  {
+    hProc = ::OpenProcess(PROCESS_VM_OPERATION|PROCESS_VM_READ|PROCESS_DUP_HANDLE|PROCESS_QUERY_LIMITED_INFORMATION,
+                          FALSE, (DWORD)pid);
+  }
+  if (hProc == NULL)
+    return NKT_HRESULT_FROM_WIN32(::GetLastError());
+  szProcNameA = Wide2Ansi(procName);
+  if (szProcNameA == NULL)
+  {
+    ::CloseHandle(hProc);
+    return E_OUTOFMEMORY;
+  }
+  *funcAddress = (my_ssize_t)NktHookLibHelpers::GetRemoteProcedureAddress(hProc, (HINSTANCE)moduleBaseAddress,
+                                                                          szProcNameA);
+  free(szProcNameA);
+  ::CloseHandle(hProc);
   return S_OK;
 }
 
@@ -289,4 +400,21 @@ VOID CNktHookLibImpl::CHookInfo::StoreInfo()
     lpHookInfoImpl->sInfo = lpInfo[i];
   }
   return;
+}
+
+//-----------------------------------------------------------
+
+static LPSTR Wide2Ansi(__in_nz_opt LPCWSTR szSrcW)
+{
+  SIZE_T nSrcLen, nDestLen;
+  LPSTR szDestA;
+
+  nSrcLen = wcslen(szSrcW);
+  nDestLen = (SIZE_T)::WideCharToMultiByte(CP_ACP, 0, szSrcW, (int)nSrcLen, NULL, 0, NULL, NULL);
+  szDestA = (LPSTR)malloc((nDestLen+1)*sizeof(CHAR));
+  if (szDestA == NULL)
+    return NULL;
+  nDestLen = (SIZE_T)::WideCharToMultiByte(CP_ACP, 0, szSrcW, (int)nSrcLen, szDestA, (int)(nDestLen+1), NULL, NULL);
+  szDestA[nDestLen] = 0;
+  return szDestA;
 }

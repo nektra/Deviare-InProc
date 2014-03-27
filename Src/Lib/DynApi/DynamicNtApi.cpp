@@ -43,6 +43,7 @@ static LONG volatile nMutex = 0;
 static HINSTANCE volatile hNtDll = NULL;
 extern "C" {
   extern void* volatile NktHookLib_fn_vsnprintf;
+  void* volatile NktHookLib_fn_vsnwprintf;
 };
 
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, _notused)  \
@@ -60,8 +61,7 @@ extern "C" {
 #define NKT_PARSE_NTAPI_ULONG(name, parameters, _notused)     \
   typedef ULONG (__stdcall *lpfn_##name)parameters;           \
   lpfn_##name volatile NktHookLib_fn_##name = NULL;
-extern "C"
-{
+extern "C" {
 #include "NtApiDeclarations.h"
 };
 #undef NKT_PARSE_NTAPI_NTSTATUS
@@ -168,7 +168,10 @@ static VOID InitializeInternals()
     #undef NKT_PARSE_NTAPI_BOOLEAN
     #undef NKT_PARSE_NTAPI_ULONG
     //----
-    NktHookLib_fn_vsnprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll, "_vsnprintf");
+    NktHookLib_fn_vsnprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
+                                                                      "_vsnprintf");
+    NktHookLib_fn_vsnwprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
+                                                                       "_vsnwprintf");
   }
 #if defined(_M_IX86)
   _InterlockedExchange((long volatile*)&hNtDll, (long)_hNtDll);

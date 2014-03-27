@@ -13,6 +13,11 @@ typedef [v1_enum] enum eNktDispIds {
   dispidNktHookLibEnableHook,
   dispidNktHookLibSuspendThreadsWhileHooking,
   dispidNktHookLibShowDebugOutput,
+  dispidNktHookLibRemoveHook,
+  dispidNktHookLibGetModuleBaseAddress,
+  dispidNktHookLibGetRemoteModuleBaseAddress,
+  dispidNktHookLibGetProcedureAddress,
+  dispidNktHookLibGetRemoteProcedureAddress,
   //----
   dispidNktHookInfoId = 1,
   dispidNktHookInfoOrigProcAddr,
