@@ -63,6 +63,7 @@ extern "C" {
                            __in va_list lpArgList);
   int NktHookLib_sprintf(__out_z char *lpDest, __in_z const char *szFormatA, ...);
   extern void* volatile NktHookLib_fn_vsnwprintf;
+  extern void* volatile NktHookLib_fn_DbgPrint;
 };
 
 //-----------------------------------------------------------
@@ -500,6 +501,7 @@ VOID DebugPrint(__in LPCSTR szFormatA, ...)
 
 VOID DebugVPrint(__in LPCSTR szFormatA, __in va_list argptr)
 {
+  typedef int (__cdecl *lpfnDbgPrint)(char *Format, ...);
   CHAR szTempA[2048];
   EXCEPTION_RECORD sExcRec;
   SIZE_T i;
@@ -508,14 +510,21 @@ VOID DebugVPrint(__in LPCSTR szFormatA, __in va_list argptr)
   szTempA[2047] = 0;
   if (i > 2047)
     i = 2047;
-  MemSet(&sExcRec, 0, sizeof(sExcRec));
-  sExcRec.ExceptionCode = DBG_PRINTEXCEPTION_C;
-  sExcRec.NumberParameters = 2;
-  sExcRec.ExceptionInformation[0] = (ULONG_PTR)(i+1); //include end of string
-  sExcRec.ExceptionInformation[1] = (ULONG_PTR)szTempA;
-  sExcRec.ExceptionAddress = (PVOID)NktRtlRaiseException;
-  //avoid compiler stuff for try/except blocks
-  NktHookLib_TryCallOneParam(NktRtlRaiseException, (SIZE_T)&sExcRec, FALSE);
+  if (NktHookLib_fn_DbgPrint != NULL)
+  {
+    ((lpfnDbgPrint)NktHookLib_fn_DbgPrint)("%s", szTempA);
+  }
+  else
+  {
+    MemSet(&sExcRec, 0, sizeof(sExcRec));
+    sExcRec.ExceptionCode = DBG_PRINTEXCEPTION_C;
+    sExcRec.NumberParameters = 2;
+    sExcRec.ExceptionInformation[0] = (ULONG_PTR)(i+1); //include end of string
+    sExcRec.ExceptionInformation[1] = (ULONG_PTR)szTempA;
+    sExcRec.ExceptionAddress = (PVOID)NktRtlRaiseException;
+    //avoid compiler stuff for try/except blocks
+    NktHookLib_TryCallOneParam(NktRtlRaiseException, (SIZE_T)&sExcRec, FALSE);
+  }
   return;
 }
 

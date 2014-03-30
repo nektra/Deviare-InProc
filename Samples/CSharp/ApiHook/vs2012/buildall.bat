@@ -19,18 +19,22 @@ GOTO end
 
 :show_err
 ECHO Please ensure Visual Studio 2012 is installed
+PAUSE
 GOTO end
 
 :err_cantsetupvs_x86
 ECHO Cannot initialize Visual Studio x86 Command Prompt environment
+PAUSE
 GOTO end
 
 :err_cantsetupvs_x64
 ECHO Cannot initialize Visual Studio x64 Command Prompt environment
+PAUSE
 GOTO end
 
 :bad_compile
 ECHO Errors detected while compiling project
+PAUSE
 GOTO end
 
 :end

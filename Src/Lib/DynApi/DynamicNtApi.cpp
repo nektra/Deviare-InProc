@@ -43,7 +43,8 @@ static LONG volatile nMutex = 0;
 static HINSTANCE volatile hNtDll = NULL;
 extern "C" {
   extern void* volatile NktHookLib_fn_vsnprintf;
-  void* volatile NktHookLib_fn_vsnwprintf;
+  void* volatile NktHookLib_fn_vsnwprintf = NULL;
+  void* volatile NktHookLib_fn_DbgPrint = NULL;
 };
 
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, _notused)  \
@@ -172,6 +173,8 @@ static VOID InitializeInternals()
                                                                       "_vsnprintf");
     NktHookLib_fn_vsnwprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
                                                                        "_vsnwprintf");
+    NktHookLib_fn_DbgPrint  = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
+                                                                      "DbgPrint");
   }
 #if defined(_M_IX86)
   _InterlockedExchange((long volatile*)&hNtDll, (long)_hNtDll);
