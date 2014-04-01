@@ -319,26 +319,54 @@ typedef struct {
 #endif //_M_X64
 
 typedef struct {
-  DWORD dwVersion; //usually 2
+  DWORD dwVersion; //usually 2 or 4
   DWORD dwEntriesCount;
-} NKT_HK_APIMAPSET_HEADER;
+} NKT_HK_APIMAPSET_HEADER_V2;
 
 typedef struct {
   DWORD dwNameOffset;
   DWORD dwNameLength;
   DWORD dwHostModulesOffset;
-} NKT_HK_APIMAPSET_ENTRY;
+} NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V2;
 
 typedef struct {
   DWORD dwCount;
-} NKT_HK_APIMAPSET_HOST_HEADER;
+} NKT_HK_APIMAPSET_HOST_HEADER_V2;
 
 typedef struct {
   DWORD dwNameOffsetRealName;     //used only when dwCount > 1 and compared with dll name 
   DWORD dwLengthRealName;         //from LDR_DATA_TABLE_ENTRY
   DWORD dwNameOffset;
   DWORD dwLength;
-} NKT_HK_APIMAPSET_HOST_ENTRY;
+} NKT_HK_APIMAPSET_HOST_ENTRY_V2;
+
+typedef struct {
+  DWORD dwVersion; //usually 2 or 4
+  DWORD dwUnknown[2];
+  DWORD dwEntriesCount;
+} NKT_HK_APIMAPSET_HEADER_V4;
+
+typedef struct {
+  DWORD dwUnknown;
+  DWORD dwNameOffset1;
+  DWORD dwNameLength1;
+  DWORD dwNameOffset2;
+  DWORD dwNameLength2;
+  DWORD dwHostModulesOffset;
+} NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V4;
+
+typedef struct {
+  DWORD dwUnknown;
+  DWORD dwCount;
+} NKT_HK_APIMAPSET_HOST_HEADER_V4;
+
+typedef struct {
+  DWORD dwUnknown;
+  DWORD dwNameOffsetRealName;     //used only when dwCount > 1 and compared with dll name 
+  DWORD dwLengthRealName;         //from LDR_DATA_TABLE_ENTRY
+  DWORD dwNameOffset;
+  DWORD dwLength;
+} NKT_HK_APIMAPSET_HOST_ENTRY_V4;
 #pragma pack()
 
 //-----------------------------------------------------------

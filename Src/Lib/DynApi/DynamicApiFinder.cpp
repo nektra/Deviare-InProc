@@ -647,12 +647,8 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
                                    __in LPCWSTR szDllToFindW)
 {
   LPBYTE lpPeb, lpApiMapSet, lpPtr;
-  NKT_HK_APIMAPSET_HEADER sHdr;
-  NKT_HK_APIMAPSET_ENTRY sHdrEntry, *lpCurrEntry;
-  NKT_HK_APIMAPSET_HOST_HEADER sHostHdr;
-  NKT_HK_APIMAPSET_HOST_ENTRY sHostEntry, *lpCurrHostEntry;
   RTL_OSVERSIONINFOW sOvi;
-  DWORD i, j, dwDllToFindLen, dwTemp32;
+  DWORD dwDllToFindLen, dwTemp32;
   struct {
     NKT_HK_UNICODE_STRING us;
     WCHAR chDataW[2048];
@@ -673,26 +669,33 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
                                                       &sUString, sizeof(sUString), &nRetLen)))
     return NULL;
   //find last slash
-  i = (DWORD)(sUString.us.Length) / (DWORD)sizeof(WCHAR);
-  while (i > 0 && sUString.us.Buffer[i-1] != L'\\')
-    i--;
-  sUString.us.Buffer += i;
-  sUString.us.Length -= (USHORT)i * (USHORT)sizeof(WCHAR);
+  dwTemp32 = (DWORD)(sUString.us.Length) / (DWORD)sizeof(WCHAR);
+  while (dwTemp32 > 0 && sUString.us.Buffer[dwTemp32-1] != L'\\')
+    dwTemp32--;
+  sUString.us.Buffer += dwTemp32;
+  sUString.us.Length -= (USHORT)dwTemp32 * (USHORT)sizeof(WCHAR);
   if (sUString.us.Length == 0)
     return NULL;
   //check length and "api-" prefix of dll to find
   for (dwDllToFindLen=0; szDllToFindW[dwDllToFindLen]!=0; dwDllToFindLen++);
-  if (dwDllToFindLen <= 4 ||
-      szDllToFindW[0] != L'a' || szDllToFindW[1] != L'p' || szDllToFindW[2] != L'i' || szDllToFindW[3] != L'-')
+  if (dwDllToFindLen <= 4)
+    return NULL;
+  if (!((((szDllToFindW[0] == L'a' || szDllToFindW[0] == L'A') &&
+          (szDllToFindW[1] == L'p' || szDllToFindW[1] == L'P') &&
+          (szDllToFindW[2] == L'i' || szDllToFindW[2] == L'I')) ||
+         ((szDllToFindW[0] == L'e' || szDllToFindW[0] == L'E') &&
+          (szDllToFindW[1] == L'x' || szDllToFindW[1] == L'X') &&
+          (szDllToFindW[2] == L't' || szDllToFindW[2] == L'T'))) &&
+        szDllToFindW[3] == L'-'))
     return NULL;
   //remove dll extension if any
-  for (i=dwDllToFindLen; i>4; i--)
+  for (dwTemp32=dwDllToFindLen; dwTemp32>4; dwTemp32--)
   {
-    if (szDllToFindW[i-1] == L'.')
+    if (szDllToFindW[dwTemp32-1] == L'.')
       break;
   }
-  if (i > 4)
-    dwDllToFindLen = i-1;
+  if (dwTemp32 > 4)
+    dwDllToFindLen = dwTemp32-1;
   dwDllToFindLen -= 4; //substract "api-" length
   if (dwDllToFindLen == 0)
     return NULL;
@@ -717,61 +720,143 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
     default:
       return NULL;
   }
-  if (lpApiMapSet == NULL)
+  //get apimapset version
+  if (lpApiMapSet == NULL ||
+      NktHookLibHelpers::ReadMem(hProcess, &dwTemp32, lpApiMapSet, sizeof(DWORD)) != sizeof(DWORD))
     return NULL;
-  if (NktHookLibHelpers::ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
-    return NULL;
-  lpCurrEntry = (NKT_HK_APIMAPSET_ENTRY*)(lpApiMapSet + sizeof(sHdr));
-  for (i=0; i<sHdr.dwEntriesCount; i++)
+  switch (dwTemp32)
   {
-    //read header entry
-    if (NktHookLibHelpers::ReadMem(hProcess, &sHdrEntry, lpCurrEntry+i, sizeof(sHdrEntry)) == FALSE)
-      return NULL;
-    //check if it is the dll we are looking for
-    if (sHdrEntry.dwNameLength == dwDllToFindLen*(DWORD)sizeof(WCHAR) &&
-        CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sHdrEntry.dwNameOffset)),
-                                   szDllToFindW+4, (SIZE_T)dwDllToFindLen) != FALSE)
-    {
-      //scan host entries
-      lpPtr = lpApiMapSet + (SIZE_T)(sHdrEntry.dwHostModulesOffset);
-      if (NktHookLibHelpers::ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
-        return NULL;
-      lpCurrHostEntry = (NKT_HK_APIMAPSET_HOST_ENTRY*)(lpPtr + sizeof(sHostHdr));
-      for (j=0; j<sHostHdr.dwCount; j++)
+    case 2: //found in Win7 & Win8
       {
-        if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, lpCurrHostEntry+j,
-                                       sizeof(sHostEntry)) != sizeof(sHostEntry))
+      NKT_HK_APIMAPSET_HEADER_V2 sHdr;
+      NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V2 sNamespaceEntry, *lpCurrNamespaceEntry;
+      NKT_HK_APIMAPSET_HOST_HEADER_V2 sHostHdr;
+      NKT_HK_APIMAPSET_HOST_ENTRY_V2 sHostEntry, *lpCurrHostEntry;
+
+      //read header entry
+      if (NktHookLibHelpers::ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
+        return NULL;
+      lpCurrNamespaceEntry = (NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V2*)(lpApiMapSet + sizeof(NKT_HK_APIMAPSET_HEADER_V2));
+      for (; sHdr.dwEntriesCount>0; sHdr.dwEntriesCount--,lpCurrNamespaceEntry++)
+      {
+        if (NktHookLibHelpers::ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry,
+                                       sizeof(sNamespaceEntry)) == FALSE)
           return NULL;
-        if (sHostEntry.dwLength != 0 && sHostEntry.dwNameOffset != 0 &&
-            (SIZE_T)(sHostEntry.dwLengthRealName) == (SIZE_T)(sUString.us.Length) &&
-            sHostEntry.dwNameOffsetRealName != 0)
+        //check if it is the dll we are looking for
+        if (sNamespaceEntry.dwNameLength == dwDllToFindLen*(DWORD)sizeof(WCHAR) &&
+            CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset)),
+                                       szDllToFindW+4, (SIZE_T)dwDllToFindLen) != FALSE)
         {
-          //check for importing dll name match
-          lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffsetRealName);
-          if (CompareUnicodeStringCommon(hProcess, (LPCWSTR)lpPtr, sUString.us.Buffer,
-                                         (SIZE_T)(sUString.us.Length) / sizeof(WCHAR)) != FALSE)
+          //scan host entries
+          lpPtr = lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwHostModulesOffset);
+          if (NktHookLibHelpers::ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
+            return NULL;
+          lpCurrHostEntry = (NKT_HK_APIMAPSET_HOST_ENTRY_V2*)(lpPtr + sizeof(sHostHdr));
+          for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
           {
-gotIt:        //retrieve dll name
-            lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
-            if (sHostEntry.dwLength >= 2040)
-              return NULL; //name too long
-            if (NktHookLibHelpers::ReadMem(hProcess, sUString.chDataW, lpPtr,
-                                           (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
+            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
+                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
               return NULL;
-            sUString.chDataW[sHostEntry.dwLength / (DWORD)sizeof(WCHAR)] = 0;
-            return NktHookLib::GetRemoteModuleBaseAddress(hProcess, sUString.chDataW, FALSE);
+            if (sHostEntry.dwLength != 0 && sHostEntry.dwNameOffset != 0 &&
+                (SIZE_T)(sHostEntry.dwLengthRealName) == (SIZE_T)(sUString.us.Length) &&
+                sHostEntry.dwNameOffsetRealName != 0)
+            {
+              //check for importing dll name match
+              lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffsetRealName);
+              if (CompareUnicodeStringCommon(hProcess, (LPCWSTR)lpPtr, sUString.us.Buffer,
+                                             (SIZE_T)(sUString.us.Length) / sizeof(WCHAR)) != FALSE)
+              {
+gotIt_V2:       //retrieve dll name
+                lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
+                if (sHostEntry.dwLength >= 2040)
+                  return NULL; //name too long
+                if (NktHookLibHelpers::ReadMem(hProcess, sUString.chDataW, lpPtr,
+                                               (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
+                  return NULL;
+                sUString.chDataW[sHostEntry.dwLength / (DWORD)sizeof(WCHAR)] = 0;
+                return NktHookLib::GetRemoteModuleBaseAddress(hProcess, sUString.chDataW, FALSE);
+              }
+            }
+          }
+          for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
+          {
+            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
+                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
+              return NULL;
+            if (sHostEntry.dwLengthRealName == 0 && sHostEntry.dwLength > 0 && sHostEntry.dwNameOffset > 0)
+              goto gotIt_V2;
           }
         }
       }
-      for (j=0; j<sHostHdr.dwCount; j++)
-      {
-        if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, lpCurrHostEntry+j,
-                                       sizeof(sHostEntry)) != sizeof(sHostEntry))
-          return NULL;
-        if (sHostEntry.dwLengthRealName == 0 && sHostEntry.dwLength > 0 && sHostEntry.dwNameOffset > 0)
-          goto gotIt;
       }
-    }
+      break;
+
+    case 4: //found in Win8.1
+      {
+      NKT_HK_APIMAPSET_HEADER_V4 sHdr;
+      NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V4 sNamespaceEntry, *lpCurrNamespaceEntry;
+      NKT_HK_APIMAPSET_HOST_HEADER_V4 sHostHdr;
+      NKT_HK_APIMAPSET_HOST_ENTRY_V4 sHostEntry, *lpCurrHostEntry;
+
+      if (NktHookLibHelpers::ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
+        return NULL;
+      lpCurrNamespaceEntry = (NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V4*)(lpApiMapSet + sizeof(NKT_HK_APIMAPSET_HEADER_V4));
+      for (; sHdr.dwEntriesCount>0; sHdr.dwEntriesCount--,lpCurrNamespaceEntry++)
+      {
+        if (NktHookLibHelpers::ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry,
+                                       sizeof(sNamespaceEntry)) == FALSE)
+          return NULL;
+        //check if it is the dll we are looking for
+        if ((sNamespaceEntry.dwNameLength1 == dwDllToFindLen*(DWORD)sizeof(WCHAR) &&
+             CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset1)),
+                                        szDllToFindW+4, (SIZE_T)dwDllToFindLen) != FALSE) ||
+            (sNamespaceEntry.dwNameLength2 == dwDllToFindLen*(DWORD)sizeof(WCHAR) &&
+             CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset2)),
+                                        szDllToFindW+4, (SIZE_T)dwDllToFindLen) != FALSE))
+        {
+          //scan host entries
+          lpPtr = lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwHostModulesOffset);
+          if (NktHookLibHelpers::ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
+            return NULL;
+          lpCurrHostEntry = (NKT_HK_APIMAPSET_HOST_ENTRY_V4*)(lpPtr + sizeof(sHostHdr));
+          for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
+          {
+            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
+                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
+              return NULL;
+            if (sHostEntry.dwLength != 0 && sHostEntry.dwNameOffset != 0 &&
+                (SIZE_T)(sHostEntry.dwLengthRealName) == (SIZE_T)(sUString.us.Length) &&
+                sHostEntry.dwNameOffsetRealName != 0)
+            {
+              //check for importing dll name match
+              lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffsetRealName);
+              if (CompareUnicodeStringCommon(hProcess, (LPCWSTR)lpPtr, sUString.us.Buffer,
+                                             (SIZE_T)(sUString.us.Length) / sizeof(WCHAR)) != FALSE)
+              {
+gotIt_V4:       //retrieve dll name
+                lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
+                if (sHostEntry.dwLength >= 2040)
+                  return NULL; //name too long
+                if (NktHookLibHelpers::ReadMem(hProcess, sUString.chDataW, lpPtr,
+                                               (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
+                  return NULL;
+                sUString.chDataW[sHostEntry.dwLength / (DWORD)sizeof(WCHAR)] = 0;
+                return NktHookLib::GetRemoteModuleBaseAddress(hProcess, sUString.chDataW, FALSE);
+              }
+            }
+          }
+          for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
+          {
+            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
+                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
+              return NULL;
+            if (sHostEntry.dwLengthRealName == 0 && sHostEntry.dwLength > 0 && sHostEntry.dwNameOffset > 0)
+              goto gotIt_V4;
+          }
+        }
+      }
+      }
+      break;
   }
   return NULL;
 }
