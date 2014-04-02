@@ -45,7 +45,7 @@ Although the library functionallity remains the same, the code was modified to
 make it independant from Visual Studio's CRT libraries.
 
 Deviare In-Proc uses assembly code to locate needed Api's and it only depends on
-NTDLL.DLL, no Lernel32 nor another library is used.
+NTDLL.DLL, no Kernel32 nor another library is used.
 
 This allows developers to use the library, for e.g., in custom dll's that will
 be injected in a process that was launched suspended.
