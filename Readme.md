@@ -1,4 +1,4 @@
-Deviare In-Process is a code interception engine for Microsoft Windows® developed by [Nektra Advanced Computing](http://www.nektra.com)
+Deviare In-Process is a code interception engine for Microsoft Windows® developed by [Nektra Advanced Computing](http://www.nektra.com).
 
 This library is at the core of our [Deviare 2.0 (hooking for the masses)](http://www.nektra.com/products/deviare-api-hook-windows/) and [SpyStudio Application Monitor](http://www.nektra.com/products/spystudio-api-monitor/) technologies. Deviare is an alternative to Microsoft Detours® but with a dual license distribution.
 
