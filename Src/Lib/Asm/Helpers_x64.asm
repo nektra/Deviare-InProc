@@ -89,7 +89,7 @@ NktHookLib_TryMemCopy_SEH PROTO
 
 ALIGN 16
 ;SIZE_T __stdcall NktHookLib_TryMemCopy(__in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nCount);
-NktHookLib_TryMemCopy PROC FRAME ;  :NktHookLib_TryMemCopy_SEH
+NktHookLib_TryMemCopy PROC FRAME :NktHookLib_TryMemCopy_SEH
     sub  rsp, 28h+20h
 .allocstack 28h+20h
 .endprolog
