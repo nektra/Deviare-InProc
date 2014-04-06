@@ -44,10 +44,13 @@ C RUN-TIME LESS
 Although the library functionallity remains the same, the code was modified to
 make it independant from Visual Studio's CRT libraries.
 
-Deviare In-Proc only depends on NTDLL.DLL, no Kernel32 nor another library is used.
+Deviare In-Proc only depends on NTDLL.DLL, no Kernel32 nor another library is
+used.
 
-This allows developers to use the library, for e.g., in custom dll's that will
-be injected in a process that was launched suspended.
+It also does a dynamic discovery of needed apis in order to eliminate NTDLL
+static binding when used in an application or dll. This allows developers to use
+the library, for e.g., in custom dll's that will be injected in non-initialized
+processes that ware launched in a suspended state.
 
 The ApiHook sample provided with this package was also modified in order to
 demostrate how to build an executable with minimal imported api's. Because
