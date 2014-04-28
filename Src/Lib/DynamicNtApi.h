@@ -35,6 +35,9 @@
 
 //-----------------------------------------------------------
 
+#ifndef STATUS_UNSUCCESSFUL
+  #define STATUS_UNSUCCESSFUL            ((NTSTATUS)0xC0000001L)
+#endif //!STATUS_UNSUCCESSFUL
 #ifndef STATUS_NOT_IMPLEMENTED
   #define STATUS_NOT_IMPLEMENTED         ((NTSTATUS)0xC0000002L)
 #endif //!STATUS_NOT_IMPLEMENTED

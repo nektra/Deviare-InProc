@@ -166,12 +166,13 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Lib\DynApi\DynamicApiFinder.cpp" />
-    <ClCompile Include="..\Lib\DynApi\DynamicNtApi.cpp" />
+    <ClCompile Include="..\Lib\DynamicApiFinder.cpp" />
+    <ClCompile Include="..\Lib\DynamicNtApi.cpp" />
     <ClCompile Include="..\Lib\HookEntry.cpp" />
     <ClCompile Include="..\Lib\libudis86\amalgamation.c" />
     <ClCompile Include="..\Lib\NktHookLib.cpp" />
     <ClCompile Include="..\Lib\NktHookLibHelpers.cpp" />
+    <ClCompile Include="..\Lib\NtSysCallGen.cpp" />
     <ClCompile Include="..\Lib\ProcessEntry.cpp" />
     <ClCompile Include="..\Lib\ThreadSuspend.cpp" />
     <ClCompile Include="..\Lib\WaitableObjects.cpp" />
@@ -204,8 +205,8 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Lib\DynApi\DynamicNtApi.h" />
-    <ClInclude Include="..\Lib\DynApi\NtApiDeclarations.h" />
+    <ClInclude Include="..\Lib\DynamicNtApi.h" />
+    <ClInclude Include="..\Lib\NtApiDeclarations.h" />
     <ClInclude Include="..\Lib\HookEntry.h" />
     <ClInclude Include="..\Lib\libudis86\amalgamation_defines.h" />
     <ClInclude Include="..\Lib\LinkedList.h" />

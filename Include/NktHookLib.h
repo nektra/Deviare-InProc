@@ -38,8 +38,8 @@
 #define NKTHOOKLIB_DontRemoveOnUnhook                 0x0002
 #define NKTHOOKLIB_DontSkipAnyJumps                   0x0004
 
-#define NKTHOOKLIB_PRocessPlatformX86                      1
-#define NKTHOOKLIB_PRocessPlatformX64                      2
+#define NKTHOOKLIB_ProcessPlatformX86                      1
+#define NKTHOOKLIB_ProcessPlatformX64                      2
 
 #define NKTHOOKLIB_CurrentProcess       (HANDLE)(LONG_PTR)-1
 #define NKTHOOKLIB_CurrentThread        (HANDLE)(LONG_PTR)-2
@@ -49,7 +49,7 @@
 class CNktHookLib
 {
 public:
-  typedef struct {
+  typedef struct tagHOOK_INFO {
     SIZE_T nHookId;
     LPVOID lpProcToHook;
     LPVOID lpNewProcAddr;
@@ -107,6 +107,19 @@ private:
 namespace NktHookLibHelpers
 {
 
+//NOTE: See "BuildNtSysCalls" below
+typedef struct tagSYSCALLDEF {
+  LPSTR szNtApiNameA;
+  SIZE_T nOffset;
+} SYSCALLDEF, *LPSYSCALLDEF;
+
+//----------------
+
+//NOTE: See "SetApiResolverCallback" below
+typedef LPVOID (__stdcall *lpfnInternalApiResolver)(__in_z LPCSTR szApiNameA, __in LPVOID lpUserParam);
+
+//----------------
+
 HINSTANCE GetModuleBaseAddress(__in LPCWSTR szDllNameW);
 LPVOID GetProcedureAddress(__in HINSTANCE hDll, __in LPCSTR szProcNameA);
 
@@ -120,6 +133,7 @@ int vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *sz
 int swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, ...);
 int vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, __in va_list lpArgList);
 
+//Returns a PROCESSOR_ARCHITECTURE_xxx value or -1 on error.
 LONG GetProcessorArchitecture();
 
 HANDLE OpenProcess(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in DWORD dwProcessId);
@@ -151,6 +165,29 @@ VOID DebugVPrint(__in LPCSTR szFormatA, __in va_list argptr);
 
 SIZE_T GetInstructionLength(__in LPVOID lpAddr, __in SIZE_T nSize, __in BYTE nPlatformBits,
                             __out_opt BOOL *lpbIsMemOp=NULL, __out_z_opt LPSTR szBufA=NULL, __in SIZE_T nBufLen=0);
+
+
+//NOTE: When NktHookLib is initialized, it tries to locate needed ntdll's apis by scanning process' modules.
+//      If you want to override an api call, use this method to set the resolver address. LPVOID returned by
+//      the callback must have the same definition and calling convention than the one in ntdll. Return NULL
+//      if you want NktHookLib to use the real ntdll api.
+VOID SetInternalApiResolverCallback(__in lpfnInternalApiResolver fnInternalApiResolver, __in LPVOID lpUserParam);
+
+//This function generates a relocatable byte code with a copy of the original SysCall routine for each passes
+//ntdll api. The code is created based on the original ntdll.dll image file on disk located on System32 or SysWow64,
+//depending on the target platform.
+//
+//Useful for doing direct calls to low level apis bypassing third party hooks (like Chrome navigator does). Also, you
+//can pass the generated code to another process. You can generate the code with this method, pass it to another
+//process and then use SetApiResolverCallback above.
+//
+//NOTE: Not all NtXXX apis are SysCalls. Trying to generate code for a non-syscall api may generate an unexpected
+//      behavior.
+//      If 'lpCode' is NULL, the needed space is returned. Although syscalls uses less than 32 bytes, a maximum of 256
+//      bytes are supported for each requested api. You can safety allocate a block of 256*nDefsCount bytes to hold
+//      the generated code.
+DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZE_T nPlatform,
+                      __out_opt LPVOID lpCode, __out SIZE_T *lpnCodeSize);
 
 } //namespace NktHookLibHelpers
 

@@ -65,8 +65,32 @@ NKT_PARSE_NTAPI_NTSTATUS(NtSetEvent, (__in HANDLE EventHandle, __out_opt PLONG N
 
 //--------
 
+NKT_PARSE_NTAPI_NTSTATUS(NtCreateFile, (__out PHANDLE FileHandle, __in ACCESS_MASK DesiredAccess,
+                                        __in POBJECT_ATTRIBUTES ObjectAttributes, __out PIO_STATUS_BLOCK IoStatusBlock,
+                                        __in_opt PLARGE_INTEGER AllocationSize, __in ULONG FileAttributes,
+                                        __in ULONG ShareAccess, __in ULONG CreateDisposition, __in ULONG CreateOptions,
+                                        __in PVOID EaBuffer, __in ULONG EaLength),
+                         (FileHandle, DesiredAccess, ObjectAttributes, IoStatusBlock, AllocationSize, FileAttributes,
+                          ShareAccess, CreateDisposition, CreateOptions, EaBuffer, EaLength))
 NKT_PARSE_NTAPI_NTSTATUS(NtClose, (__in HANDLE Handle), (Handle))
 
+NKT_PARSE_NTAPI_NTSTATUS(NtCreateSection, (__out PHANDLE  SectionHandle, __in ACCESS_MASK DesiredAccess,
+                                           __in_opt POBJECT_ATTRIBUTES ObjectAttributes,
+                                           __in_opt PLARGE_INTEGER MaximumSize,
+                                           __in ULONG SectionPageProtection, __in ULONG AllocationAttributes,
+                                           __in_opt HANDLE FileHandle),
+                         (SectionHandle, DesiredAccess, ObjectAttributes, MaximumSize, SectionPageProtection,
+                          AllocationAttributes, FileHandle))
+
+NKT_PARSE_NTAPI_NTSTATUS(NtMapViewOfSection, (__in HANDLE SectionHandle, __in HANDLE ProcessHandle,
+                                              __inout PVOID *BaseAddress, __in ULONG_PTR ZeroBits,
+                                              __in SIZE_T CommitSize, __inout PLARGE_INTEGER SectionOffset,
+                                              __inout PSIZE_T ViewSize, __in ULONG InheritDisposition,
+                                              __in ULONG AllocationType, __in ULONG Win32Protect),
+                          (SectionHandle, ProcessHandle, BaseAddress, ZeroBits, CommitSize, SectionOffset, ViewSize,
+                           InheritDisposition, AllocationType, Win32Protect))
+NKT_PARSE_NTAPI_NTSTATUS(NtUnmapViewOfSection, (__in HANDLE ProcessHandle, __in PVOID BaseAddress),
+                         (ProcessHandle, BaseAddress))
 //--------
 
 NKT_PARSE_NTAPI_NTSTATUS(NtDelayExecution, (__in BOOLEAN Alertable, __in PLARGE_INTEGER DelayInterval),
@@ -187,3 +211,7 @@ NKT_PARSE_NTAPI_VOID(RtlUnwindEx, (__in ULONGLONG TargetFrame, __in ULONGLONG Ta
 //--------
 
 NKT_PARSE_NTAPI_NTSTATUS(RtlGetVersion, (__inout PRTL_OSVERSIONINFOW lpVersionInformation), (lpVersionInformation))
+
+NKT_PARSE_NTAPI_ULONG(RtlCompareString, (__in const STRING *String1, __in const STRING *String2,
+                                         __in BOOLEAN CaseInSensitive),
+                      (String1, String2, CaseInSensitive))

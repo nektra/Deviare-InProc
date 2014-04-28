@@ -213,11 +213,11 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       //calculate inject code size and offset to data
       switch (cProcEntry->GetPlatform())
       {
-        case NKTHOOKLIB_PRocessPlatformX86:
+        case NKTHOOKLIB_ProcessPlatformX86:
           lpHookEntry->nInjCodeAndDataSize = 0x2A + lpHookEntry->nNewStubSize;
           break;
 #if defined _M_X64
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           lpHookEntry->nInjCodeAndDataSize = 0x41 + lpHookEntry->nNewStubSize;
           break;
 #endif //_M_X64
@@ -233,7 +233,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       //setup code
       switch (cProcEntry->GetPlatform())
       {
-        case NKTHOOKLIB_PRocessPlatformX86:
+        case NKTHOOKLIB_ProcessPlatformX86:
           NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                            //flags location
           NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                       //NOPs for hotpatching double hooks
           aNewCode[0x10] = 0x50;                                                   //push  eax
@@ -258,7 +258,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           break;
 
 #if defined _M_X64
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                            //flags location
           NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                       //NOPs for hotpatching double hooks
           aNewCode[0x10] = 0x50;                                                   //push  rax

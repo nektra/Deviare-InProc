@@ -74,4 +74,4 @@ SIZE_T GetInstructionLength(__in LPVOID lpAddr, __in SIZE_T nSize, __in BYTE nPl
   return nLen;
 }
 
-} //NktHookLib
+} //NktHookLibHelpers

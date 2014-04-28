@@ -29,7 +29,7 @@
 
 #include "DynamicNtApi.h"
 #include <intrin.h>
-#include "..\..\..\Include\NktHookLib.h"
+#include "..\..\Include\NktHookLib.h"
 
 #if defined(_M_IX86)
   #pragma intrinsic (_InterlockedExchange)
@@ -39,13 +39,18 @@
 
 //-----------------------------------------------------------
 
-static LONG volatile nMutex = 0;
-static HINSTANCE volatile hNtDll = NULL;
+static LONG volatile nInitialized = 0;
 extern "C" {
   extern void* volatile NktHookLib_fn_vsnprintf;
   void* volatile NktHookLib_fn_vsnwprintf = NULL;
   void* volatile NktHookLib_fn_DbgPrint = NULL;
 };
+namespace NktHookLibHelpers {
+
+extern lpfnInternalApiResolver fnInternalApiResolver;
+extern LPVOID lpUserParam;
+
+} //namespace NktHookLibHelpers
 
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, _notused)  \
   typedef NTSTATUS (__stdcall *lpfn_##name)parameters;        \
@@ -74,11 +79,12 @@ extern "C" {
 //-----------------------------------------------------------
 
 static VOID InitializeInternals();
+static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA);
 
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, paramCall) \
 NTSTATUS __stdcall Nkt##name parameters                       \
 {                                                             \
-  if (hNtDll == NULL)                                         \
+  if (nInitialized == 0)                                      \
     InitializeInternals();                                    \
   if (NktHookLib_fn_##name == NULL)                           \
     return STATUS_NOT_IMPLEMENTED;                            \
@@ -87,7 +93,7 @@ NTSTATUS __stdcall Nkt##name parameters                       \
 #define NKT_PARSE_NTAPI_VOID(name, parameters, paramCall)     \
 VOID __stdcall Nkt##name parameters                           \
 {                                                             \
-  if (hNtDll == NULL)                                         \
+  if (nInitialized == 0)                                      \
     InitializeInternals();                                    \
   if (NktHookLib_fn_##name != NULL)                           \
     NktHookLib_fn_##name paramCall;                           \
@@ -96,7 +102,7 @@ VOID __stdcall Nkt##name parameters                           \
 #define NKT_PARSE_NTAPI_PVOID(name, parameters, paramCall)    \
 PVOID __stdcall Nkt##name parameters                          \
 {                                                             \
-  if (hNtDll == NULL)                                         \
+  if (nInitialized == 0)                                      \
     InitializeInternals();                                    \
   if (NktHookLib_fn_##name == NULL)                           \
     return NULL;                                              \
@@ -105,7 +111,7 @@ PVOID __stdcall Nkt##name parameters                          \
 #define NKT_PARSE_NTAPI_BOOLEAN(name, parameters, paramCall)  \
 BOOLEAN __stdcall Nkt##name parameters                        \
 {                                                             \
-  if (hNtDll == NULL)                                         \
+  if (nInitialized == 0)                                      \
     InitializeInternals();                                    \
   if (NktHookLib_fn_##name == NULL)                           \
     return FALSE;                                             \
@@ -114,7 +120,7 @@ BOOLEAN __stdcall Nkt##name parameters                        \
 #define NKT_PARSE_NTAPI_ULONG(name, parameters, paramCall)    \
 ULONG __stdcall Nkt##name parameters                          \
 {                                                             \
-  if (hNtDll == NULL)                                         \
+  if (nInitialized == 0)                                      \
     InitializeInternals();                                    \
   if (NktHookLib_fn_##name == NULL)                           \
     return 0;                                                 \
@@ -133,53 +139,67 @@ namespace NktHookLib {
 
 static VOID InitializeInternals()
 {
-  //because we are using NKTHOOKLIB_CurrentProcess and ScanMappedImages to FALSE, we are avoiding the recursion
-  LPVOID _hNtDll = ::NktHookLib::GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, L"ntdll.dll", FALSE);
-  if (_hNtDll != NULL)
-  {
-    #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                                                   \
-      lpfn_##name __fn_##name = (lpfn_##name)::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess,    \
-                                                                                    _hNtDll, # name);
-    #define NKT_PARSE_NTAPI_VOID NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_PVOID NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_BOOLEAN NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_ULONG NKT_PARSE_NTAPI_NTSTATUS
-    #include "NtApiDeclarations.h"
-    #undef NKT_PARSE_NTAPI_NTSTATUS
-    #undef NKT_PARSE_NTAPI_VOID
-    #undef NKT_PARSE_NTAPI_PVOID
-    #undef NKT_PARSE_NTAPI_BOOLEAN
-    #undef NKT_PARSE_NTAPI_ULONG
+  LPVOID _hNtDll, fn;
 
+  _hNtDll = NULL;
 #if defined(_M_IX86)
-    #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)  \
-      _InterlockedExchange((long volatile*)&(NktHookLib_fn_##name), (long)(__fn_##name));
+  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                \
+    fn = ResolveNtDllApi(_hNtDll, # name);                                   \
+    _InterlockedExchange((long volatile*)&(NktHookLib_fn_##name), (long)fn);
 #elif defined(_M_X64)
-    #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)  \
-      _InterlockedExchangePointer((void* volatile*)&(NktHookLib_fn_##name), (__fn_##name));
+  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                \
+    fn = ResolveNtDllApi(_hNtDll, # name);                                   \
+    _InterlockedExchangePointer((void* volatile*)&(NktHookLib_fn_##name), fn);
 #endif
-    #define NKT_PARSE_NTAPI_VOID NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_PVOID NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_BOOLEAN NKT_PARSE_NTAPI_NTSTATUS
-    #define NKT_PARSE_NTAPI_ULONG NKT_PARSE_NTAPI_NTSTATUS
-    #include "NtApiDeclarations.h"
-    #undef NKT_PARSE_NTAPI_NTSTATUS
-    #undef NKT_PARSE_NTAPI_VOID
-    #undef NKT_PARSE_NTAPI_PVOID
-    #undef NKT_PARSE_NTAPI_BOOLEAN
-    #undef NKT_PARSE_NTAPI_ULONG
-    //----
-    NktHookLib_fn_vsnprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
-                                                                      "_vsnprintf");
-    NktHookLib_fn_vsnwprintf = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
-                                                                       "_vsnwprintf");
-    NktHookLib_fn_DbgPrint  = ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll,
-                                                                      "DbgPrint");
-  }
+#define NKT_PARSE_NTAPI_VOID NKT_PARSE_NTAPI_NTSTATUS
+#define NKT_PARSE_NTAPI_PVOID NKT_PARSE_NTAPI_NTSTATUS
+#define NKT_PARSE_NTAPI_BOOLEAN NKT_PARSE_NTAPI_NTSTATUS
+#define NKT_PARSE_NTAPI_ULONG NKT_PARSE_NTAPI_NTSTATUS
+#include "NtApiDeclarations.h"
+#undef NKT_PARSE_NTAPI_NTSTATUS
+#undef NKT_PARSE_NTAPI_VOID
+#undef NKT_PARSE_NTAPI_PVOID
+#undef NKT_PARSE_NTAPI_BOOLEAN
+#undef NKT_PARSE_NTAPI_ULONG
+  //----
+  fn = ResolveNtDllApi(_hNtDll, "_vsnprintf");
 #if defined(_M_IX86)
-  _InterlockedExchange((long volatile*)&hNtDll, (long)_hNtDll);
+  _InterlockedExchange((long volatile*)&NktHookLib_fn_vsnprintf, (long)fn);
 #elif defined(_M_X64)
-  _InterlockedExchangePointer((volatile PVOID*)&hNtDll, _hNtDll);
+  _InterlockedExchangePointer((void* volatile*)&NktHookLib_fn_vsnprintf, fn);
 #endif
+  fn = ResolveNtDllApi(_hNtDll, "_vsnwprintf");
+#if defined(_M_IX86)
+  _InterlockedExchange((long volatile*)&NktHookLib_fn_vsnwprintf, (long)fn);
+#elif defined(_M_X64)
+  _InterlockedExchangePointer((void* volatile*)&NktHookLib_fn_vsnwprintf, fn);
+#endif
+  fn = ResolveNtDllApi(_hNtDll, "DbgPrint");
+#if defined(_M_IX86)
+  _InterlockedExchange((long volatile*)&NktHookLib_fn_DbgPrint, (long)fn);
+#elif defined(_M_X64)
+  _InterlockedExchangePointer((void* volatile*)&NktHookLib_fn_DbgPrint, fn);
+#endif
+  //done
+  _InterlockedExchange(&nInitialized, 1);
   return;
+}
+
+static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA)
+{
+  LPVOID fn;
+
+  if (NktHookLibHelpers::fnInternalApiResolver != NULL)
+  {
+    fn = NktHookLibHelpers::fnInternalApiResolver(szApiNameA, NktHookLibHelpers::lpUserParam);
+    if (fn != NULL)
+      return fn;
+  }
+  if (_hNtDll == NULL)
+  {
+    //Set ScanMappedImages to FALSE to avoid recursion
+   _hNtDll = NktHookLib::GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, L"ntdll.dll", FALSE);
+  }
+  return (_hNtDll != NULL) ? NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll, szApiNameA) :
+                             NULL;
 }

@@ -28,7 +28,7 @@
  **/
 
 #include "..\..\Include\NktHookLib.h"
-#include "DynApi\DynamicNtApi.h"
+#include "DynamicNtApi.h"
 #include <intrin.h>
 
 #pragma intrinsic (_InterlockedIncrement)
@@ -56,6 +56,13 @@ typedef struct {
 
 //-----------------------------------------------------------
 
+namespace NktHookLibHelpers {
+
+lpfnInternalApiResolver fnInternalApiResolver = NULL;
+LPVOID lpUserParam = NULL;
+
+} //namespace NktHookLibHelpers
+
 extern "C" {
   size_t __stdcall NktHookLib_TryMemCopy(__out const void *lpDest, __in const void *lpSrc, __in size_t nCount);
   SIZE_T __stdcall NktHookLib_TryCallOneParam(__in LPVOID lpFunc, __in SIZE_T nParam1, __in BOOL bIsCDecl);
@@ -68,8 +75,7 @@ extern "C" {
 
 //-----------------------------------------------------------
 
-namespace NktHookLibHelpers
-{
+namespace NktHookLibHelpers {
 
 HINSTANCE GetModuleBaseAddress(__in LPCWSTR szDllNameW)
 {
@@ -195,15 +201,15 @@ NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
   if (hProcess == NKTHOOKLIB_CurrentProcess)
   {
 #if defined _M_IX86
-    return NKTHOOKLIB_PRocessPlatformX86;
+    return NKTHOOKLIB_ProcessPlatformX86;
 #elif defined _M_X64
-    return NKTHOOKLIB_PRocessPlatformX64;
+    return NKTHOOKLIB_ProcessPlatformX64;
 #endif
   }
   switch (GetProcessorArchitecture())
   {
     case PROCESSOR_ARCHITECTURE_INTEL:
-      return NKTHOOKLIB_PRocessPlatformX86;
+      return NKTHOOKLIB_ProcessPlatformX86;
 
     case PROCESSOR_ARCHITECTURE_AMD64:
       //check on 64-bit platforms
@@ -214,15 +220,15 @@ NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
       if (NT_SUCCESS(nNtStatus))
       {
 #if defined _M_IX86
-        return (nWow64 == 0) ? NKTHOOKLIB_PRocessPlatformX64 : NKTHOOKLIB_PRocessPlatformX86;
+        return (nWow64 == 0) ? NKTHOOKLIB_ProcessPlatformX64 : NKTHOOKLIB_ProcessPlatformX86;
 #elif defined _M_X64
-        return (nWow64 != 0) ? NKTHOOKLIB_PRocessPlatformX86 : NKTHOOKLIB_PRocessPlatformX64;
+        return (nWow64 != 0) ? NKTHOOKLIB_ProcessPlatformX86 : NKTHOOKLIB_ProcessPlatformX64;
 #endif
       }
 #if defined _M_IX86
-      return NKTHOOKLIB_PRocessPlatformX86;
+      return NKTHOOKLIB_ProcessPlatformX86;
 #elif defined _M_X64
-      return NKTHOOKLIB_PRocessPlatformX64;
+      return NKTHOOKLIB_ProcessPlatformX64;
 #endif
       break;
     //case PROCESSOR_ARCHITECTURE_IA64:
@@ -525,6 +531,13 @@ VOID DebugVPrint(__in LPCSTR szFormatA, __in va_list argptr)
     //avoid compiler stuff for try/except blocks
     NktHookLib_TryCallOneParam(NktRtlRaiseException, (SIZE_T)&sExcRec, FALSE);
   }
+  return;
+}
+
+VOID SetInternalApiResolverCallback(__in lpfnInternalApiResolver _fnInternalApiResolver, __in LPVOID _lpUserParam)
+{
+  fnInternalApiResolver = _fnInternalApiResolver;
+  lpUserParam = _lpUserParam;
   return;
 }
 

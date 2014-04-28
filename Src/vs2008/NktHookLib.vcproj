@@ -311,6 +311,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath="..\Lib\DynamicApiFinder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Lib\DynamicNtApi.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Lib\HookEntry.cpp"
 				>
 			</File>
@@ -320,6 +328,10 @@
 			</File>
 			<File
 				RelativePath="..\Lib\NktHookLibHelpers.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Lib\NtSysCallGen.cpp"
 				>
 			</File>
 			<File
@@ -376,26 +388,6 @@
 							AdditionalIncludeDirectories=""
 						/>
 					</FileConfiguration>
-				</File>
-			</Filter>
-			<Filter
-				Name="DynamicAPI"
-				>
-				<File
-					RelativePath="..\Lib\DynApi\DynamicApiFinder.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Lib\DynApi\DynamicNtApi.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\Lib\DynApi\DynamicNtApi.h"
-					>
-				</File>
-				<File
-					RelativePath="..\Lib\DynApi\NtApiDeclarations.h"
-					>
 				</File>
 			</Filter>
 			<Filter
@@ -489,6 +481,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath="..\Lib\DynamicNtApi.h"
+				>
+			</File>
+			<File
 				RelativePath="..\Lib\HookEntry.h"
 				>
 			</File>
@@ -498,6 +494,10 @@
 			</File>
 			<File
 				RelativePath="..\..\Include\NktHookLib.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Lib\NtApiDeclarations.h"
 				>
 			</File>
 			<File

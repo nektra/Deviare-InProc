@@ -179,7 +179,7 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
         nProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64 ||
         nProcessorArchitecture == PROCESSOR_ARCHITECTURE_ALPHA64)
     {
-      if (NktHookLibHelpers::GetProcessPlatform(hProcess) == NKTHOOKLIB_PRocessPlatformX86)
+      if (NktHookLibHelpers::GetProcessPlatform(hProcess) == NKTHOOKLIB_ProcessPlatformX86)
         break; //process is running on Wow64... skip check
     }
     //if we are here, we must confirm that no new threads where created in the middle

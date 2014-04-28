@@ -22,14 +22,17 @@
     <ClCompile Include="..\Lib\libudis86\GetInstructionLength.cpp">
       <Filter>Source Files\LibUDIS</Filter>
     </ClCompile>
-    <ClCompile Include="..\Lib\DynApi\DynamicNtApi.cpp">
-      <Filter>Source Files\DynamicAPI</Filter>
-    </ClCompile>
     <ClCompile Include="..\Lib\NktHookLibHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Lib\DynApi\DynamicApiFinder.cpp">
-      <Filter>Source Files\DynamicAPI</Filter>
+    <ClCompile Include="..\Lib\NtSysCallGen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Lib\DynamicApiFinder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Lib\DynamicNtApi.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -57,11 +60,11 @@
     <ClInclude Include="..\Lib\NtHeapBaseObj.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Lib\DynApi\DynamicNtApi.h">
-      <Filter>Source Files\DynamicAPI</Filter>
+    <ClInclude Include="..\Lib\DynamicNtApi.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Lib\DynApi\NtApiDeclarations.h">
-      <Filter>Source Files\DynamicAPI</Filter>
+    <ClInclude Include="..\Lib\NtApiDeclarations.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -85,9 +88,6 @@
     </Filter>
     <Filter Include="Source Files\LibUDIS">
       <UniqueIdentifier>{0a9f1e1d-d59b-469d-97f3-f2f833030445}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\DynamicAPI">
-      <UniqueIdentifier>{00c50652-9979-4556-9176-a546ef603df1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Asm">
       <UniqueIdentifier>{70214cbd-444b-4907-9c56-a3de97bf5804}</UniqueIdentifier>

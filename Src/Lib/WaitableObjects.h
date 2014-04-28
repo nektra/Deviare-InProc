@@ -32,7 +32,7 @@
 
 #include <windows.h>
 #include <intrin.h>
-#include "DynApi\DynamicNtApi.h"
+#include "DynamicNtApi.h"
 #include "NtHeapBaseObj.h"
 
 namespace NktHookLib {

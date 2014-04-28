@@ -113,7 +113,7 @@ LPBYTE CHookEntry::SkipJumpInstructions(__in LPBYTE lpPtr)
       nOfs = *((LONG NKT_UNALIGNED*)(aTempBuf+nSize));
       switch (cProcEntry->GetPlatform())
       {
-        case NKTHOOKLIB_PRocessPlatformX86:
+        case NKTHOOKLIB_ProcessPlatformX86:
           if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aTempBuf, (LPBYTE)(ULONG)nOfs,
                                          sizeof(ULONG)) != sizeof(ULONG))
             return NULL;
@@ -121,7 +121,7 @@ LPBYTE CHookEntry::SkipJumpInstructions(__in LPBYTE lpPtr)
           break;
 
 #if defined _M_X64
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aTempBuf, lpPtr+(LONGLONG)(nSize+4)+(LONGLONG)nOfs,
                                          sizeof(ULONGLONG)) != sizeof(ULONGLONG))
             return NULL;
@@ -151,9 +151,9 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
 
   switch (nPlatform = cProcEntry->GetPlatform())
   {
-    case NKTHOOKLIB_PRocessPlatformX86:
+    case NKTHOOKLIB_ProcessPlatformX86:
 #if defined _M_X64
-    case NKTHOOKLIB_PRocessPlatformX64:
+    case NKTHOOKLIB_ProcessPlatformX64:
 #endif //_M_X64
       break;
     default:
@@ -190,7 +190,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
       //we hit a jump in the middle of the stuff so we encode a jump to the final position ...
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX86:
+        case NKTHOOKLIB_ProcessPlatformX86:
           //...convert to PUSH imm32/RET
           lpDest[0] = 0x68;
           *((ULONG NKT_UNALIGNED*)(lpDest+1)) = (ULONG)(s[1]);
@@ -199,7 +199,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
           break;
 
 #if defined _M_X64
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           //jmp to original call (JMP QWORD PTR [RIP+0h])
           lpDest[0] = 0xFF;  lpDest[1] = 0x25; //
           *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
@@ -269,7 +269,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
         *((ULONG NKT_UNALIGNED*)(lpDest+1)) = 0;
         switch (nPlatform)
         {
-          case NKTHOOKLIB_PRocessPlatformX86:
+          case NKTHOOKLIB_ProcessPlatformX86:
             //...increment return address (ADD DWORD PTR [esp], 4+5+1)
             lpDest[5] = 0x83;
             lpDest[6] = 0x04;
@@ -284,7 +284,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
             return 15;
 
 #if defined _M_X64
-          case NKTHOOKLIB_PRocessPlatformX64:
+          case NKTHOOKLIB_ProcessPlatformX64:
             //...increment return address (ADD QWORD PTR [rsp], 5+14)
             lpDest[5] = 0x48;
             lpDest[6] = 0x83;
@@ -307,7 +307,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0xFF && lpSrc[1] == 0x15)
           {
             //convert "indirect 32-bit CALL" (CALL [mofs32]) [FF 15 xxyyzzww] into...
@@ -347,7 +347,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] >= 0x88 && lpSrc[0] <= 0x8B && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert MOV [mofs32], r8 into... (88h)
@@ -382,7 +382,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0xC6 && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert MOV BYTE PTR [mofs32], imm8 into...
@@ -470,7 +470,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if ((lpSrc[0] == 0x66 || lpSrc[0] == 0xF3) && lpSrc[1] == 0x0F && lpSrc[2] == 0x6F &&
               (lpSrc[3] & 0xC7) == 0x05)
           {
@@ -500,7 +500,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x66 && lpSrc[1] == 0xC7 && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert MOV WORD PTR [mofs32], imm16 into...
@@ -552,7 +552,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0xC7 && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert MOV DWORD PTR [mofs32], imm32 into...
@@ -584,7 +584,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x48 && lpSrc[1] == 0xC7 && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert MOV QWORD PTR [mofs32], imm32 into....
@@ -630,7 +630,7 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x8D && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert LEA r32, [mofs32] into...
@@ -650,7 +650,7 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if ((lpSrc[0] & 0xFB) == 0x48 && lpSrc[1] == 0x8D && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert LEA r64, [mofs32] into...
@@ -695,7 +695,7 @@ static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if ((lpSrc[0] == 0xFF && (lpSrc[1] == 0x0D || lpSrc[1] == 0x05)) ||
               (lpSrc[0] == 0xF7 && (lpSrc[1] == 0x1D || lpSrc[1] == 0x15)))
           {
@@ -726,7 +726,7 @@ static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x48 &&
               ((lpSrc[1] == 0xFF && (lpSrc[2] == 0x0D || lpSrc[2] == 0x05)) ||
                (lpSrc[1] == 0xF7 && (lpSrc[2] == 0x1D || lpSrc[2] == 0x15))))
@@ -784,7 +784,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if ((lpSrc[0] & 0xC4) == 0x00 && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP BYTE PTR [mofs32], r8 or
@@ -821,7 +821,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x80 && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP BYTE PTR [mofs32], imm8 into...
@@ -924,7 +924,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x66 && lpSrc[1] == 0x83 && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP WORD PTR [mofs32], imm8 into...
@@ -1000,7 +1000,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x66 && lpSrc[1] == 0x81 && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP WORD PTR [mofs32], imm16 into...
@@ -1033,7 +1033,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x81 && (lpSrc[1] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP DWORD PTR [mofs32], imm32 into...
@@ -1067,7 +1067,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x48 && lpSrc[1] == 0x81 && (lpSrc[2] & 0xC7) == 0x05)
           {
             //convert ADD/SUB/ADC/SBB/AND/OR/XOR/CMP QWORD PTR [mofs32], imm32 into...
@@ -1127,7 +1127,7 @@ static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __i
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x0F &&
               ((lpSrc[1] & 0xFE) == 0xB0 || (lpSrc[1] & 0xFE) == 0xC0) &&
               (lpSrc[2] & 0xC7) == 0x05)
@@ -1167,7 +1167,7 @@ static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __i
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x66 && lpSrc[1] == 0x0F &&
               (lpSrc[2] == 0xB1 || lpSrc[2] == 0xC1) &&
               (lpSrc[3] & 0xC7) == 0x05)
@@ -1245,7 +1245,7 @@ static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SI
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0xFF && lpSrc[1] == 0x35)
           {
             //convert PUSH DWORD PTR [mofs32] into...
@@ -1311,7 +1311,7 @@ static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SI
 #if defined _M_X64
       switch (nPlatform)
       {
-        case NKTHOOKLIB_PRocessPlatformX64:
+        case NKTHOOKLIB_ProcessPlatformX64:
           if (lpSrc[0] == 0x48 && lpSrc[1] == 0xFF && lpSrc[2] == 0x35)
           {
             //convert PUSH QWORD PTR [mofs32] into...
@@ -1399,14 +1399,14 @@ static SIZE_T ProcessJUMPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
 pj_setupfarjump:
         switch (nPlatform)
         {
-          case NKTHOOKLIB_PRocessPlatformX86:
+          case NKTHOOKLIB_ProcessPlatformX86:
             lpDest[0] = 0xFF;
             lpDest[1] = 0x25;
             *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
             *((ULONGLONG NKT_UNALIGNED*)(lpDest+6)) = nDest;
             return 14;
 #if defined _M_X64
-          case NKTHOOKLIB_PRocessPlatformX64:
+          case NKTHOOKLIB_ProcessPlatformX64:
             lpDest[0] = 0x48;
             lpDest[1] = 0xFF;
             lpDest[2] = 0x25;
@@ -1433,7 +1433,7 @@ pj_setupfarjump:
         nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+2));
         switch (nPlatform)
         {
-          case NKTHOOKLIB_PRocessPlatformX86:
+          case NKTHOOKLIB_ProcessPlatformX86:
             if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, (LPVOID)nOfs32, sizeof(ULONG)) == sizeof(ULONG))
             {
               nDest = (SIZE_T)*((ULONG NKT_UNALIGNED*)(aTempBuf));
@@ -1442,7 +1442,7 @@ pj_setupfarjump:
             break;
 
 #if defined _M_X64
-          case NKTHOOKLIB_PRocessPlatformX64:
+          case NKTHOOKLIB_ProcessPlatformX64:
             if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, lpSrc+6+(LONGLONG)nOfs32, sizeof(ULONGLONG)) == sizeof(ULONGLONG))
             {
               nDest = (SIZE_T)*((ULONGLONG NKT_UNALIGNED*)(aTempBuf));
@@ -1460,7 +1460,7 @@ pj_setupfarjump:
         nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+3));
         switch (nPlatform)
         {
-          case NKTHOOKLIB_PRocessPlatformX86:
+          case NKTHOOKLIB_ProcessPlatformX86:
             if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, (LPVOID)nOfs32, sizeof(ULONG)) == sizeof(ULONG))
             {
               nDest = (SIZE_T)*((ULONG NKT_UNALIGNED*)(aTempBuf));
@@ -1469,7 +1469,7 @@ pj_setupfarjump:
             break;
 
 #if defined _M_X64
-          case NKTHOOKLIB_PRocessPlatformX64:
+          case NKTHOOKLIB_ProcessPlatformX64:
             if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, lpSrc+7+(LONGLONG)nOfs32, sizeof(ULONGLONG)) == sizeof(ULONGLONG))
             {
               nDest = (SIZE_T)*((ULONGLONG NKT_UNALIGNED*)(aTempBuf));

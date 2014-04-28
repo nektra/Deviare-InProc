@@ -28,7 +28,7 @@
  **/
 
 #include "DynamicNtApi.h"
-#include "..\..\..\Include\NktHookLib.h"
+#include "..\..\Include\NktHookLib.h"
 
 //-----------------------------------------------------------
 
@@ -41,15 +41,16 @@ static HRESULT GetNextLdrEntry32(__inout NKT_HK_LDRENTRY32 *lpEntry32);
 static HRESULT GetFirstLdrEntry64(__out NKT_HK_LDRENTRY64 *lpEntry64, __in LPBYTE lpPeb, __in HANDLE hProcess);
 static HRESULT GetNextLdrEntry64(__inout NKT_HK_LDRENTRY64 *lpEntry64);
 #endif //_M_X64
-static BOOL CompareUnicodeString32(__in HANDLE hProcess, NKT_HK_UNICODE_STRING32 *lpStr, __in LPCWSTR szDllNameW,
-                                   __in SIZE_T nDllNameLen);
+static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING32 *lpRemoteStr,
+                                         __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen);
 #if defined _M_X64
-static BOOL CompareUnicodeString64(__in HANDLE hProcess, NKT_HK_UNICODE_STRING64 *lpStr, __in LPCWSTR szDllNameW,
-                                   __in SIZE_T nDllNameLen);
+static BOOL RemoteCompareUnicodeString64(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING64 *lpRemoteStr,
+                                         __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen);
 #endif //_M_X64
-static BOOL CompareUnicodeStringCommon(__in HANDLE hProcess, __in LPCWSTR sW, __in LPCWSTR szDllNameW,
-                                       __in SIZE_T nDllNameLen);
-static BOOL StrICmp(__in LPCSTR sA_1, __in LPCSTR sA_2);
+static BOOL RemoteStrNICmpW(__in HANDLE hProcess, __in LPCWSTR szRemoteStrW, __in LPCWSTR szLocalStrW,
+                            __in SIZE_T nStrLen);
+static BOOL StrICmpA(__in LPCSTR sA_1, __in LPCSTR sA_2);
+static BOOL StrNICmpW(__in LPCWSTR sW_1, __in LPCWSTR sW_2, __in SIZE_T nLen);
 static DWORD ToNumberA(__in LPCSTR sA);
 static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBits, __in LPVOID lpImportingDllBase,
                                    __in LPCWSTR szDllToFindW);
@@ -85,11 +86,11 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
   for (nDllNameLen=0; szDllNameW[nDllNameLen]!=0; nDllNameLen++);
   switch (NktHookLibHelpers::GetProcessPlatform(hProcess))
   {
-    case NKTHOOKLIB_PRocessPlatformX86:
+    case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
       break;
 #if defined _M_X64
-    case NKTHOOKLIB_PRocessPlatformX64:
+    case NKTHOOKLIB_ProcessPlatformX64:
       nPlatformBits = 64;
       break;
 #endif //_M_X64
@@ -107,7 +108,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
         while (hRes == S_OK)
         {
           if (sLdrEntry32.sEntry.DllBase != 0 &&
-              CompareUnicodeString32(hProcess, &(sLdrEntry32.sEntry.BaseDllName), szDllNameW, nDllNameLen) != FALSE)
+              RemoteCompareUnicodeString32(hProcess, &(sLdrEntry32.sEntry.BaseDllName), szDllNameW, nDllNameLen) != FALSE)
             return (HINSTANCE)(sLdrEntry32.sEntry.DllBase);
           hRes = GetNextLdrEntry32(&sLdrEntry32);
         }
@@ -121,7 +122,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
         while (hRes == S_OK)
         {
           if (sLdrEntry64.sEntry.DllBase != 0 &&
-              CompareUnicodeString64(hProcess, &(sLdrEntry64.sEntry.BaseDllName), szDllNameW, nDllNameLen) != FALSE)
+              RemoteCompareUnicodeString64(hProcess, &(sLdrEntry64.sEntry.BaseDllName), szDllNameW, nDllNameLen) != FALSE)
             return (HINSTANCE)(sLdrEntry64.sEntry.DllBase);
           hRes = GetNextLdrEntry64(&sLdrEntry64);
         }
@@ -170,7 +171,8 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
         if (dwType == MEM_IMAGE)
         {
           hRes = CheckImageType(&sNtHdr, hProcess, lpBaseAddr);
-          if ((nPlatformBits == 32 && hRes == (HRESULT)64) ||
+          if (FAILED(hRes) ||
+              (nPlatformBits == 32 && hRes == (HRESULT)64) ||
               (nPlatformBits == 64 && hRes == (HRESULT)32))
             continue;
         }
@@ -183,15 +185,9 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
           k--;
         usImportingDll.us.Buffer += k;
         usImportingDll.us.Length -= (USHORT)k * (USHORT)sizeof(WCHAR);
-#if defined _M_IX86
-        if (CompareUnicodeString32(hProcess, (NKT_HK_UNICODE_STRING32*)&(usImportingDll.us), szDllNameW,
-                                   nDllNameLen) != FALSE)
+        if (nDllNameLen*sizeof(WCHAR) == (SIZE_T)(usImportingDll.us.Length) &&
+            StrNICmpW(szDllNameW, usImportingDll.us.Buffer, nDllNameLen) != FALSE)
           return (HINSTANCE)lpBaseAddr;
-#elif defined _M_X64
-        if (CompareUnicodeString64(hProcess, (NKT_HK_UNICODE_STRING64*)&(usImportingDll.us), szDllNameW,
-                                   nDllNameLen) != FALSE)
-          return (HINSTANCE)lpBaseAddr;
-#endif
       }
       else
       {
@@ -220,11 +216,11 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
     return NULL;
   switch (NktHookLibHelpers::GetProcessPlatform(hProcess))
   {
-    case NKTHOOKLIB_PRocessPlatformX86:
+    case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
       break;
 #if defined _M_X64
-    case NKTHOOKLIB_PRocessPlatformX64:
+    case NKTHOOKLIB_ProcessPlatformX64:
       nPlatformBits = 64;
       break;
 #endif //_M_X64
@@ -292,7 +288,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
       if (nLen == 0)
         continue;
       szBufA[nLen] = 0;
-      if (StrICmp(szBufA, szFuncNameA) != FALSE)
+      if (StrICmpA(szBufA, szFuncNameA) != FALSE)
         break;
     }
     if (dwTemp32 >= sExpDir.NumberOfNames)
@@ -556,61 +552,52 @@ HRESULT GetNextLdrEntry64(__inout NKT_HK_LDRENTRY64 *lpEntry64)
 }
 #endif //_M_X64
 
-static BOOL CompareUnicodeString32(__in HANDLE hProcess, NKT_HK_UNICODE_STRING32 *lpStr, __in LPCWSTR szDllNameW,
-                                   __in SIZE_T nDllNameLen)
+static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING32 *lpRemoteStr,
+                                         __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen)
 {
   NKT_HK_UNICODE_STRING32 usTemp;
 
-  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpStr, sizeof(usTemp)) != sizeof(usTemp) ||
-      (SIZE_T)(usTemp.Length) != nDllNameLen*sizeof(WCHAR))
+  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpRemoteStr, sizeof(usTemp)) != sizeof(usTemp) ||
+      (SIZE_T)(usTemp.Length) != nStrLen*sizeof(WCHAR))
     return FALSE;
-  return CompareUnicodeStringCommon(hProcess, (LPCWSTR)(usTemp.Buffer), szDllNameW, nDllNameLen);
+  return RemoteStrNICmpW(hProcess, (LPCWSTR)(usTemp.Buffer), szLocalStrW, nStrLen);
 }
 
 #if defined _M_X64
-static BOOL CompareUnicodeString64(__in HANDLE hProcess, NKT_HK_UNICODE_STRING64 *lpStr, __in LPCWSTR szDllNameW,
-                                   __in SIZE_T nDllNameLen)
+static BOOL RemoteCompareUnicodeString64(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING64 *lpRemoteStr,
+                                         __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen)
 {
   NKT_HK_UNICODE_STRING64 usTemp;
 
-  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpStr, sizeof(usTemp)) != sizeof(usTemp) ||
-      (SIZE_T)(usTemp.Length) != nDllNameLen*sizeof(WCHAR))
+  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpRemoteStr, sizeof(usTemp)) != sizeof(usTemp) ||
+      (SIZE_T)(usTemp.Length) != nStrLen*sizeof(WCHAR))
     return FALSE;
-  return CompareUnicodeStringCommon(hProcess, (LPCWSTR)(usTemp.Buffer), szDllNameW, nDllNameLen);
+  return RemoteStrNICmpW(hProcess, (LPCWSTR)(usTemp.Buffer), szLocalStrW, nStrLen);
 }
 #endif //_M_X64
 
-static BOOL CompareUnicodeStringCommon(__in HANDLE hProcess, __in LPCWSTR sW, __in LPCWSTR szDllNameW,
-                                       __in SIZE_T nDllNameLen)
+static BOOL RemoteStrNICmpW(__in HANDLE hProcess, __in LPCWSTR szRemoteStrW, __in LPCWSTR szLocalStrW,
+                            __in SIZE_T nStrLen)
 {
-  WCHAR aBufW[128], chW;
-  SIZE_T i, k;
+  WCHAR aBufW[128];
+  SIZE_T i;
 
-  if (sW == NULL)
+  if (szRemoteStrW == NULL)
     return FALSE;
-  while (nDllNameLen > 0)
+  while (nStrLen > 0)
   {
-    i = (nDllNameLen > 128) ? 128 : nDllNameLen;
-    if (NktHookLibHelpers::ReadMem(hProcess, aBufW, (LPVOID)sW, i*sizeof(WCHAR)) != i*sizeof(WCHAR))
+    i = (nStrLen > 128) ? 128 : nStrLen;
+    if (NktHookLibHelpers::ReadMem(hProcess, aBufW, (LPVOID)szRemoteStrW, i*sizeof(WCHAR)) != i*sizeof(WCHAR) ||
+        StrNICmpW(szLocalStrW, aBufW, i) == FALSE)
       return FALSE;
-    for (k=0; k<i; k++)
-    {
-      chW = szDllNameW[k];
-      if (chW >= L'a' && chW <= L'z')
-        chW -= (L'a' - L'A');
-      if (aBufW[k] >= L'a' && aBufW[k] <= L'z')
-        aBufW[k] -= (L'a' - L'A');
-      if (chW != aBufW[k])
-        return FALSE;
-    }
-    nDllNameLen -= i;
-    sW += i;
-    szDllNameW += i;
+    szRemoteStrW += i;
+    szLocalStrW += i;
+    nStrLen -= i;
   }
   return TRUE;
 }
 
-static BOOL StrICmp(__in LPCSTR sA_1, __in LPCSTR sA_2)
+static BOOL StrICmpA(__in LPCSTR sA_1, __in LPCSTR sA_2)
 {
   CHAR chA_1, chA_2;
 
@@ -628,6 +615,27 @@ static BOOL StrICmp(__in LPCSTR sA_1, __in LPCSTR sA_2)
     sA_2++;
   }
   return (sA_1[0] == 0 && sA_2[0] == 0) ? TRUE : FALSE;
+}
+
+static BOOL StrNICmpW(__in LPCWSTR sW_1, __in LPCWSTR sW_2, __in SIZE_T nLen)
+{
+  WCHAR chW_1, chW_2;
+
+  while (nLen > 0)
+  {
+    chW_1 = sW_1[0];
+    chW_2 = sW_2[0];
+    if (chW_1 >= L'a' && chW_1 <= L'z')
+      chW_1 -= (L'a' - L'A');
+    if (chW_2 >= L'a' && chW_2 <= L'z')
+      chW_2 -= (L'a' - L'A');
+    if (chW_1 != chW_2)
+      return FALSE;
+    sW_1++;
+    sW_2++;
+    nLen--;
+  }
+  return TRUE;
 }
 
 static DWORD ToNumberA(__in LPCSTR sA)
@@ -748,8 +756,8 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
           return NULL;
         //check if it is the dll we are looking for
         if (sNamespaceEntry.dwNameLength == dwDllToFindLenInBytes &&
-            CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset)),
-                                       szDllToFindW, (SIZE_T)dwDllToFindLen) != FALSE)
+            RemoteStrNICmpW(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset)), szDllToFindW,
+                            (SIZE_T)dwDllToFindLen) != FALSE)
         {
           sDefHostEntry.dwLengthRealName = 0xFFFFFFFFUL;
           //scan host entries
@@ -768,8 +776,8 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
             {
               //check for importing dll name match
               lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffsetRealName);
-              if (CompareUnicodeStringCommon(hProcess, (LPCWSTR)lpPtr, usImportingDll.us.Buffer,
-                                             (SIZE_T)(usImportingDll.us.Length) / sizeof(WCHAR)) != FALSE)
+              if (RemoteStrNICmpW(hProcess, (LPCWSTR)lpPtr, usImportingDll.us.Buffer,
+                                  (SIZE_T)(usImportingDll.us.Length) / sizeof(WCHAR)) != FALSE)
               {
 gotIt_V2:       //retrieve dll name
                 lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
@@ -815,11 +823,11 @@ gotIt_V2:       //retrieve dll name
           return NULL;
         //check if it is the dll we are looking for
         if ((sNamespaceEntry.dwNameLength1 == dwDllToFindLenInBytes &&
-             CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset1)),
-                                        szDllToFindW, (SIZE_T)dwDllToFindLen) != FALSE) ||
+             RemoteStrNICmpW(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset1)),
+                             szDllToFindW, (SIZE_T)dwDllToFindLen) != FALSE) ||
             (sNamespaceEntry.dwNameLength2 == dwDllToFindLenInBytes &&
-             CompareUnicodeStringCommon(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset2)),
-                                        szDllToFindW, (SIZE_T)dwDllToFindLen) != FALSE))
+             RemoteStrNICmpW(hProcess, (LPCWSTR)(lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwNameOffset2)),
+                             szDllToFindW, (SIZE_T)dwDllToFindLen) != FALSE))
         {
           sDefHostEntry.dwLengthRealName = 0xFFFFFFFFUL;
           //scan host entries
@@ -838,8 +846,8 @@ gotIt_V2:       //retrieve dll name
             {
               //check for importing dll name match
               lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffsetRealName);
-              if (CompareUnicodeStringCommon(hProcess, (LPCWSTR)lpPtr, usImportingDll.us.Buffer,
-                                             (SIZE_T)(usImportingDll.us.Length) / sizeof(WCHAR)) != FALSE)
+              if (RemoteStrNICmpW(hProcess, (LPCWSTR)lpPtr, usImportingDll.us.Buffer,
+                                  (SIZE_T)(usImportingDll.us.Length) / sizeof(WCHAR)) != FALSE)
               {
 gotIt_V4:       //retrieve dll name
                 lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
