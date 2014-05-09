@@ -244,7 +244,8 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
               continue; //a forwarded function => ignore
             //create new stub
             lpDefs[k].nOffset = nDestSize;
-            nCodeSize = GenerateNtSysCall((LPBYTE)lpCode+nDestSize, lpFileFuncAddr, nPlatformBits);
+            nCodeSize = GenerateNtSysCall((lpCode != NULL) ? (LPBYTE)lpCode+nDestSize : NULL, lpFileFuncAddr,
+                                          nPlatformBits);
             if (nCodeSize == 0)
             {
               nNtStatus = STATUS_UNSUCCESSFUL;
