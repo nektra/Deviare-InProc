@@ -252,9 +252,6 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
 static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                            __out LPBYTE lpDest)
 {
-#if defined _M_X64
-  ULONGLONG ullTemp;
-#endif //_M_X64
   ULONG ulTemp;
   SIZE_T k;
 
@@ -311,18 +308,37 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
           if (lpSrc[0] == 0xFF && lpSrc[1] == 0x15)
           {
             //convert "indirect 32-bit CALL" (CALL [mofs32]) [FF 15 xxyyzzww] into...
-            //..."another 32-bit CALL" (CALL [2] / JMP $+8) [FF 15 02000000 xxyyzzwwxxyyzzww / EB 08]
-            lpDest[0] = 0xFF; //CALL
-            lpDest[1] = 0x15;
-            lpDest[2] = 0x02;
-            lpDest[3] = lpDest[4] = lpDest[5] = 0x00;
-            lpDest[6] = 0xEB; //JMP $+8
-            lpDest[7] = 0x08;
             ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+2));
+pj_setupfarcall_x64:
             k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
-            ullTemp = *((ULONGLONG NKT_UNALIGNED*)((LPBYTE)k));
-            *((ULONGLONG NKT_UNALIGNED*)(lpDest+8)) = ullTemp;
-            return 16;
+            //... MOV DWORD PTR [RSP-8], LODWORD(nDest)
+            lpDest[0] = 0xC7;  lpDest[1] = 0x44;
+            lpDest[2] = 0x24;  lpDest[3] = 0xF8;
+            *((ULONG NKT_UNALIGNED*)(lpDest+4)) = (ULONG)k;
+            //... MOV DWORD PTR [RSP-4], HIDWORD(nDest)
+            lpDest[8] = 0xC7;  lpDest[9] = 0x44;
+            lpDest[10] = 0x24;  lpDest[11] = 0xFC;
+            *((ULONG NKT_UNALIGNED*)(lpDest+12)) = (ULONG)(k >> 32);
+            //... CALL QWORD PTR [RSP-8]
+            lpDest[16] = 0xC7;  lpDest[17] = 0x44;
+            lpDest[18] = 0x24;  lpDest[19] = 0xF8;
+            return 20;
+          }
+          break;
+      }
+#endif //_M_X64
+      break;
+
+    case 7:
+#if defined _M_X64
+      switch (nPlatform)
+      {
+        case NKTHOOKLIB_ProcessPlatformX64:
+          if (lpSrc[0] == 0x48 && lpSrc[1] == 0xFF && lpSrc[1] == 0x15)
+          {
+            //convert "indirect 64-bit CALL" (CALL [mofs64]) [48 FF 15 xxyyzzww] into...
+            ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+3));
+            goto pj_setupfarcall_x64;
           }
           break;
       }
@@ -1384,7 +1400,6 @@ static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SI
 static SIZE_T ProcessJUMPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                            __in HANDLE hProc, __out LPBYTE lpDest)
 {
-  BYTE aTempBuf[16];
   LONG nOfs32;
   SIZE_T nDest;
 
@@ -1430,25 +1445,46 @@ pj_setupfarjump:
     case 6:
       if (lpSrc[0]==0xFF && lpSrc[1]==0x25)
       {
-        nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+2));
         switch (nPlatform)
         {
           case NKTHOOKLIB_ProcessPlatformX86:
-            if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, (LPVOID)nOfs32, sizeof(ULONG)) == sizeof(ULONG))
-            {
-              nDest = (SIZE_T)*((ULONG NKT_UNALIGNED*)(aTempBuf));
-              goto pj_setupfarjump;
-            }
-            break;
+            nDest = (SIZE_T)(*((ULONG NKT_UNALIGNED*)(lpSrc+2)));
+pj_setupfarjump2_x86:
+            //convert JMP DWORD PTR [nOfs32] into...
+            //... PUSH EAX
+            lpDest[0] = 0x50;
+            //... MOV EAX, nDest
+            lpDest[1] = 0xB8;
+            *((ULONG NKT_UNALIGNED*)(lpDest+2)) = (ULONG)nDest;
+            //... PUSH DWORD PTR [EAX]
+            lpDest[6] = 0xFF;  lpDest[7] = 0x30;
+            //... MOV EAX, DWORD PTR [ESP+4]
+            lpDest[8] = 0x8B;  lpDest[9] = 0x44;
+            lpDest[10] = 0x24;  lpDest[11] = 0x04;
+            //... RET 4h
+            lpDest[12] = 0xC2;  lpDest[13] = 0x04;  lpDest[14] = 0x00;
+            return 15;
 
 #if defined _M_X64
           case NKTHOOKLIB_ProcessPlatformX64:
-            if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, lpSrc+6+(LONGLONG)nOfs32, sizeof(ULONGLONG)) == sizeof(ULONGLONG))
-            {
-              nDest = (SIZE_T)*((ULONGLONG NKT_UNALIGNED*)(aTempBuf));
-              goto pj_setupfarjump;
-            }
-            break;
+            nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+2));
+            nDest = (SIZE_T)(nNextSrcIP+(LONGLONG)nOfs32);
+pj_setupfarjump2_x64:
+            //convert JMP QWORD PTR [nOfs32] into...
+            //... PUSH RAX
+            lpDest[0] = 0x50;
+            //... MOV RAX, nDest
+            lpDest[1] = 0x48;  lpDest[2] = 0xB8;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)nDest;
+            //... PUSH QWORD PTR [RAX]
+            lpDest[11] = 0xFF;  lpDest[12] = 0x30;
+            //... MOV RAX, QWORD PTR [RSP+8]
+            lpDest[13] = 0x48;  lpDest[14] = 0x8B;
+            lpDest[15] = 0x44;  lpDest[16] = 0x24;
+            lpDest[17] = 0x08;
+            //... RET 8h
+            lpDest[18] = 0xC2;  lpDest[19] = 0x08;  lpDest[20] = 0x00;
+            return 21;
 #endif //_M_X64
         }
       }
@@ -1457,25 +1493,17 @@ pj_setupfarjump:
     case 7:
       if (lpSrc[0]==0x48 && lpSrc[1]==0xFF && lpSrc[2]==0x25)
       {
-        nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+3));
         switch (nPlatform)
         {
           case NKTHOOKLIB_ProcessPlatformX86:
-            if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, (LPVOID)nOfs32, sizeof(ULONG)) == sizeof(ULONG))
-            {
-              nDest = (SIZE_T)*((ULONG NKT_UNALIGNED*)(aTempBuf));
-              goto pj_setupfarjump;
-            }
-            break;
+            nDest = (SIZE_T)(*((ULONG NKT_UNALIGNED*)(lpSrc+3)));
+            goto pj_setupfarjump2_x86;
 
 #if defined _M_X64
           case NKTHOOKLIB_ProcessPlatformX64:
-            if (NktHookLibHelpers::ReadMem(hProc, aTempBuf, lpSrc+7+(LONGLONG)nOfs32, sizeof(ULONGLONG)) == sizeof(ULONGLONG))
-            {
-              nDest = (SIZE_T)*((ULONGLONG NKT_UNALIGNED*)(aTempBuf));
-              goto pj_setupfarjump;
-            }
-            break;
+            nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+3));
+            nDest = (SIZE_T)(nNextSrcIP+(LONGLONG)nOfs32);
+            goto pj_setupfarjump2_x64;
 #endif //_M_X64
         }
       }
