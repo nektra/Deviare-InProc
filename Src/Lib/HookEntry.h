@@ -39,6 +39,7 @@ namespace NktHookLib {
 
 //-----------------------------------------------------------
 
+#define HOOKENG_MAX_ORIGINAL_STUB_SIZE                    64
 #define HOOKENG_MAX_STUB_SIZE                             64
 #define HOOKENG_JUMP_TO_HOOK_SIZE                          5
 
@@ -65,7 +66,7 @@ private:
   LPBYTE lpCall2Orig;
   LPBYTE lpInjCodeAndData;
   SIZE_T nInjCodeAndDataSize;
-  BYTE aOriginalStub[HOOKENG_MAX_STUB_SIZE], aNewStub[HOOKENG_MAX_STUB_SIZE];
+  BYTE aOriginalStub[HOOKENG_MAX_ORIGINAL_STUB_SIZE], aNewStub[HOOKENG_MAX_STUB_SIZE];
   BYTE aJumpStub[5];
   SIZE_T nOriginalStubSize, nNewStubSize;
   SIZE_T nInstalledCode;

@@ -160,9 +160,9 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
       return ERROR_NOT_SUPPORTED;
   }
   //---
-  NktHookLibHelpers::MemSet(aOriginalStub, 0, HOOKENG_MAX_STUB_SIZE);
+  NktHookLibHelpers::MemSet(aOriginalStub, 0, HOOKENG_MAX_ORIGINAL_STUB_SIZE);
   NktHookLibHelpers::MemSet(aNewStub, 0, HOOKENG_MAX_STUB_SIZE);
-  for (k=HOOKENG_MAX_STUB_SIZE; k>0; k--)
+  for (k=HOOKENG_MAX_ORIGINAL_STUB_SIZE; k>0; k--)
   {
     if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aOriginalStub, lpOrigProc, k) == k)
       break;
@@ -175,7 +175,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
   {
     lpSrc = aOriginalStub + nOriginalStubSize;
     lpDest = aNewStub + nNewStubSize;
-    nSrcInstrLen = NktHookLibHelpers::GetInstructionLength(lpSrc, HOOKENG_MAX_STUB_SIZE-nOriginalStubSize,
+    nSrcInstrLen = NktHookLibHelpers::GetInstructionLength(lpSrc, HOOKENG_MAX_ORIGINAL_STUB_SIZE-nOriginalStubSize,
                                         sizeof(SIZE_T)<<3, &bIsMemOp, (bOutputDebug != FALSE) ? szBufA : NULL,
                                         (bOutputDebug != FALSE) ? (sizeof(szBufA)/sizeof(szBufA[0])) : 0);
     if (nSrcInstrLen == 0)
@@ -320,7 +320,7 @@ pj_setupfarcall_x64:
             lpDest[10] = 0x24;  lpDest[11] = 0xFC;
             *((ULONG NKT_UNALIGNED*)(lpDest+12)) = (ULONG)(k >> 32);
             //... CALL QWORD PTR [RSP-8]
-            lpDest[16] = 0xC7;  lpDest[17] = 0x44;
+            lpDest[16] = 0xFF;  lpDest[17] = 0x54;
             lpDest[18] = 0x24;  lpDest[19] = 0xF8;
             return 20;
           }

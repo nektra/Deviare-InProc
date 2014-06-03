@@ -301,7 +301,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       nCurrSize++;
       break;
     }
-    if (lpFileFuncAddr[nCurrSize] == 0xE9)
+    if (lpFileFuncAddr[nCurrSize] == 0xE8)
     {
       //near call found, calculate size too
       lpSrc = lpFileFuncAddr+nCurrSize+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+nCurrSize+1));
@@ -354,7 +354,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
         i++;
         break;
       }
-      if (lpFileFuncAddr[i] == 0xE9)
+      if (lpFileFuncAddr[i] == 0xE8)
       {
         //near call found, relocate
         lpStub[i] = 0xE9;
