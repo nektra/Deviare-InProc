@@ -357,7 +357,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       if (lpFileFuncAddr[i] == 0xE8)
       {
         //near call found, relocate
-        lpStub[i] = 0xE9;
+        lpStub[i] = 0xE8;
         *((ULONG NKT_UNALIGNED*)(lpStub+i+1)) = (ULONG)(nCurrSize+nExtraSize - (i+5));
         lpSrc = lpFileFuncAddr+i+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+i+1));
         i += 5;
