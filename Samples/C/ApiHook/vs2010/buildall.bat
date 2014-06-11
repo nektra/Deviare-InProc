@@ -1,14 +1,14 @@
 @ECHO OFF
 SETLOCAL
 IF NOT "%VCINSTALLDIR%" == "" GOTO do_process
-IF "%VS110COMNTOOLS%" == "" (
-  ECHO Please ensure Visual Studio 2012 is installed
+IF "%VS100COMNTOOLS%" == "" (
+  ECHO Please ensure Visual Studio 2010 is installed
   PAUSE
   GOTO end
 )
 
 SETLOCAL
-CALL "%VS110COMNTOOLS%\vsvars32.bat" >NUL 2>NUL
+CALL "%VS100COMNTOOLS%\vsvars32.bat" >NUL 2>NUL
 ENDLOCAL & SET __VCINSTALLDIR=%VCINSTALLDIR%
 
 :do_process

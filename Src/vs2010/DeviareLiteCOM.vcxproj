@@ -26,25 +26,25 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110_xp</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110_xp</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110_xp</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v110_xp</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -68,26 +68,26 @@
     <_ProjectFileVersion>11.0.60610.1</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\..\bin\2012\</OutDir>
+    <OutDir>..\..\bin\2010\</OutDir>
     <IntDir>obj\Debug\x86\Com\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\..\bin\2012\</OutDir>
+    <OutDir>..\..\bin\2010\</OutDir>
     <IntDir>obj\Debug\x64\Com\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\bin\2012\</OutDir>
+    <OutDir>..\..\bin\2010\</OutDir>
     <IntDir>obj\Debug\x86\Com\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\..\bin\2012\</OutDir>
+    <OutDir>..\..\bin\2010\</OutDir>
     <IntDir>obj\Debug\x64\Com\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
@@ -109,7 +109,6 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -145,7 +144,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -181,7 +179,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -190,7 +187,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
     </ResourceCompile>
     <Link>
       <ModuleDefinitionFile>..\Com\DeviareLiteCOM.def</ModuleDefinitionFile>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -217,7 +213,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -231,7 +226,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX64</TargetMachine>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest and signing executable...</Message>
@@ -305,22 +299,22 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_i64_vs2012.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\dlldata64_vs2012.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_i64_vs2012.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_p64_vs2012.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_i64_vs2012.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\dlldata64_vs2012.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_i64_vs2012.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_p64_vs2012.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_i_vs2012.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\dlldata_vs2012.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_i_vs2012.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_p_vs2012.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_i_vs2012.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\dlldata_vs2012.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_i_vs2012.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_p_vs2012.c</ProxyFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_i64_vs2010.h</HeaderFileName>
+      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\dlldata64_vs2010.c</DllDataFileName>
+      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_i64_vs2010.c</InterfaceIdentifierFileName>
+      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\Com\DeviareLiteCOM_p64_vs2010.c</ProxyFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_i64_vs2010.h</HeaderFileName>
+      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\dlldata64_vs2010.c</DllDataFileName>
+      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_i64_vs2010.c</InterfaceIdentifierFileName>
+      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Com\DeviareLiteCOM_p64_vs2010.c</ProxyFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_i_vs2010.h</HeaderFileName>
+      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\dlldata_vs2010.c</DllDataFileName>
+      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_i_vs2010.c</InterfaceIdentifierFileName>
+      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Com\DeviareLiteCOM_p_vs2010.c</ProxyFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_i_vs2010.h</HeaderFileName>
+      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\dlldata_vs2010.c</DllDataFileName>
+      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_i_vs2010.c</InterfaceIdentifierFileName>
+      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\Com\DeviareLiteCOM_p_vs2010.c</ProxyFileName>
     </Midl>
   </ItemGroup>
   <ItemGroup>
