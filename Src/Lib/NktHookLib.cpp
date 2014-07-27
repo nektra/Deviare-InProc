@@ -152,9 +152,9 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
   {
     NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
     NktHookLib::CProcessesHandles::CEntryPtr cProcEntry;
-    NktHookLib::CHookEntry *lpHookEntry, **lpNewEntriesList;
-    BYTE aNewCode[0x80 + HOOKENG_MAX_STUB_SIZE];
-    SIZE_T nSize, nHookIdx;
+    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry> cNewHooksList;
+    NktHookLib::CHookEntry *lpHookEntry, *lpFirstHookEntryInRound;
+    SIZE_T nSize, nHookIdx, nThisRound, k;
     LPBYTE lpPtr;
     DWORD dw;
     NTSTATUS nNtStatus;
@@ -173,292 +173,307 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     cProcEntry.Attach(int_data->cProcHdrMgr.Get(dwPid));
     if (cProcEntry == NULL)
       return ERROR_ACCESS_DENIED;
-    //create entries for each item
-    lpNewEntriesList = (NktHookLib::CHookEntry**)NktHookLibHelpers::MemAlloc(nCount*sizeof(NktHookLib::CHookEntry*));
-    if (lpNewEntriesList != NULL)
+    //process items
+    if (nHookIdx >= nCount)
     {
+      nHookIdx = 0;
       dwOsErr = NO_ERROR;
-      NktHookLibHelpers::MemSet(lpNewEntriesList, 0, nCount * sizeof(NktHookLib::CHookEntry*));
+      while (nHookIdx<nCount && dwOsErr==NO_ERROR)
+      {
+        BYTE aNewCode[0x80 + HOOKENG_MAX_STUB_SIZE];
+
+        //count items for this round stopping when we find a proc to hook in conflict (two or more hooks on the
+        //same address)
+        nThisRound = 1;
+        while (nHookIdx+nThisRound<nCount &&
+               aHookInfo[nHookIdx+nThisRound].lpProcToHook!=aHookInfo[nHookIdx].lpProcToHook)
+          nThisRound++;
+        //process
+        lpFirstHookEntryInRound = NULL;
+        for (k=0; k<nThisRound; k++)
+        {
+          //create new entries
+          lpHookEntry = new NktHookLib::CHookEntry(cProcEntry);
+          if (lpHookEntry == NULL)
+          {
+            dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
+            break;
+          }
+          if (lpFirstHookEntryInRound == NULL)
+            lpFirstHookEntryInRound = lpHookEntry;
+          //add to the new hooks list
+          cNewHooksList.PushTail(lpHookEntry);
+          //calculate real proc to hook
+          lpHookEntry->lpOrigProc = (LPBYTE)(aHookInfo[nHookIdx+k].lpProcToHook);
+          if ((dwFlags & NKTHOOKLIB_DontSkipInitialJumps) == 0)
+          {
+            lpHookEntry->lpOrigProc = lpHookEntry->SkipJumpInstructions(lpHookEntry->lpOrigProc);
+            if (lpHookEntry->lpOrigProc == NULL)
+            {
+              dwOsErr = ERROR_ACCESS_DENIED;
+              break;
+            }
+          }
+          lpHookEntry->lpNewProc = (LPBYTE)(aHookInfo[nHookIdx+k].lpNewProcAddr);
+          //read original stub and create new one
+          dwOsErr = lpHookEntry->CreateStub(int_data->sOptions.bOutputDebug,
+                                            ((dwFlags & NKTHOOKLIB_DontSkipAnyJumps) == 0) ? TRUE : FALSE);
+          if (dwOsErr != NO_ERROR)
+            break;
+          //calculate inject code size and offset to data
+          switch (cProcEntry->GetPlatform())
+          {
+            case NKTHOOKLIB_ProcessPlatformX86:
+              lpHookEntry->nInjCodeAndDataSize = 0x2A + lpHookEntry->nNewStubSize;
+              break;
+#if defined _M_X64
+            case NKTHOOKLIB_ProcessPlatformX64:
+              lpHookEntry->nInjCodeAndDataSize = 0x41 + lpHookEntry->nNewStubSize;
+              break;
+#endif //_M_X64
+          }
+          //allocate memory for inject code in target process
+          NKT_ASSERT(lpHookEntry->nInjCodeAndDataSize < NKTHOOKLIB_PROCESS_MEMBLOCK_SIZE);
+          lpHookEntry->lpInjCodeAndData = cProcEntry->AllocateStub(lpHookEntry->lpOrigProc);
+          if (lpHookEntry->lpInjCodeAndData == NULL)
+          {
+            dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
+            break;
+          }
+          //setup code
+          switch (cProcEntry->GetPlatform())
+          {
+            case NKTHOOKLIB_ProcessPlatformX86:
+              NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                        //flags location
+              NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                   //NOPs for hotpatching double hooks
+              aNewCode[0x10] = 0x50;                                               //push  eax
+              aNewCode[0x11] = 0xB8;                                               //mov   eax, ADDR lpInjCode
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x12)) = (ULONG)(lpHookEntry->lpInjCodeAndData);
+              aNewCode[0x16] = 0xF7;                                               //test  dword ptr [eax], 00000101h
+              aNewCode[0x17] = 0x00;
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x18)) = 0x00000101;
+              aNewCode[0x1C] = 0x75;                                               //jne   @@1 ;if disabled/uninst
+              aNewCode[0x1D] = 0x06;
+              aNewCode[0x1E] = 0x58;                                               //pop   eax
+              aNewCode[0x1F] = 0xE9;                                               //jmp   hooked proc
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x20)) = (ULONG)(lpHookEntry->lpNewProc) -
+                                                         (ULONG)(lpHookEntry->lpInjCodeAndData) - 0x24;
+              aNewCode[0x24] = 0x58;                                               //@@1: pop   eax
+              lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + 0x25;
+              NktHookLibHelpers::MemCopy(aNewCode+0x25, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
+              aNewCode[0x25+lpHookEntry->nNewStubSize] = 0xE9;                     //jmp original proc after stub
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x26+lpHookEntry->nNewStubSize)) =
+                       (ULONG)(lpHookEntry->lpOrigProc) + (ULONG)(lpHookEntry->nOriginalStubSize) -
+                       (ULONG)(lpHookEntry->lpInjCodeAndData+0x2A+lpHookEntry->nNewStubSize);
+              break;
+
+#if defined _M_X64
+            case NKTHOOKLIB_ProcessPlatformX64:
+              NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                        //flags location
+              NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                   //NOPs for hotpatching double hooks
+              aNewCode[0x10] = 0x50;                                               //push  rax
+              aNewCode[0x11] = 0x48;                                               //mov   rax, ADDR lpInjCode
+              aNewCode[0x12] = 0xB8;
+              *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x13)) = (ULONGLONG)(lpHookEntry->lpInjCodeAndData);
+              aNewCode[0x1B] = 0xF7;                                               //test  dword ptr [rax], 00000101h
+              aNewCode[0x1C] = 0x00;
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x1D)) = 0x00000101;
+              aNewCode[0x21] = 0x75;                                               //jne   @@1 ;if disabled/uninst
+              aNewCode[0x22] = 0x0F;
+              aNewCode[0x23] = 0x58;                                               //pop   rax
+              aNewCode[0x24] = 0xFF;                                               //jmp   hooked proc
+              aNewCode[0x25] = 0x25;
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x26)) = 0;
+              *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x2A)) = (ULONGLONG)(lpHookEntry->lpNewProc);
+              aNewCode[0x32] = 0x58;                                               //@@1: pop   rax
+              lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData+0x33;
+              NktHookLibHelpers::MemCopy(aNewCode+0x33, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
+              aNewCode[0x33+lpHookEntry->nNewStubSize] = 0xFF;                     //jmp original proc after stub
+              aNewCode[0x34+lpHookEntry->nNewStubSize] = 0x25;
+              *((ULONG NKT_UNALIGNED*)(aNewCode+0x35+lpHookEntry->nNewStubSize)) = 0;
+              *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x39+lpHookEntry->nNewStubSize)) =
+                           (ULONGLONG)(lpHookEntry->lpOrigProc + lpHookEntry->nOriginalStubSize);
+              break;
+#endif //_M_X64
+          }
+          if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData, aNewCode,
+                                          lpHookEntry->nInjCodeAndDataSize) == FALSE)
+          {
+            dwOsErr = ERROR_ACCESS_DENIED;
+            break;
+          }
+          //replace original proc with a jump
+          dw = (DWORD)(lpHookEntry->lpInjCodeAndData+8) - (DWORD)(lpHookEntry->lpOrigProc) - 5;
+          lpHookEntry->aJumpStub[0] = 0xE9; //JMP
+          lpHookEntry->aJumpStub[1] = (BYTE)( dw        & 0xFF);
+          lpHookEntry->aJumpStub[2] = (BYTE)((dw >>  8) & 0xFF);
+          lpHookEntry->aJumpStub[3] = (BYTE)((dw >> 16) & 0xFF);
+          lpHookEntry->aJumpStub[4] = (BYTE)((dw >> 24) & 0xFF);
+          //set id
+#if defined _M_IX86
+          lpHookEntry->nId = (SIZE_T)lpHookEntry ^ 0x34B68363UL; //odd number to avoid result of zero
+#elif defined _M_X64
+          lpHookEntry->nId = (SIZE_T)lpHookEntry ^ 0x34B68364A3CE19F3ui64; //odd number to avoid result of zero
+#endif
+          //done
+          aHookInfo[nHookIdx+k].nHookId = lpHookEntry->nId;
+          aHookInfo[nHookIdx+k].lpCallOriginal = lpHookEntry->lpCall2Orig;
+        }
+        //do actual hooking
+        if (dwOsErr == NO_ERROR)
+        {
+          NktHookLib::CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
+          NktHookLib::CNktThreadSuspend::IP_RANGE sIpRanges[MAX_SUSPEND_IPRANGES];
+          MEMORY_BASIC_INFORMATION sMbi;
+          DWORD dwNewProt, dwOldProt;
+          BOOL bThreadsSuspended;
+
+          bThreadsSuspended = FALSE;
+          for (lpHookEntry=lpFirstHookEntryInRound,k=0; k<nThisRound; k++,lpHookEntry=lpHookEntry->GetNextEntry())
+          {
+            //suspend threads if not done yet taking into account until 'MAX_SUSPEND_IPRANGES' ahead items
+            if (bThreadsSuspended == FALSE && int_data->sOptions.bSuspendThreads != FALSE)
+            {
+              NktHookLib::CHookEntry *lpHookEntry2;
+              SIZE_T i;
+
+              for (i=0,lpHookEntry2=lpHookEntry; i<nThisRound && i<MAX_SUSPEND_IPRANGES;
+                   i++,lpHookEntry2=lpHookEntry2->GetNextEntry())
+              {
+                sIpRanges[i].nStart = (SIZE_T)(lpHookEntry2->lpOrigProc);
+                sIpRanges[i].nEnd = sIpRanges[i].nStart + HOOKENG_JUMP_TO_HOOK_SIZE;
+              }
+              dwOsErr = int_data->cThreadSuspender.SuspendAll(cProcEntry->GetPid(), sIpRanges, i);
+              if (dwOsErr != NO_ERROR)
+                break;
+              bThreadsSuspended = TRUE;
+            }
+            //do actual hooking
+            nSize = 0;
+            lpPtr = lpHookEntry->lpOrigProc;
+            NktHookLibHelpers::MemSet(&sMbi, 0, sizeof(sMbi));
+            nNtStatus = NktHookLib::NktNtQueryVirtualMemory(cProcEntry->GetHandle(), lpPtr, MyMemoryBasicInformation,
+                                                            &sMbi, sizeof(sMbi), &nSize);
+            dwNewProt = PAGE_EXECUTE_WRITECOPY;
+            if (NT_SUCCESS(nNtStatus))
+            {
+              switch (sMbi.Protect & 0xFF)
+              {
+                case PAGE_NOACCESS:
+                case PAGE_READONLY:
+                case PAGE_READWRITE:
+                  dwNewProt = PAGE_READWRITE;
+                  break;
+                case PAGE_WRITECOPY:
+                  dwNewProt = PAGE_WRITECOPY;
+                  break;
+                case PAGE_EXECUTE:
+                case PAGE_EXECUTE_READ:
+                case PAGE_EXECUTE_READWRITE:
+                  dwNewProt = PAGE_EXECUTE_READWRITE;
+                  break;
+              }
+            }
+            //change protection if needed
+            if (dwNewProt != (sMbi.Protect & 0xFF))
+            {
+              dwOldProt = 0;
+              nSize = HOOKENG_JUMP_TO_HOOK_SIZE;
+              nNtStatus = NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&lpPtr, &nSize,
+                                                               dwNewProt, &dwOldProt);
+              if (!NT_SUCCESS(nNtStatus))
+              {
+                dwOsErr = NktHookLib::NktRtlNtStatusToDosError(nNtStatus);
+                if (dwOsErr == 0)
+                  dwOsErr = ERROR_NOT_SUPPORTED;
+                break;
+              }
+            }
+            //replace entry point
+            if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
+                                            lpHookEntry->aJumpStub, HOOKENG_JUMP_TO_HOOK_SIZE) == FALSE)
+              dwOsErr = ERROR_ACCESS_DENIED;
+            //restore protection
+            if (dwNewProt != (sMbi.Protect & 0xFF))
+            {
+              lpPtr = lpHookEntry->lpOrigProc;
+              nSize = HOOKENG_JUMP_TO_HOOK_SIZE;
+              NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&lpPtr, &nSize, dwOldProt, &dw);
+            }
+            //check write operation result
+            if (dwOsErr != NO_ERROR)
+              break;
+            //flush instruction cache
+            NktHookLib::NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
+            //mark as installed
+            lpHookEntry->nInstalledCode = 1;
+            //check if next item to hook is outside any suspended thread range
+            if (int_data->sOptions.bSuspendThreads != FALSE && k+1 < nThisRound)
+            {
+              NktHookLib::CHookEntry *lpHookEntry2 = lpHookEntry->GetNextEntry();
+              SIZE_T nAddr;
+
+              nAddr = (SIZE_T)(lpHookEntry2->lpOrigProc);
+              if (int_data->cThreadSuspender.CheckIfThreadIsInRange(nAddr, nAddr+HOOKENG_JUMP_TO_HOOK_SIZE) != FALSE)
+              {
+                //resume threads
+                int_data->cThreadSuspender.ResumeAll();
+                bThreadsSuspended = FALSE;
+              }
+            }
+          }
+        }
+        //advance count
+        if (dwOsErr == NO_ERROR)
+          nHookIdx += nThisRound;
+      }
     }
     else
     {
       dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
     }
-    for (nHookIdx=0; nHookIdx<nCount && dwOsErr==NO_ERROR; nHookIdx++)
-    {
-      //allocate new entry
-      lpHookEntry = new NktHookLib::CHookEntry(cProcEntry);
-      if (lpHookEntry == NULL)
-      {
-        dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
-        continue;
-      }
-      lpNewEntriesList[nHookIdx] = lpHookEntry;
-      lpHookEntry->lpOrigProc = (LPBYTE)(aHookInfo[nHookIdx].lpProcToHook);
-      if ((dwFlags & NKTHOOKLIB_DontSkipInitialJumps) == 0)
-      {
-        lpHookEntry->lpOrigProc = lpHookEntry->SkipJumpInstructions(lpHookEntry->lpOrigProc);
-        if (lpHookEntry->lpOrigProc == NULL)
-        {
-          dwOsErr = ERROR_ACCESS_DENIED;
-          continue;
-        }
-      }
-      lpHookEntry->lpNewProc = (LPBYTE)(aHookInfo[nHookIdx].lpNewProcAddr);
-      //read original stub and create new one
-      dwOsErr = lpHookEntry->CreateStub(int_data->sOptions.bOutputDebug,
-                                        ((dwFlags & NKTHOOKLIB_DontSkipAnyJumps) == 0) ? TRUE : FALSE);
-      if (dwOsErr != NO_ERROR)
-        continue;
-      //calculate inject code size and offset to data
-      switch (cProcEntry->GetPlatform())
-      {
-        case NKTHOOKLIB_ProcessPlatformX86:
-          lpHookEntry->nInjCodeAndDataSize = 0x2A + lpHookEntry->nNewStubSize;
-          break;
-#if defined _M_X64
-        case NKTHOOKLIB_ProcessPlatformX64:
-          lpHookEntry->nInjCodeAndDataSize = 0x41 + lpHookEntry->nNewStubSize;
-          break;
-#endif //_M_X64
-      }
-      //allocate memory for inject code in target process
-      NKT_ASSERT(lpHookEntry->nInjCodeAndDataSize < NKTHOOKLIB_PROCESS_MEMBLOCK_SIZE);
-      lpHookEntry->lpInjCodeAndData = cProcEntry->AllocateStub(lpHookEntry->lpOrigProc);
-      if (lpHookEntry->lpInjCodeAndData == NULL)
-      {
-        dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
-        continue;
-      }
-      //setup code
-      switch (cProcEntry->GetPlatform())
-      {
-        case NKTHOOKLIB_ProcessPlatformX86:
-          NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                            //flags location
-          NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                       //NOPs for hotpatching double hooks
-          aNewCode[0x10] = 0x50;                                                   //push  eax
-          aNewCode[0x11] = 0xB8;                                                   //mov   eax, ADDR lpInjCode
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x12)) = (ULONG)(lpHookEntry->lpInjCodeAndData);
-          aNewCode[0x16] = 0xF7;                                                   //test  dword ptr [eax], 00000101h
-          aNewCode[0x17] = 0x00;
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x18)) = 0x00000101;
-          aNewCode[0x1C] = 0x75;                                                   //jne   @@1 ;if disabled/uninst
-          aNewCode[0x1D] = 0x06;
-          aNewCode[0x1E] = 0x58;                                                   //pop   eax
-          aNewCode[0x1F] = 0xE9;                                                   //jmp   hooked proc
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x20)) = (ULONG)(lpHookEntry->lpNewProc) -
-                                                     (ULONG)(lpHookEntry->lpInjCodeAndData) - 0x24;
-          aNewCode[0x24] = 0x58;                                                   //@@1: pop   eax
-          lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + 0x25;
-          NktHookLibHelpers::MemCopy(aNewCode+0x25, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
-          aNewCode[0x25+lpHookEntry->nNewStubSize] = 0xE9;                         //jmp original proc after stub
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x26+lpHookEntry->nNewStubSize)) =
-                                         (ULONG)(lpHookEntry->lpOrigProc) + (ULONG)(lpHookEntry->nOriginalStubSize) -
-                                         (ULONG)(lpHookEntry->lpInjCodeAndData+0x2A+lpHookEntry->nNewStubSize);
-          break;
-
-#if defined _M_X64
-        case NKTHOOKLIB_ProcessPlatformX64:
-          NktHookLibHelpers::MemSet(aNewCode, 0x00, 8);                            //flags location
-          NktHookLibHelpers::MemSet(aNewCode+0x08, 0x90, 8);                       //NOPs for hotpatching double hooks
-          aNewCode[0x10] = 0x50;                                                   //push  rax
-          aNewCode[0x11] = 0x48;                                                   //mov   rax, ADDR lpInjCode
-          aNewCode[0x12] = 0xB8;
-          *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x13)) = (ULONGLONG)(lpHookEntry->lpInjCodeAndData);
-          aNewCode[0x1B] = 0xF7;                                                   //test  dword ptr [rax], 00000101h
-          aNewCode[0x1C] = 0x00;
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x1D)) = 0x00000101;
-          aNewCode[0x21] = 0x75;                                                   //jne   @@1 ;if disabled/uninst
-          aNewCode[0x22] = 0x0F;
-          aNewCode[0x23] = 0x58;                                                   //pop   rax
-          aNewCode[0x24] = 0xFF;                                                   //jmp   hooked proc
-          aNewCode[0x25] = 0x25;
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x26)) = 0;
-          *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x2A)) = (ULONGLONG)(lpHookEntry->lpNewProc);
-          aNewCode[0x32] = 0x58;                                                   //@@1: pop   rax
-          lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData+0x33;
-          NktHookLibHelpers::MemCopy(aNewCode+0x33, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
-          aNewCode[0x33+lpHookEntry->nNewStubSize] = 0xFF;                         //jmp original proc after stub
-          aNewCode[0x34+lpHookEntry->nNewStubSize] = 0x25;
-          *((ULONG NKT_UNALIGNED*)(aNewCode+0x35+lpHookEntry->nNewStubSize)) = 0;
-          *((ULONGLONG NKT_UNALIGNED*)(aNewCode+0x39+lpHookEntry->nNewStubSize)) =
-                                             (ULONGLONG)(lpHookEntry->lpOrigProc + lpHookEntry->nOriginalStubSize);
-          break;
-#endif //_M_X64
-      }
-      if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData, aNewCode,
-                                      lpHookEntry->nInjCodeAndDataSize) == FALSE)
-      {
-        dwOsErr = ERROR_ACCESS_DENIED;
-        continue;
-      }
-      //replace original proc with a jump
-      dw = (DWORD)(lpHookEntry->lpInjCodeAndData+8) - (DWORD)(lpHookEntry->lpOrigProc) - 5;
-      lpHookEntry->aJumpStub[0] = 0xE9; //JMP
-      lpHookEntry->aJumpStub[1] = (BYTE)( dw        & 0xFF);
-      lpHookEntry->aJumpStub[2] = (BYTE)((dw >>  8) & 0xFF);
-      lpHookEntry->aJumpStub[3] = (BYTE)((dw >> 16) & 0xFF);
-      lpHookEntry->aJumpStub[4] = (BYTE)((dw >> 24) & 0xFF);
-      //set id
-#if defined _M_IX86
-      lpHookEntry->nId = (SIZE_T)lpHookEntry ^ 0x34B68363UL; //odd number to avoid result of zero
-#elif defined _M_X64
-      lpHookEntry->nId = (SIZE_T)lpHookEntry ^ 0x34B68364A3CE19F3ui64; //odd number to avoid result of zero
-#endif
-      //done
-      aHookInfo[nHookIdx].nHookId = lpHookEntry->nId;
-      aHookInfo[nHookIdx].lpCallOriginal = lpHookEntry->lpCall2Orig;
-    }
-    //hook new items
-    if (dwOsErr == NO_ERROR)
-    {
-      NktHookLib::CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
-      NktHookLib::CNktThreadSuspend::IP_RANGE sIpRanges[MAX_SUSPEND_IPRANGES];
-      SIZE_T k, k2, nThisRoundSuspCount;
-      MEMORY_BASIC_INFORMATION sMbi;
-      HOOK_INFO sHooks[64];
-      DWORD dwNewProt, dwOldProt;
-
-      for (nHookIdx=nThisRoundSuspCount=0; nHookIdx<nCount && dwOsErr==NO_ERROR; )
-      {
-        if (nThisRoundSuspCount == 0)
-        {
-          //suspend threads
-          nThisRoundSuspCount = (nCount-nHookIdx > MAX_SUSPEND_IPRANGES) ? MAX_SUSPEND_IPRANGES : (nCount-nHookIdx);
-          for (k=0; k<nThisRoundSuspCount; k++)
-          {
-            sIpRanges[k].nStart = (SIZE_T)(lpNewEntriesList[nHookIdx+k]->lpOrigProc);
-            sIpRanges[k].nEnd = sIpRanges[k].nStart + HOOKENG_JUMP_TO_HOOK_SIZE;
-          }
-          dwOsErr = NO_ERROR;
-          if (int_data->sOptions.bSuspendThreads != FALSE)
-            dwOsErr = int_data->cThreadSuspender.SuspendAll(cProcEntry->GetPid(), sIpRanges, nThisRoundSuspCount);
-          if (dwOsErr != NO_ERROR)
-          {
-err_uninstall_and_destroy:
-            for (nHookIdx=k2=0; nHookIdx<nCount; nHookIdx++)
-            {
-              if (lpNewEntriesList[nHookIdx]->nInstalledCode != 0)
-              {
-                sHooks[k2++].nHookId = lpNewEntriesList[nHookIdx]->nId;
-                if (k2 >= X_ARRAYLEN(sHooks))
-                {
-                  Unhook(sHooks, k2);
-                  k2 = 0;
-                }
-              }
-            }
-            if (k2 > 0)
-              Unhook(sHooks, k2);
-            continue;
-          }
-        }
-        for (k=0; k<nThisRoundSuspCount; k++)
-        {
-          k2 = 0;
-          lpPtr = lpNewEntriesList[nHookIdx+k]->lpOrigProc;
-          NktHookLibHelpers::MemSet(&sMbi, 0, sizeof(sMbi));
-          nNtStatus = NktHookLib::NktNtQueryVirtualMemory(cProcEntry->GetHandle(), lpPtr, MyMemoryBasicInformation,
-                                                         &sMbi, sizeof(sMbi), &k2);
-          dwNewProt = PAGE_EXECUTE_WRITECOPY;
-          if (NT_SUCCESS(nNtStatus))
-          {
-            switch (sMbi.Protect & 0xFF)
-            {
-              case PAGE_NOACCESS:
-              case PAGE_READONLY:
-              case PAGE_READWRITE:
-                dwNewProt = PAGE_READWRITE;
-                break;
-              case PAGE_WRITECOPY:
-                dwNewProt = PAGE_WRITECOPY;
-                break;
-              case PAGE_EXECUTE:
-              case PAGE_EXECUTE_READ:
-              case PAGE_EXECUTE_READWRITE:
-                dwNewProt = PAGE_EXECUTE_READWRITE;
-                break;
-            }
-          }
-          //change protection if needed
-          if (dwNewProt != (sMbi.Protect & 0xFF))
-          {
-            dwOldProt = 0;
-            nSize = HOOKENG_JUMP_TO_HOOK_SIZE;
-            nNtStatus = NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&lpPtr, &nSize,
-                                                             dwNewProt, &dwOldProt);
-            if (!NT_SUCCESS(nNtStatus))
-            {
-              dwOsErr = NktHookLib::NktRtlNtStatusToDosError(nNtStatus);
-              if (dwOsErr == 0)
-                dwOsErr = ERROR_NOT_SUPPORTED;
-              int_data->cThreadSuspender.ResumeAll();
-              goto err_uninstall_and_destroy;
-            }
-          }
-          //replace each entry point
-          k2 = (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpNewEntriesList[nHookIdx+k]->lpOrigProc,
-                                            lpNewEntriesList[nHookIdx+k]->aJumpStub,
-                                            HOOKENG_JUMP_TO_HOOK_SIZE) != FALSE) ? 1 : 0;
-          //restore protection
-          if (dwNewProt != (sMbi.Protect & 0xFF))
-          {
-            lpPtr = lpNewEntriesList[nHookIdx+k]->lpOrigProc;
-            nSize = HOOKENG_JUMP_TO_HOOK_SIZE;
-            NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&lpPtr, &nSize, dwOldProt, &dw);
-          }
-          //check write operation result
-          if (k2 == 0)
-          {
-            dwOsErr = ERROR_ACCESS_DENIED;
-            int_data->cThreadSuspender.ResumeAll();
-            goto err_uninstall_and_destroy;
-          }
-          //flush instruction cache
-          NktHookLib::NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpNewEntriesList[nHookIdx+k]->lpOrigProc, 32);
-          //mark as installed
-          lpNewEntriesList[nHookIdx+k]->nInstalledCode = 1;
-        }
-        //advance count
-        nHookIdx += nThisRoundSuspCount;
-        //check if we can proceed with the next hook with this
-        nThisRoundSuspCount = 0;
-        for (k=nHookIdx; k<nCount; k++)
-        {
-          k2 = (SIZE_T)(lpNewEntriesList[k]->lpOrigProc);
-          if (int_data->cThreadSuspender.CheckIfThreadIsInRange(k2, k2+HOOKENG_JUMP_TO_HOOK_SIZE) == FALSE)
-            break;
-          nThisRoundSuspCount++;
-        }
-        if (nThisRoundSuspCount == 0)
-        {
-          //resume threads
-          int_data->cThreadSuspender.ResumeAll();
-        }
-      }
-    }
     //done... move to the final list or delete on error
     if (dwOsErr == NO_ERROR)
     {
-      for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
+      while ((lpHookEntry = cNewHooksList.PopHead()) != NULL)
       {
-        lpNewEntriesList[nHookIdx]->dwFlags = dwFlags;
+        lpHookEntry->dwFlags = dwFlags;
         if (int_data->sOptions.bOutputDebug != FALSE)
         {
           NktHookLibHelpers::DebugPrint("NktHookLib: Hook installed. Proc @ 0x%IX -> 0x%IX (Stub @ 0x%IX) \r\n",
-                    (SIZE_T)(lpNewEntriesList[nHookIdx]->lpOrigProc), (SIZE_T)(lpNewEntriesList[nHookIdx]->lpNewProc),
-                    (SIZE_T)(lpNewEntriesList[nHookIdx]->lpInjCodeAndData));
+                    (SIZE_T)(lpHookEntry->lpOrigProc), (SIZE_T)(lpHookEntry->lpNewProc),
+                    (SIZE_T)(lpHookEntry->lpInjCodeAndData));
         }
-        int_data->cHooksList.PushTail(lpNewEntriesList[nHookIdx]);
+        int_data->cHooksList.PushTail(lpHookEntry);
       }
     }
     else
     {
-      for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
-        delete lpNewEntriesList[nHookIdx];
+      HOOK_INFO sHooks[64];
+      SIZE_T nCount;
+
+      nCount = 0;
+      while ((lpHookEntry = cNewHooksList.PopHead()) != NULL)
+      {
+        if (lpHookEntry->nInstalledCode == 0)
+        {
+          delete lpHookEntry;
+        }
+        else
+        {
+          //temporary add the hook entry to the final list in order to remove it later
+          int_data->cHooksList.PushTail(lpHookEntry);
+          sHooks[nCount++].nHookId = lpHookEntry->nId;
+          if (nCount >= X_ARRAYLEN(sHooks))
+          {
+            Unhook(sHooks, nCount);
+            nCount = 0;
+          }
+        }
+      }
+      if (nCount > 0)
+        Unhook(sHooks, nCount);
     }
-    if (lpNewEntriesList != NULL)
-      NktHookLibHelpers::MemFree(lpNewEntriesList);
   }
   else
   {

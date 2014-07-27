@@ -153,7 +153,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <OutputFile>$(OutDir)$(ProjectName)64.dll</OutputFile>
       <ModuleDefinitionFile>..\Com\DeviareLiteCOM64.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -225,7 +224,6 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <OutputFile>$(OutDir)$(ProjectName)64.dll</OutputFile>
       <ModuleDefinitionFile>..\Com\DeviareLiteCOM64.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

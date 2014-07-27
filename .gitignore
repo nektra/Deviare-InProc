@@ -5,6 +5,12 @@
 *.exp
 *.user
 *.sdf
+Bin/2008/*.lib
+Bin/2008/*.pdb
+Bin/2010/*.lib
+Bin/2010/*.pdb
+Bin/2012/*.lib
+Bin/2012/*.pdb
 MISC/
 Libs/2008/*.idb
 Libs/2010/*.idb
