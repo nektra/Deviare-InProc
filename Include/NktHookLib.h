@@ -37,6 +37,7 @@
 #define NKTHOOKLIB_DontSkipInitialJumps               0x0001
 #define NKTHOOKLIB_DontRemoveOnUnhook                 0x0002
 #define NKTHOOKLIB_DontSkipAnyJumps                   0x0004
+#define NKTHOOKLIB_SkipNullProcsToHook                0x0008
 
 #define NKTHOOKLIB_ProcessPlatformX86                      1
 #define NKTHOOKLIB_ProcessPlatformX64                      2
