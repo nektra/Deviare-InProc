@@ -59,10 +59,12 @@ static SIZE_T ProcessJUMPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
 
 //-----------------------------------------------------------
 
-CHookEntry::CHookEntry(__in CProcessesHandles::CEntry *lpProcEntry) : TNktLnkLstNode<CHookEntry>(), CNktNtHeapBaseObj()
+CHookEntry::CHookEntry(__in CProcessesHandles::CEntry *lpProcEntry, __in DWORD _dwFlags) : TNktLnkLstNode<CHookEntry>(),
+                                                                                           CNktNtHeapBaseObj()
 {
   ZeroFields();
   cProcEntry = lpProcEntry;
+  dwFlags = _dwFlags;
   return;
 }
 
@@ -120,7 +122,7 @@ LPBYTE CHookEntry::SkipJumpInstructions(__in LPBYTE lpPtr)
           lpPtr = (LPBYTE)*((ULONG NKT_UNALIGNED*)(aTempBuf));
           break;
 
-#if defined _M_X64
+#if defined(_M_X64)
         case NKTHOOKLIB_ProcessPlatformX64:
           if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aTempBuf, lpPtr+(LONGLONG)(nSize+4)+(LONGLONG)nOfs,
                                          sizeof(ULONGLONG)) != sizeof(ULONGLONG))
@@ -141,7 +143,7 @@ LPBYTE CHookEntry::SkipJumpInstructions(__in LPBYTE lpPtr)
   return lpPtr;
 }
 
-DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
+DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
 {
   SIZE_T k, nSrcInstrLen, nDestInstrLen, nNextSrcIP;
   LPBYTE lpSrc, lpDest, s[2];
@@ -152,7 +154,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
   switch (nPlatform = cProcEntry->GetPlatform())
   {
     case NKTHOOKLIB_ProcessPlatformX86:
-#if defined _M_X64
+#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
 #endif //_M_X64
       break;
@@ -171,7 +173,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
     return ERROR_CAN_NOT_COMPLETE;
   //calculate stub size and create the new one
   nOriginalStubSize = nNewStubSize = 0;
-  while (nOriginalStubSize < HOOKENG_JUMP_TO_HOOK_SIZE)
+  while (nOriginalStubSize < GetJumpToHookBytes())
   {
     lpSrc = aOriginalStub + nOriginalStubSize;
     lpDest = aNewStub + nNewStubSize;
@@ -182,7 +184,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
       return ERROR_INVALID_DATA; //invalid opcode
     //check special opcodes
     s[0] = (LPBYTE)lpOrigProc + nOriginalStubSize;
-    s[1] = (bSkipJumps == FALSE) ? s[0] : SkipJumpInstructions(s[0]);
+    s[1] = ((dwFlags & NKTHOOKLIB_DontSkipAnyJumps) != 0) ? s[0] : SkipJumpInstructions(s[0]);
     if (s[1] == NULL)
       s[1] = s[0];
     if (s[1] != s[0])
@@ -198,7 +200,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
           nDestInstrLen = 6;
           break;
 
-#if defined _M_X64
+#if defined(_M_X64)
         case NKTHOOKLIB_ProcessPlatformX64:
           //jmp to original call (JMP QWORD PTR [RIP+0h])
           lpDest[0] = 0xFF;  lpDest[1] = 0x25; //
@@ -209,8 +211,8 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps)
 #endif //_M_X64
       }
       //...and finalize the loop
-      if (nOriginalStubSize + nSrcInstrLen < HOOKENG_JUMP_TO_HOOK_SIZE)
-        nSrcInstrLen = HOOKENG_JUMP_TO_HOOK_SIZE - nOriginalStubSize;
+      if (nOriginalStubSize + nSrcInstrLen < GetJumpToHookBytes())
+        nSrcInstrLen = GetJumpToHookBytes() - nOriginalStubSize;
     }
     else
     {
@@ -280,7 +282,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
             lpDest[14] = 0xC3; //ret
             return 15;
 
-#if defined _M_X64
+#if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
             //...increment return address (ADD QWORD PTR [rsp], 5+14)
             lpDest[5] = 0x48;
@@ -301,7 +303,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
       break;
 
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -330,7 +332,7 @@ pj_setupfarcall_x64:
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -351,7 +353,7 @@ pj_setupfarcall_x64:
 static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                           __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   BYTE nReg;
   SIZE_T k;
@@ -360,7 +362,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
   switch (nSrcInstrLen)
   {
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -395,7 +397,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -483,7 +485,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 8:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -513,7 +515,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 9:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -565,7 +567,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 10:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -597,7 +599,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 11:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -635,7 +637,7 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                           __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   SIZE_T k;
 #endif
@@ -643,7 +645,7 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
   switch (nSrcInstrLen)
   {
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -663,7 +665,7 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -689,7 +691,7 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
 static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                                __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   SIZE_T k;
 #endif
@@ -708,7 +710,7 @@ static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
   switch (nSrcInstrLen)
   {
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -739,7 +741,7 @@ static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -777,7 +779,7 @@ static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                                __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   SIZE_T k;
   BYTE nReg;
@@ -797,7 +799,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
   switch(nSrcInstrLen)
   {
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -834,7 +836,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -937,7 +939,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 8:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1013,7 +1015,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 9:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1046,7 +1048,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 10:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1080,7 +1082,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
       break;
 
     case 11:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1120,7 +1122,7 @@ static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE
 static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen,
                                      __in SIZE_T nNextSrcIP, __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   SIZE_T k;
   BYTE nReg;
@@ -1140,7 +1142,7 @@ static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __i
   switch (nSrcInstrLen)
   {
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1180,7 +1182,7 @@ static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __i
       break;
 
     case 8:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1250,7 +1252,7 @@ static SIZE_T ProcessCMPXCHGandXADDs(__in LONG nPlatform, __in LPBYTE lpSrc, __i
 static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen,
                                  __in SIZE_T nNextSrcIP, __out LPBYTE lpDest)
 {
-#if defined _M_X64
+#if defined(_M_X64)
   ULONG ulTemp;
   SIZE_T k;
 #endif
@@ -1258,7 +1260,7 @@ static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SI
   switch (nSrcInstrLen)
   {
     case 6:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1324,7 +1326,7 @@ static SIZE_T ProcessPUSHandPOPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SI
       break;
 
     case 7:
-#if defined _M_X64
+#if defined(_M_X64)
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
@@ -1420,7 +1422,7 @@ pj_setupfarjump:
             *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
             *((ULONGLONG NKT_UNALIGNED*)(lpDest+6)) = nDest;
             return 14;
-#if defined _M_X64
+#if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
             lpDest[0] = 0x48;
             lpDest[1] = 0xFF;
@@ -1465,7 +1467,7 @@ pj_setupfarjump2_x86:
             lpDest[12] = 0xC2;  lpDest[13] = 0x04;  lpDest[14] = 0x00;
             return 15;
 
-#if defined _M_X64
+#if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
             nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+2));
             nDest = (SIZE_T)(nNextSrcIP+(LONGLONG)nOfs32);
@@ -1499,7 +1501,7 @@ pj_setupfarjump2_x64:
             nDest = (SIZE_T)(*((ULONG NKT_UNALIGNED*)(lpSrc+3)));
             goto pj_setupfarjump2_x86;
 
-#if defined _M_X64
+#if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
             nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+3));
             nDest = (SIZE_T)(nNextSrcIP+(LONGLONG)nOfs32);

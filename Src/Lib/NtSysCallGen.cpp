@@ -87,7 +87,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
     case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
       break;
-#if defined _M_X64
+#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       nPlatformBits = 64;
       break;
@@ -119,7 +119,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
         case NKTHOOKLIB_ProcessPlatformX86:
           InitializeObjectAttributes(&sObjAttr, (PUNICODE_STRING)&usSysWow64NtDll, OBJ_CASE_INSENSITIVE, NULL, NULL);
           break;
-#if defined _M_X64
+#if defined(_M_X64)
         case NKTHOOKLIB_ProcessPlatformX64:
           InitializeObjectAttributes(&sObjAttr, (PUNICODE_STRING)&usSystem32NtDll, OBJ_CASE_INSENSITIVE, NULL, NULL);
           break;
@@ -185,7 +185,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
         lpFileImgSect = (IMAGE_SECTION_HEADER*)(lpNtHdr32+1);
         lpFileExportsDir = &(lpNtHdr32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]);
         break;
-#if defined _M_X64
+#if defined(_M_X64)
       case NKTHOOKLIB_ProcessPlatformX64:
         nSecCount = (SIZE_T)(lpNtHdr64->FileHeader.NumberOfSections);
         lpFileImgSect = (IMAGE_SECTION_HEADER*)(lpNtHdr64+1);

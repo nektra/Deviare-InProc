@@ -200,9 +200,9 @@ NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
 {
   if (hProcess == NKTHOOKLIB_CurrentProcess)
   {
-#if defined _M_IX86
+#if defined(_M_IX86)
     return NKTHOOKLIB_ProcessPlatformX86;
-#elif defined _M_X64
+#elif defined(_M_X64)
     return NKTHOOKLIB_ProcessPlatformX64;
 #endif
   }
@@ -219,15 +219,15 @@ NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
       nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
       if (NT_SUCCESS(nNtStatus))
       {
-#if defined _M_IX86
+#if defined(_M_IX86)
         return (nWow64 == 0) ? NKTHOOKLIB_ProcessPlatformX64 : NKTHOOKLIB_ProcessPlatformX86;
-#elif defined _M_X64
+#elif defined(_M_X64)
         return (nWow64 != 0) ? NKTHOOKLIB_ProcessPlatformX86 : NKTHOOKLIB_ProcessPlatformX64;
 #endif
       }
-#if defined _M_IX86
+#if defined(_M_IX86)
       return NKTHOOKLIB_ProcessPlatformX86;
-#elif defined _M_X64
+#elif defined(_M_X64)
       return NKTHOOKLIB_ProcessPlatformX64;
 #endif
       break;
@@ -300,10 +300,10 @@ DWORD GetCurrentThreadId()
   LPBYTE lpPtr;
   DWORD dw;
 
-#if defined _M_IX86
+#if defined(_M_IX86)
   lpPtr = (LPBYTE)__readfsdword(0x18); //get TEB
   dw = *((DWORD*)(lpPtr+0x24));        //TEB.ClientId.UniqueThread
-#elif defined _M_X64
+#elif defined(_M_X64)
   lpPtr = (LPBYTE)__readgsqword(0x30); //get TEB
   dw = *((DWORD*)(lpPtr+0x48));        //TEB.ClientId.UniqueThread
 #endif
@@ -315,10 +315,10 @@ DWORD GetCurrentProcessId()
   LPBYTE lpPtr;
   DWORD dw;
 
-#if defined _M_IX86
+#if defined(_M_IX86)
   lpPtr = (LPBYTE)__readfsdword(0x18);     //get TEB
   dw = (DWORD)*((ULONGLONG*)(lpPtr+0x20)); //TEB.ClientId.UniqueProcess
-#elif defined _M_X64
+#elif defined(_M_X64)
   lpPtr = (LPBYTE)__readgsqword(0x30);     //get TEB
   dw = (DWORD)*((ULONGLONG*)(lpPtr+0x40)); //TEB.ClientId.UniqueProcess
 #endif
@@ -330,11 +330,11 @@ HANDLE GetProcessHeap()
   LPBYTE lpPtr;
   HANDLE h;
 
-#if defined _M_IX86
+#if defined(_M_IX86)
   lpPtr = (LPBYTE)__readfsdword(0x18); //get TEB
   lpPtr = *((LPBYTE*)(lpPtr+0x30));    //TEB.Peb
   h = *((HANDLE*)(lpPtr+0x18));        //PEB.ProcessHeap
-#elif defined _M_X64
+#elif defined(_M_X64)
   lpPtr = (LPBYTE)__readgsqword(0x30); //get TEB
   lpPtr = *((LPBYTE*)(lpPtr+0x60));    //TEB.Peb
   h = *((HANDLE*)(lpPtr+0x30));        //PEB.ProcessHeap

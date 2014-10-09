@@ -223,11 +223,11 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr)
   TNktLnkLst<CMemBlock>::Iterator it;
   CMemBlock *lpBlock;
   LPBYTE lpPtr;
-#if defined _M_X64
+#if defined(_M_X64)
   ULONGLONG nMin, nMax;
 #endif //_M_X64
 
-#if defined _M_X64
+#if defined(_M_X64)
   //calculate min/max address
   nMin = nMax = ((ULONGLONG)(SIZE_T)lpRefAddr) & (~65535ui64);
   if (nMin > 0x40000000ui64)
@@ -242,7 +242,7 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr)
   //find a previously allocated block
   for (lpBlock=it.Begin(cMemBlocksList); lpBlock!=NULL; lpBlock=it.Next())
   {
-#if defined _M_X64
+#if defined(_M_X64)
     if ((ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) >= nMin &&
         (ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) < nMax)
     {
@@ -250,7 +250,7 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr)
       lpPtr = lpBlock->GetFreeSlot();
       if (lpPtr != NULL)
         return lpPtr;
-#if defined _M_X64
+#if defined(_M_X64)
     }
 #endif //_M_X64
   }
@@ -258,7 +258,7 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr)
   if (lpBlock == NULL)
     return NULL;
   if (lpBlock->Initialize(
-#if defined _M_X64
+#if defined(_M_X64)
     nMin, nMax
 #endif //_M_X64
     ) == FALSE)
@@ -311,7 +311,7 @@ CProcessesHandles::CEntry::CMemBlock::~CMemBlock()
   return;
 };
 
-#if defined _M_IX86
+#if defined(_M_IX86)
 BOOL CProcessesHandles::CEntry::CMemBlock::Initialize()
 {
   SIZE_T nSize;
@@ -326,7 +326,7 @@ BOOL CProcessesHandles::CEntry::CMemBlock::Initialize()
   return (lpBaseAddress != NULL) ? TRUE : FALSE;
 };
 
-#elif defined _M_X64
+#elif defined(_M_X64)
 BOOL CProcessesHandles::CEntry::CMemBlock::Initialize(__in ULONGLONG nMin, __in ULONGLONG nMax)
 {
   MEMORY_BASIC_INFORMATION sMbi;

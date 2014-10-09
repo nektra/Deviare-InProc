@@ -41,19 +41,25 @@ namespace NktHookLib {
 
 #define HOOKENG_MAX_ORIGINAL_STUB_SIZE                    64
 #define HOOKENG_MAX_STUB_SIZE                             64
-#define HOOKENG_JUMP_TO_HOOK_SIZE                          5
 
 //-----------------------------------------------------------
 
 class CHookEntry : public TNktLnkLstNode<CHookEntry>, public CNktNtHeapBaseObj
 {
 public:
-  CHookEntry(__in CProcessesHandles::CEntry *lpProcEntry);
+  CHookEntry(__in CProcessesHandles::CEntry *lpProcEntry, __in DWORD dwFlags);
   ~CHookEntry();
 
   LPBYTE SkipJumpInstructions(__in LPBYTE lpPtr);
 
-  DWORD CreateStub(__in BOOL bOutputDebug, __in BOOL bSkipJumps);
+  DWORD CreateStub(__in BOOL bOutputDebug);
+
+  SIZE_T GetJumpToHookBytes()
+    {
+    if ((dwFlags & NKTHOOKLIB_AlternativeMethod1) != 0)
+      return 6;
+    return 5;
+    };
 
 private:
   friend class CNktHookLib;
@@ -67,7 +73,7 @@ private:
   LPBYTE lpInjCodeAndData;
   SIZE_T nInjCodeAndDataSize;
   BYTE aOriginalStub[HOOKENG_MAX_ORIGINAL_STUB_SIZE], aNewStub[HOOKENG_MAX_STUB_SIZE];
-  BYTE aJumpStub[5];
+  BYTE aJumpStub[8];
   SIZE_T nOriginalStubSize, nNewStubSize;
   SIZE_T nInstalledCode;
   DWORD dwFlags;

@@ -142,7 +142,7 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
           nNtStatus = NktNtGetContextThread(hThread, &sThreadCtx);
           if (!NT_SUCCESS(nNtStatus))
             break;
-#if defined _M_X64
+#if defined(_M_X64)
           nCurrIP = (SIZE_T)sThreadCtx.Rip;
 #else //_M_X64
           nCurrIP = (SIZE_T)sThreadCtx.Eip;

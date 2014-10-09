@@ -200,7 +200,7 @@ typedef struct {
   ULONG InheritedFromUniqueProcessId;
 } NKT_HK_PROCESS_BASIC_INFORMATION32;
 
-#if defined _M_X64
+#if defined(_M_X64)
 typedef struct {
   LONG ExitStatus;
   ULONG _dummy1;
@@ -219,7 +219,7 @@ typedef struct {
   ULONG Buffer;
 } NKT_HK_UNICODE_STRING32;
 
-#if defined _M_X64
+#if defined(_M_X64)
 typedef struct {
   USHORT Length;
   USHORT MaximumLength;
@@ -232,7 +232,7 @@ typedef struct {
   ULONG Blink;
 } NKT_HK_LIST_ENTRY32;
 
-#if defined _M_X64
+#if defined(_M_X64)
 typedef struct {
   ULONGLONG Flink;
   ULONGLONG Blink;
@@ -271,7 +271,7 @@ typedef struct {
   //structure continues but it is not needed
 } NKT_HK_LDR_DATA_TABLE_ENTRY32;
 
-#if defined _M_X64
+#if defined(_M_X64)
 typedef struct {
   NKT_HK_LIST_ENTRY64 InLoadOrderLinks;
   NKT_HK_LIST_ENTRY64 InMemoryOrderLinks;
@@ -312,7 +312,7 @@ typedef struct {
   ULONG nFirstLink, nCurrLink;
 } NKT_HK_LDRENTRY32;
 
-#if defined _M_X64
+#if defined(_M_X64)
 typedef struct {
   NKT_HK_LDR_DATA_TABLE_ENTRY64 sEntry;
   //internal usage, don't touch

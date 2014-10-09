@@ -37,13 +37,13 @@ static HRESULT CheckImageType(__out NKT_HK_IMAGE_NT_HEADER *lpNtHdr, __in HANDLE
                               __out_opt LPBYTE *lplpNtHdrAddr=NULL);
 static HRESULT GetFirstLdrEntry32(__out NKT_HK_LDRENTRY32 *lpEntry32, __in LPBYTE lpPeb, __in HANDLE hProcess);
 static HRESULT GetNextLdrEntry32(__inout NKT_HK_LDRENTRY32 *lpEntry32);
-#if defined _M_X64
+#if defined(_M_X64)
 static HRESULT GetFirstLdrEntry64(__out NKT_HK_LDRENTRY64 *lpEntry64, __in LPBYTE lpPeb, __in HANDLE hProcess);
 static HRESULT GetNextLdrEntry64(__inout NKT_HK_LDRENTRY64 *lpEntry64);
 #endif //_M_X64
 static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING32 *lpRemoteStr,
                                          __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen);
-#if defined _M_X64
+#if defined(_M_X64)
 static BOOL RemoteCompareUnicodeString64(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING64 *lpRemoteStr,
                                          __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen);
 #endif //_M_X64
@@ -67,7 +67,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
   LARGE_INTEGER liTime;
   union {
     NKT_HK_LDRENTRY32 sLdrEntry32;
-#if defined _M_X64
+#if defined(_M_X64)
     NKT_HK_LDRENTRY64 sLdrEntry64;
 #endif //_M_X64
   };
@@ -89,7 +89,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
     case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
       break;
-#if defined _M_X64
+#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       nPlatformBits = 64;
       break;
@@ -116,7 +116,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
           hRes = S_OK;
         break;
 
-#if defined _M_X64
+#if defined(_M_X64)
       case 64:
         hRes = GetFirstLdrEntry64(&sLdrEntry64, lpPeb, hProcess);
         while (hRes == S_OK)
@@ -219,7 +219,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
     case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
       break;
-#if defined _M_X64
+#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       nPlatformBits = 64;
       break;
@@ -245,7 +245,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
                                        DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
       nExpDirSize = (SIZE_T)(sNtLdr.u32.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
       break;
-#if defined _M_X64
+#if defined(_M_X64)
     case 64:
       if (sNtLdr.u64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress == 0 ||
           sNtLdr.u64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
@@ -331,9 +331,9 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
 
 static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T nPlatformBits)
 {
-#if defined _M_IX86
+#if defined(_M_IX86)
   NKT_HK_PROCESS_BASIC_INFORMATION32 sPbi32;
-#elif defined _M_X64
+#elif defined(_M_X64)
   NKT_HK_PROCESS_BASIC_INFORMATION64 sPbi64;
   ULONGLONG nPeb32;
 #endif
@@ -342,9 +342,9 @@ static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T n
 
   if (hProcess == NKTHOOKLIB_CurrentProcess)
   {
-#if defined _M_IX86
+#if defined(_M_IX86)
     *lplpPeb = (LPBYTE)__readfsdword(0x30); //get PEB from the TIB
-#elif defined _M_X64
+#elif defined(_M_X64)
     LPBYTE lpPtr = (LPBYTE)__readgsqword(0x30); //get TEB
     *lplpPeb = *((LPBYTE*)(lpPtr+0x60));
 #else
@@ -357,13 +357,13 @@ static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T n
     switch (nPlatformBits)
     {
       case 32:
-#if defined _M_IX86
+#if defined(_M_IX86)
         hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi32,
                                                        sizeof(sPbi32), &k);
         if (FAILED(hRes))
           return hRes;
         *lplpPeb = (LPBYTE)(sPbi32.PebBaseAddress);
-#elif defined _M_X64
+#elif defined(_M_X64)
         hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessWow64Information, &nPeb32,
                                                        sizeof(nPeb32), &k);
         if (FAILED(hRes))
@@ -372,7 +372,7 @@ static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T n
 #endif
       break;
 
-#if defined _M_X64
+#if defined(_M_X64)
       case 64:
         hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi64,
                                                        sizeof(sPbi64), &k);
@@ -486,7 +486,7 @@ static HRESULT GetNextLdrEntry32(__inout NKT_HK_LDRENTRY32 *lpEntry32)
   return S_OK;
 }
 
-#if defined _M_X64
+#if defined(_M_X64)
 HRESULT GetBaseAddress64(__out LPBYTE *lplpBaseAddress, __in LPBYTE lpPeb, __in HANDLE hProcess)
 {
   ULONGLONG qwTemp64;
@@ -563,7 +563,7 @@ static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICO
   return RemoteStrNICmpW(hProcess, (LPCWSTR)(usTemp.Buffer), szLocalStrW, nStrLen);
 }
 
-#if defined _M_X64
+#if defined(_M_X64)
 static BOOL RemoteCompareUnicodeString64(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING64 *lpRemoteStr,
                                          __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen)
 {
@@ -663,7 +663,7 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
     NKT_HK_UNICODE_STRING us;
     WCHAR chDataW[2048];
   } usImportingDll;
-#if defined _M_X64
+#if defined(_M_X64)
   ULONGLONG qwTemp64;
 #endif //_M_X64
   SIZE_T nRetLen;
@@ -722,7 +722,7 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
         return NULL;
       lpApiMapSet = (LPBYTE)dwTemp32;
       break;
-#if defined _M_X64
+#if defined(_M_X64)
     case 64:
       if (NktHookLibHelpers::ReadMem(hProcess, &qwTemp64, lpPeb+0x68, sizeof(qwTemp64)) != sizeof(qwTemp64))
         return NULL;
@@ -806,7 +806,7 @@ gotIt_V2:       //retrieve dll name
       }
       break;
 
-    case 4: //found in Win8.1
+    case 4: //found in Win8.1 & Win10
       {
       NKT_HK_APIMAPSET_HEADER_V4 sHdr;
       NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V4 sNamespaceEntry, *lpCurrNamespaceEntry;

@@ -84,9 +84,9 @@ public:
       CMemBlock(__in HANDLE hProc);
       ~CMemBlock();
 
-#if defined _M_IX86
+#if defined(_M_IX86)
       BOOL Initialize();
-#elif defined _M_X64
+#elif defined(_M_X64)
       BOOL Initialize(__in ULONGLONG nMin, __in ULONGLONG nMax);
 #else
   #error Platform not supported

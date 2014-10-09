@@ -16,13 +16,13 @@
   #define X_LIBPATH "2008"
 #endif
 
-#if defined _M_IX86
+#if defined(_M_IX86)
   #ifdef _DEBUG
     #pragma comment (lib, "..\\..\\Libs\\" X_LIBPATH "\\NktHookLib_Debug.lib")
   #else //_DEBUG
     #pragma comment (lib, "..\\..\\Libs\\" X_LIBPATH "\\NktHookLib.lib")
   #endif //_DEBUG
-#elif defined _M_X64
+#elif defined(_M_X64)
   #ifdef _DEBUG
     #pragma comment (lib, "..\\..\\Libs\\" X_LIBPATH "\\NktHookLib64_Debug.lib")
   #else //_DEBUG
