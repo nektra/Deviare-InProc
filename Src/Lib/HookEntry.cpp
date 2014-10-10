@@ -313,18 +313,24 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
             ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+2));
 pj_setupfarcall_x64:
             k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
-            //... MOV DWORD PTR [RSP-8], LODWORD(nDest)
-            lpDest[0] = 0xC7;  lpDest[1] = 0x44;
-            lpDest[2] = 0x24;  lpDest[3] = 0xF8;
-            *((ULONG NKT_UNALIGNED*)(lpDest+4)) = (ULONG)k;
-            //... MOV DWORD PTR [RSP-4], HIDWORD(nDest)
-            lpDest[8] = 0xC7;  lpDest[9] = 0x44;
-            lpDest[10] = 0x24;  lpDest[11] = 0xFC;
-            *((ULONG NKT_UNALIGNED*)(lpDest+12)) = (ULONG)(k >> 32);
-            //... CALL QWORD PTR [RSP-8]
-            lpDest[16] = 0xFF;  lpDest[17] = 0x54;
-            lpDest[18] = 0x24;  lpDest[19] = 0xF8;
-            return 20;
+            //... PUSH RAX
+            lpDest[0] = 0x50;
+            //... MOV RAX, nDest
+            lpDest[1] = 0x48;  lpDest[2] = 0xB8;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)k;
+            //... MOV RAX, QWORD PTR [RAX]
+            lpDest[11] = 0x48;  lpDest[12] = 0x8B;
+            lpDest[13] = 0x00;
+            //... MOV QWORD PTR [RSP-8], RAX
+            lpDest[14] = 0x48;  lpDest[15] = 0x89;
+            lpDest[16] = 0x44;  lpDest[17] = 0x24;
+            lpDest[18] = 0xF8;
+            //... POP RAX
+            lpDest[19] = 0x58;
+            //... CALL QWORD PTR [RSP-10h]
+            lpDest[20] = 0xFF;  lpDest[21] = 0x54;
+            lpDest[22] = 0x24;  lpDest[23] = 0xF0;
+            return 24;
           }
           break;
       }
