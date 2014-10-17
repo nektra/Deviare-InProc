@@ -552,27 +552,23 @@ HRESULT GetNextLdrEntry64(__inout NKT_HK_LDRENTRY64 *lpEntry64)
 }
 #endif //_M_X64
 
+//fix by Boris Gjenero (https://github.com/dreamlayers)
 static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING32 *lpRemoteStr,
                                          __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen)
 {
-  NKT_HK_UNICODE_STRING32 usTemp;
-
-  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpRemoteStr, sizeof(usTemp)) != sizeof(usTemp) ||
-      (SIZE_T)(usTemp.Length) != nStrLen*sizeof(WCHAR))
+  if ((SIZE_T)(lpRemoteStr->Length) != nStrLen*sizeof(WCHAR))
     return FALSE;
-  return RemoteStrNICmpW(hProcess, (LPCWSTR)(usTemp.Buffer), szLocalStrW, nStrLen);
+  return RemoteStrNICmpW(hProcess, (LPCWSTR)(lpRemoteStr->Buffer), szLocalStrW, nStrLen);
 }
 
 #if defined(_M_X64)
+//fix by Boris Gjenero (https://github.com/dreamlayers)
 static BOOL RemoteCompareUnicodeString64(__in HANDLE hProcess, __in NKT_HK_UNICODE_STRING64 *lpRemoteStr,
                                          __in LPCWSTR szLocalStrW, __in SIZE_T nStrLen)
 {
-  NKT_HK_UNICODE_STRING64 usTemp;
-
-  if (NktHookLibHelpers::ReadMem(hProcess, &usTemp, lpRemoteStr, sizeof(usTemp)) != sizeof(usTemp) ||
-      (SIZE_T)(usTemp.Length) != nStrLen*sizeof(WCHAR))
+  if ((SIZE_T)(lpRemoteStr->Length) != nStrLen*sizeof(WCHAR))
     return FALSE;
-  return RemoteStrNICmpW(hProcess, (LPCWSTR)(usTemp.Buffer), szLocalStrW, nStrLen);
+  return RemoteStrNICmpW(hProcess, (LPCWSTR)(lpRemoteStr->Buffer), szLocalStrW, nStrLen);
 }
 #endif //_M_X64
 
