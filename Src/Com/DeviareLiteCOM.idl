@@ -26,6 +26,7 @@ import "ocidl.idl";
 
 interface INktHookLib;
 interface INktHookInfo;
+interface INktHookProcessInfo;
 
 //-----------------------------------------------------------
 //-----------------------------------------------------------
@@ -103,11 +104,35 @@ interface INktHookLib : IDispatch
 
   [id(dispidNktHookLibGetProcedureAddress),
    helpstring("Gets the address of an exported function")]
-  HRESULT GetProcedureAddress([in] my_ssize_t moduleBaseAddress, [in] BSTR procName, [out,retval] my_ssize_t *funcAddress);
+  HRESULT GetProcedureAddress([in] my_ssize_t moduleBaseAddress, [in] BSTR procName,
+                              [out,retval] my_ssize_t *funcAddress);
 
   [id(dispidNktHookLibGetRemoteProcedureAddress),
    helpstring("Gets the address of an exported function of another process' module")]
-  HRESULT GetRemoteProcedureAddress([in] LONG pid, [in] my_ssize_t moduleBaseAddress, [in] BSTR procName, [out,retval] my_ssize_t *funcAddress);
+  HRESULT GetRemoteProcedureAddress([in] LONG pid, [in] my_ssize_t moduleBaseAddress, [in] BSTR procName,
+                                    [out,retval] my_ssize_t *funcAddress);
+
+  [id(dispidNktHookLibCreateProcessWithDll),
+   helpstring("Create a process with a dll injected at startup")]
+  HRESULT CreateProcessWithDll([in] BSTR applicationName, [in] BSTR commandLine, [in] my_ssize_t processAttributes,
+                               [in] my_ssize_t threadAttributes, [in] VARIANT_BOOL inheritHandles,
+                               [in] LONG creationFlags, [in] BSTR environment, [in] BSTR currentDirectory,
+                               [in] my_ssize_t startupInfo, [in] BSTR dllName,
+                               [out,retval] INktHookProcessInfo **ppProcInfo);
+
+  [id(dispidNktHookLibCreateProcessWithLogonAndDll),
+   helpstring("Create a process with a dll injected at startup")]
+  HRESULT CreateProcessWithLogonAndDll([in] BSTR userName, [in] BSTR domain, [in] BSTR password, [in] LONG logonFlags,
+                                       [in] BSTR applicationName, [in] BSTR commandLine, [in] LONG creationFlags,
+                                       [in] BSTR environment, [in] BSTR currentDirectory, [in] my_ssize_t startupInfo,
+                                       [in] BSTR dllName, [out,retval] INktHookProcessInfo **ppProcInfo);
+
+  [id(dispidNktHookLibCreateProcessWithTokenAndDll),
+   helpstring("Create a process with a dll injected at startup")]
+  HRESULT CreateProcessWithTokenAndDll([in] my_ssize_t token, [in] LONG logonFlags, [in] BSTR applicationName,
+                                       [in] BSTR commandLine, [in] LONG creationFlags, [in] BSTR environment,
+                                       [in] BSTR currentDirectory, [in] my_ssize_t startupInfo, [in] BSTR dllName,
+                                       [out,retval] INktHookProcessInfo **ppProcInfo);
 };
 
 //-----------------------------------------------------------
@@ -152,6 +177,36 @@ interface INktHookInfo : IDispatch
 //-----------------------------------------------------------
 
 [
+  object,
+  uuid(BF063537-2987-445F-8280-1911FB0B7E2A),
+  dual, oleautomation, local,
+  nonextensible,
+  helpstring("INktHookProcessInfo Interface"),
+  pointer_default(unique)
+]
+interface INktHookProcessInfo : IDispatch
+{
+  [propget, id(dispidNktHookProcessInfoProcess),
+   helpstring("Process handle")]
+  HRESULT ProcessHandle([out, retval] my_ssize_t *procHandle);
+
+  [propget, id(dispidNktHookProcessInfoThread),
+   helpstring("Thread handle")]
+  HRESULT ThreadHandle([out, retval] my_ssize_t *threadHandle);
+
+  [propget, id(dispidNktHookProcessInfoProcessId),
+   helpstring("Process id")]
+  HRESULT ProcessId([out, retval] LONG *pid);
+
+  [propget, id(dispidNktHookProcessInfoThreadId),
+   helpstring("Thread id")]
+  HRESULT ThreadId([out, retval] LONG *tid);
+};
+
+//-----------------------------------------------------------
+//-----------------------------------------------------------
+
+[
   uuid(F478CE40-7BCB-4304-8B01-2303E597312B),
   version(1.0),
   helpstring("DeviareLite 1.0 Type Library")
@@ -184,5 +239,17 @@ library DeviareLite
   coclass NktHookInfo
   {
     [default] interface INktHookInfo;
+  };
+
+  //---------------------------------------------------------
+  //---------------------------------------------------------
+
+  [
+    uuid(E8E67CCF-4F2B-4099-BD7C-9A0E3BD5B480),
+    helpstring("NktHookProcessInfo Class")
+  ]
+  coclass NktHookProcessInfo
+  {
+    [default] interface INktHookProcessInfo;
   };
 };

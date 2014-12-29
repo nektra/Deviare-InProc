@@ -1,6 +1,6 @@
 
 Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2012
+# Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HookTest", "HookTest.vcxproj", "{C8F7BD67-9FBC-4F86-9A87-C04A09006B81}"
 EndProject
 Global

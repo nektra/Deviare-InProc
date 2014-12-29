@@ -43,8 +43,8 @@
 #define NKTHOOKLIB_ProcessPlatformX86                      1
 #define NKTHOOKLIB_ProcessPlatformX64                      2
 
-#define NKTHOOKLIB_CurrentProcess       (HANDLE)(LONG_PTR)-1
-#define NKTHOOKLIB_CurrentThread        (HANDLE)(LONG_PTR)-2
+#define NKTHOOKLIB_CurrentProcess     ((HANDLE)(LONG_PTR)-1)
+#define NKTHOOKLIB_CurrentThread      ((HANDLE)(LONG_PTR)-2)
 
 //-----------------------------------------------------------
 
@@ -106,6 +106,8 @@ private:
   LPVOID lpInternals;
 };
 
+//-----------------------------------------------------------
+
 namespace NktHookLibHelpers
 {
 
@@ -122,11 +124,11 @@ typedef LPVOID (__stdcall *lpfnInternalApiResolver)(__in_z LPCSTR szApiNameA, __
 
 //----------------
 
-HINSTANCE GetModuleBaseAddress(__in LPCWSTR szDllNameW);
+HINSTANCE GetModuleBaseAddress(__in_z LPCWSTR szDllNameW);
 LPVOID GetProcedureAddress(__in HINSTANCE hDll, __in LPCSTR szProcNameA);
 
-HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in LPCWSTR szDllNameW, __in BOOL bScanMappedImages);
-LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in HINSTANCE hDll, __in LPCSTR szProcNameA);
+HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in BOOL bScanMappedImages);
+LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in HINSTANCE hDll, __in_z LPCSTR szProcNameA);
 
 int sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, ...);
 int vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList);
@@ -190,6 +192,29 @@ VOID SetInternalApiResolverCallback(__in lpfnInternalApiResolver fnInternalApiRe
 //      the generated code.
 DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZE_T nPlatform,
                       __out_opt LPVOID lpCode, __out SIZE_T *lpnCodeSize);
+
+//NOTE: Return 0xFFFFFFFF if remote thread is not accessible
+DWORD GetWin32LastError(__in_opt HANDLE hThread=NULL);
+
+DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
+                            __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                            __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
+                            __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
+                            __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
+                            __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW);
+
+DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
+                                    __in DWORD dwLogonFlags, __in_opt LPCWSTR lpApplicationName,
+                                    __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
+                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in LPSTARTUPINFOW lpStartupInfo,
+                                    __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW);
+
+DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
+                                    __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
+                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
+                                    __in_z LPCWSTR szDllNameW);
 
 } //namespace NktHookLibHelpers
 

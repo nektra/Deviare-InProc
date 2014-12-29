@@ -18,9 +18,17 @@ typedef [v1_enum] enum eNktDispIds {
   dispidNktHookLibGetRemoteModuleBaseAddress,
   dispidNktHookLibGetProcedureAddress,
   dispidNktHookLibGetRemoteProcedureAddress,
+  dispidNktHookLibCreateProcessWithDll,
+  dispidNktHookLibCreateProcessWithLogonAndDll,
+  dispidNktHookLibCreateProcessWithTokenAndDll,
   //----
   dispidNktHookInfoId = 1,
   dispidNktHookInfoOrigProcAddr,
   dispidNktHookInfoNewProcAddr,
-  dispidNktHookInfoCallOriginal
+  dispidNktHookInfoCallOriginal,
+  //----
+  dispidNktHookProcessInfoProcess = 1,
+  dispidNktHookProcessInfoThread,
+  dispidNktHookProcessInfoProcessId,
+  dispidNktHookProcessInfoThreadId
 } eNktDispIds;

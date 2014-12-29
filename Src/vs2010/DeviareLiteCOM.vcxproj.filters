@@ -39,6 +39,9 @@
     <ClCompile Include="..\Com\StdAfx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Com\HookProcessInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Com\DeviareLiteCOM.def">
@@ -92,6 +95,9 @@
     </ClInclude>
     <ClInclude Include="..\Com\Resource.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Com\HookProcessInfo.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

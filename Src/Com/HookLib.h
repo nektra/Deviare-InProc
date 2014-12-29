@@ -30,6 +30,7 @@
 #include "CustomRegistryMap.h"
 class CNktHookLibImpl;
 class CNktHookInfoImpl;
+class CNktHookProcessInfoImpl;
 #include "..\..\Include\NktHookLib.h"
 
 //-----------------------------------------------------------
@@ -112,6 +113,23 @@ public:
   STDMETHOD(GetProcedureAddress)(__in my_ssize_t moduleBaseAddress, __in BSTR procName, __out my_ssize_t *funcAddress);
   STDMETHOD(GetRemoteProcedureAddress)(__in LONG pid, __in my_ssize_t moduleBaseAddress, __in BSTR procName,
                                        __out my_ssize_t *funcAddress);
+
+  STDMETHOD(CreateProcessWithDll)(__in BSTR applicationName, __in BSTR commandLine, __in my_ssize_t processAttributes,
+                                  __in my_ssize_t threadAttributes, __in VARIANT_BOOL inheritHandles,
+                                  __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
+                                  __in my_ssize_t startupInfo, __in BSTR dllName,
+                                  __deref_out INktHookProcessInfo **ppProcInfo);
+
+  STDMETHOD(CreateProcessWithLogonAndDll)(__in BSTR userName, __in BSTR domain, __in BSTR password,
+                                          __in LONG logonFlags, __in BSTR applicationName, __in BSTR commandLine,
+                                          __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
+                                          __in my_ssize_t startupInfo, __in BSTR dllName,
+                                          __deref_out INktHookProcessInfo **ppProcInfo);
+
+  STDMETHOD(CreateProcessWithTokenAndDll)(__in my_ssize_t token, __in LONG logonFlags, __in BSTR applicationName,
+                                          __in BSTR commandLine, __in LONG creationFlags, __in BSTR environment,
+                                          __in BSTR currentDirectory, __in my_ssize_t startupInfo, __in BSTR dllName,
+                                          __deref_out INktHookProcessInfo **ppProcInfo);
 
 private:
   friend class CNktHookInfoImpl;

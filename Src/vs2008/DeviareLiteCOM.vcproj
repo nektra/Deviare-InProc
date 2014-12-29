@@ -517,6 +517,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Com\HookProcessInfo.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Com\StdAfx.cpp"
 				>
 				<FileConfiguration
@@ -580,6 +584,10 @@
 			</File>
 			<File
 				RelativePath="..\Com\HookLib.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Com\HookProcessInfo.h"
 				>
 			</File>
 			<File

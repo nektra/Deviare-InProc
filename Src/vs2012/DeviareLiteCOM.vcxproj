@@ -271,6 +271,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
     </ClCompile>
     <ClCompile Include="..\Com\HookInfo.cpp" />
     <ClCompile Include="..\Com\HookLib.cpp" />
+    <ClCompile Include="..\Com\HookProcessInfo.cpp" />
     <ClCompile Include="..\Com\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -328,6 +329,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
     <ClInclude Include="..\Com\dllmain.h" />
     <ClInclude Include="..\Com\HookInfo.h" />
     <ClInclude Include="..\Com\HookLib.h" />
+    <ClInclude Include="..\Com\HookProcessInfo.h" />
     <ClInclude Include="..\Com\idl_size_t.h" />
     <ClInclude Include="..\Com\StdAfx.h" />
     <ClInclude Include="..\Com\TargetVer.h" />

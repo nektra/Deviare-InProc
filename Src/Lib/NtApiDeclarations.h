@@ -145,9 +145,9 @@ NKT_PARSE_NTAPI_NTSTATUS(NtReadVirtualMemory, (__in HANDLE ProcessHandle, __in P
                                                __out_opt PSIZE_T NumberOfBytesRead),
                          (ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead))
 NKT_PARSE_NTAPI_NTSTATUS(NtWriteVirtualMemory, (__in HANDLE ProcessHandle, __in PVOID BaseAddress,
-                                                __out PVOID Buffer, __in SIZE_T NumberOfBytesToRead,
-                                                __out_opt PSIZE_T NumberOfBytesRead),
-                         (ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead))
+                                                __out PVOID Buffer, __in SIZE_T NumberOfBytesToWrite,
+                                                __out_opt PSIZE_T NumberOfBytesWritten),
+                         (ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten))
 NKT_PARSE_NTAPI_NTSTATUS(NtQueryVirtualMemory, (__in HANDLE ProcessHandle, __in PVOID Address,
                                                 __in NKT_HK_VIRTUALMEMORYINFORMATIONCLASS VirtualMemoryInformationClass,
                                                 __out PVOID VirtualMemoryInformation, __in SIZE_T Length,

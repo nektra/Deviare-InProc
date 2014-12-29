@@ -7,6 +7,7 @@
 #include "StdAfx.h"
 #include "HookLib.h"
 #include "HookInfo.h"
+#include "HookProcessInfo.h"
 
 //-----------------------------------------------------------
 
@@ -224,6 +225,98 @@ STDMETHODIMP CNktHookLibImpl::GetRemoteProcedureAddress(__in LONG pid, __in my_s
   free(szProcNameA);
   ::CloseHandle(hProc);
   return S_OK;
+}
+
+STDMETHODIMP CNktHookLibImpl::CreateProcessWithDll(__in BSTR applicationName, __in BSTR commandLine,
+                                                   __in my_ssize_t processAttributes, __in my_ssize_t threadAttributes,
+                                                   __in VARIANT_BOOL inheritHandles, __in LONG creationFlags,
+                                                   __in BSTR environment, __in BSTR currentDirectory,
+                                                   __in my_ssize_t startupInfo, __in BSTR dllName,
+                                                   __deref_out INktHookProcessInfo **ppProcInfo)
+{
+  CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  HRESULT hRes;
+
+  if (ppProcInfo == NULL)
+    return E_POINTER;
+  *ppProcInfo = NULL;
+  if (dllName == NULL)
+    return E_POINTER;
+  hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes))
+  {
+    if (environment != NULL)
+      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithDllW(applicationName, commandLine,
+                       (LPSECURITY_ATTRIBUTES)processAttributes, (LPSECURITY_ATTRIBUTES)threadAttributes,
+                       (inheritHandles != VARIANT_FALSE) ? TRUE : FALSE, (DWORD)creationFlags,
+                       environment, currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+    if (SUCCEEDED(hRes))
+      pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
+    else
+      pProcInfo->Release();
+  }
+  return hRes;
+}
+
+STDMETHODIMP CNktHookLibImpl::CreateProcessWithLogonAndDll(__in BSTR userName, __in BSTR domain, __in BSTR password,
+                                           __in LONG logonFlags, __in BSTR applicationName, __in BSTR commandLine,
+                                           __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
+                                           __in my_ssize_t startupInfo, __in BSTR dllName,
+                                           __deref_out INktHookProcessInfo **ppProcInfo)
+{
+  CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  HRESULT hRes;
+
+  if (ppProcInfo == NULL)
+    return E_POINTER;
+  *ppProcInfo = NULL;
+  if (dllName == NULL)
+    return E_POINTER;
+  hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes))
+  {
+    if (environment != NULL)
+      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithLogonAndDllW(userName, domain, password,
+                      (DWORD)logonFlags, applicationName, commandLine, (DWORD)creationFlags, environment,
+                      currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+    if (SUCCEEDED(hRes))
+      pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
+    else
+      pProcInfo->Release();
+  }
+  return hRes;
+}
+
+STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token, __in LONG logonFlags,
+                                           __in BSTR applicationName, __in BSTR commandLine, __in LONG creationFlags,
+                                           __in BSTR environment, __in BSTR currentDirectory,
+                                           __in my_ssize_t startupInfo, __in BSTR dllName,
+                                           __deref_out INktHookProcessInfo **ppProcInfo)
+{
+  CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  HRESULT hRes;
+
+  if (ppProcInfo == NULL)
+    return E_POINTER;
+  *ppProcInfo = NULL;
+  if (dllName == NULL)
+    return E_POINTER;
+  hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes))
+  {
+    if (environment != NULL)
+      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithTokenAndDllW((HANDLE)token, (DWORD)logonFlags,
+                      applicationName, commandLine, (DWORD)creationFlags, environment, currentDirectory,
+                      (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+    if (SUCCEEDED(hRes))
+      pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
+    else
+      pProcInfo->Release();
+  }
+  return hRes;
 }
 
 //-----------------------------------------------------------
