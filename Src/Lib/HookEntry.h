@@ -56,7 +56,7 @@ public:
 
   SIZE_T GetJumpToHookBytes()
     {
-    if ((dwFlags & NKTHOOKLIB_AlternativeMethod1) != 0)
+    if ((dwFlags & NKTHOOKLIB_UseAbsoluteIndirectJumps) != 0)
       return 6;
     return 5;
     };

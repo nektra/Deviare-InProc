@@ -74,9 +74,8 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Nektra.DeviareLite, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f2ae15f8a03c7ba7, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\bin\2008\Nektra.DeviareLite.dll</HintPath>
+    <Reference Include="DeviareLiteInterop">
+      <HintPath>..\..\..\..\bin\2008\DeviareLiteInterop.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">

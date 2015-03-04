@@ -17,8 +17,9 @@ CALL "%__VCINSTALLDIR%\vcvarsall.bat" x86
 IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x86
 DEVENV vs2012\NktHookLib.sln /rebuild "Debug|Win32" /project "NktHookLib"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
+REM DeviareLiteInterop depends on DeviareLiteCOM
 REM DeviareLiteCOM depends on NktHookLib
-DEVENV vs2012\NktHookLib.sln /rebuild "Release|Win32" /project "DeviareLiteCOM" 
+DEVENV vs2012\NktHookLib.sln /rebuild "Release|Win32" /project "DeviareLiteInterop" 
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 
@@ -27,8 +28,9 @@ CALL "%__VCINSTALLDIR%\vcvarsall.bat" x64
 IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x64
 DEVENV vs2012\NktHookLib.sln /rebuild "Debug|x64" /project "NktHookLib"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
+REM DeviareLiteInterop depends on DeviareLiteCOM
 REM DeviareLiteCOM depends on NktHookLib
-DEVENV vs2012\NktHookLib.sln /rebuild "Release|x64" /project "DeviareLiteCOM"
+DEVENV vs2012\NktHookLib.sln /rebuild "Release|x64" /project "DeviareLiteInterop"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 GOTO end

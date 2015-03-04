@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -109,6 +109,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -122,9 +123,8 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Message>Updating manifest and signing executable...</Message>
-      <Command>CALL "$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat" "$(TargetDir)"
-MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Message>Updating manifest...</Message>
+      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -144,6 +144,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -157,9 +158,8 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Message>Updating manifest and signing executable...</Message>
-      <Command>CALL "$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat" "$(TargetDir)"
-MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Message>Updating manifest...</Message>
+      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -178,6 +178,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -186,16 +187,15 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
     </ResourceCompile>
     <Link>
       <ModuleDefinitionFile>..\Com\DeviareLiteCOM.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Message>Updating manifest and signing executable...</Message>
-      <Command>CALL "$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat" "$(TargetDir)"
-MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Message>Updating manifest...</Message>
+      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -213,6 +213,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -225,12 +226,11 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX64</TargetMachine>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Message>Updating manifest and signing executable...</Message>
-      <Command>CALL "$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat" "$(TargetDir)"
-MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Message>Updating manifest...</Message>
+      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -265,6 +265,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
+    <ClCompile Include="..\Com\DotNetCoreHooks.cpp" />
     <ClCompile Include="..\Com\HookInfo.cpp" />
     <ClCompile Include="..\Com\HookLib.cpp" />
     <ClCompile Include="..\Com\HookProcessInfo.cpp" />
@@ -323,6 +324,7 @@ MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM
     <ClInclude Include="..\Com\disp_ids.h" />
     <ClInclude Include="..\Com\dlldatax.h" />
     <ClInclude Include="..\Com\dllmain.h" />
+    <ClInclude Include="..\Com\DotNetCoreHooks.h" />
     <ClInclude Include="..\Com\HookInfo.h" />
     <ClInclude Include="..\Com\HookLib.h" />
     <ClInclude Include="..\Com\HookProcessInfo.h" />

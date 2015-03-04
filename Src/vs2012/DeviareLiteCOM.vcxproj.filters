@@ -42,6 +42,9 @@
     <ClCompile Include="..\Com\HookProcessInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Com\DotNetCoreHooks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Com\DeviareLiteCOM.def">
@@ -97,6 +100,9 @@
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Com\HookProcessInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Com\DotNetCoreHooks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

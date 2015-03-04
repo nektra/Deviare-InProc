@@ -25,12 +25,11 @@ Samples/C/TestDll/vs2010/obj/
 Samples/C/TestDll/vs2010/ipch/
 Samples/C/TestDll/vs2012/obj/
 Samples/C/TestDll/vs2012/ipch/
-Samples/CSharp/ApiHook/vs2008/obj/
-Samples/CSharp/ApiHook/vs2010/obj/
-Samples/CSharp/ApiHook/vs2010/ipch/
-Samples/CSharp/ApiHook/vs2012/obj/
-Samples/CSharp/ApiHook/vs2012/ipch/
-Samples/CSharp/MethodHook/
+Samples/CSharp/ApiAndMethodsHook/vs2008/obj/
+Samples/CSharp/ApiAndMethodsHook/vs2010/obj/
+Samples/CSharp/ApiAndMethodsHook/vs2010/ipch/
+Samples/CSharp/ApiAndMethodsHook/vs2012/obj/
+Samples/CSharp/ApiAndMethodsHook/vs2012/ipch/
 Samples/CSharp/CreateProcessWithDllTest/vs2008/obj/
 Samples/CSharp/CreateProcessWithDllTest/vs2010/obj/
 Samples/CSharp/CreateProcessWithDllTest/vs2010/ipch/

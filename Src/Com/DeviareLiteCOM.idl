@@ -31,9 +31,14 @@ interface INktHookProcessInfo;
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
+//synchronize with NKTHOOKLIB_xxx hooking flags
 typedef [v1_enum] enum eNktHookFlags {
-  hfDontSkipInitialJumps = 0x01,
-  hfDontRemoveOnUnhook   = 0x02
+  hfDontSkipInitialJumps     = 0x01,
+  hfDontRemoveOnUnhook       = 0x02,
+  hfDontSkipAnyJumps         = 0x04,
+  hfSkipNullProcsToHook      = 0x08,
+  hfUseAbsoluteIndirectJumps = 0x10,
+  hfAllowReentrancy          = 0x20 //for COM dll use the inverse
 } eNktHookFlags;
 
 //-----------------------------------------------------------

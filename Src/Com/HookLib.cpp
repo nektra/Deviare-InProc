@@ -49,7 +49,10 @@ STDMETHODIMP CNktHookLibImpl::RemoteHook(__in VARIANT itemsToHook, __in LONG pid
 
   hRes = cHkInfo.Init(itemsToHook);
   if (SUCCEEDED(hRes))
+  {
+    flags ^= NKTHOOKLIB_DisallowReentrancy;
     hRes = NKT_HRESULT_FROM_WIN32(cHookLib.RemoteHook(cHkInfo.lpInfo, cHkInfo.nCount, (DWORD)pid, (DWORD)flags));
+  }
   if (SUCCEEDED(hRes))
     cHkInfo.StoreInfo();
   return hRes;
@@ -245,8 +248,6 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithDll(__in BSTR applicationName, __
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
   if (SUCCEEDED(hRes))
   {
-    if (environment != NULL)
-      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithDllW(applicationName, commandLine,
                        (LPSECURITY_ATTRIBUTES)processAttributes, (LPSECURITY_ATTRIBUTES)threadAttributes,
                        (inheritHandles != VARIANT_FALSE) ? TRUE : FALSE, (DWORD)creationFlags,
@@ -276,8 +277,6 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithLogonAndDll(__in BSTR userName, _
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
   if (SUCCEEDED(hRes))
   {
-    if (environment != NULL)
-      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithLogonAndDllW(userName, domain, password,
                       (DWORD)logonFlags, applicationName, commandLine, (DWORD)creationFlags, environment,
                       currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
@@ -306,8 +305,6 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
   if (SUCCEEDED(hRes))
   {
-    if (environment != NULL)
-      creationFlags |= CREATE_UNICODE_ENVIRONMENT;
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithTokenAndDllW((HANDLE)token, (DWORD)logonFlags,
                       applicationName, commandLine, (DWORD)creationFlags, environment, currentDirectory,
                       (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));

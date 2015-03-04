@@ -2,64 +2,38 @@
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Reflection;
-using Nektra.DeviareLite;
 
 namespace CreateProcessWithDllTest
 {
     class Program
     {
-        static NktHookLib cHook = new NktHookLib();
+        //static DeviareLiteInterop.HookLib cHook = new DeviareLiteInterop.HookLib(); //<<<---- DON'T USE THIS WAY. SEE BELOW
+        static DeviareLiteInterop.HookLib cHook;
 
         //--------
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        struct STARTUPINFO
+        static Program()
         {
-            public Int32 cb;
-            public string lpReserved;
-            public string lpDesktop;
-            public string lpTitle;
-            public Int32 dwX;
-            public Int32 dwY;
-            public Int32 dwXSize;
-            public Int32 dwYSize;
-            public Int32 dwXCountChars;
-            public Int32 dwYCountChars;
-            public Int32 dwFillAttribute;
-            public Int32 dwFlags;
-            public Int16 wShowWindow;
-            public Int16 cbReserved2;
-            public IntPtr lpReserved2;
-            public IntPtr hStdInput;
-            public IntPtr hStdOutput;
-            public IntPtr hStdError;
+            //USE THIS METHOD. Clarification: .Net initializes constructors and fields upon demand and NOT in
+            //                                the C/C++ way. Because this constructor runs "before" Main,
+            //                                DeviareLite internal hooks are properly installed before the Main
+            //                                method is compiled by the JIT.
+            cHook = new DeviareLiteInterop.HookLib();
         }
 
         static void Main(string[] args)
         {
             string cmdLine, dllName;
-            IntPtr startupInfo = IntPtr.Zero;
-            STARTUPINFO si;
-            NktHookProcessInfo pi;
+            DeviareLiteInterop.HookLib.STARTUPINFO si;
+            DeviareLiteInterop.HookLib.ProcessInfo pi;
 
-            try
-            {
-                cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\calc.exe";
-                dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
-                dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
+            cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\calc.exe";
+            dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
+            dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
-                si = new STARTUPINFO();
-                si.cb = Marshal.SizeOf(si);
-                startupInfo = Marshal.AllocHGlobal(Marshal.SizeOf(si));
-                Marshal.StructureToPtr(si, startupInfo, false);
+            si = new DeviareLiteInterop.HookLib.STARTUPINFO();
 
-                pi = cHook.CreateProcessWithDll(cmdLine, "", IntPtr.Zero, IntPtr.Zero, false, 0, null, null, startupInfo, dllName);
-            }
-            finally
-            {
-                if (startupInfo != IntPtr.Zero)
-                    Marshal.FreeHGlobal(startupInfo);
-            }
+            pi = cHook.CreateProcessWithDll(cmdLine, "", null, null, false, 0, null, null, si, dllName);
         }
     }
 }

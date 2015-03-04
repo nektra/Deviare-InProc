@@ -6,37 +6,10 @@
 
 #pragma once
 
-#include "resource.h"       // main symbols
-#if _MSC_VER >= 1700
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2012.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2012.h"
-  #endif //_WIN64
-#elif  _MSC_VER >= 1600
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2010.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2010.h"
-  #endif //_WIN64
-#else
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2008.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2008.h"
-  #endif //_WIN64
-#endif
-#include "CustomRegistryMap.h"
 #include "DllMain.h"
-#include "..\..\Include\NktHookLib.h"
 
 //-----------------------------------------------------------
 
-extern HINSTANCE hDllInst;
-
-//-----------------------------------------------------------
-
-// CNktHookProcessInfoImpl
 class ATL_NO_VTABLE CNktHookProcessInfoImpl : public CComObjectRootEx<CComMultiThreadModel>,
                                               public CComCoClass<CNktHookProcessInfoImpl, &CLSID_NktHookProcessInfo>,
                                               public IObjectSafetyImpl<CNktHookProcessInfoImpl,
@@ -82,7 +55,10 @@ public:
 
   HRESULT FinalConstruct()
     {
-    return ::CoCreateFreeThreadedMarshaler(GetControllingUnknown(), &(cUnkMarshaler.p));
+    HRESULT hRes = DotNetCoreHooks::Initialize();
+    if (SUCCEEDED(hRes))
+      hRes = ::CoCreateFreeThreadedMarshaler(GetControllingUnknown(), &(cUnkMarshaler.p));
+    return hRes;
     };
 
   void FinalRelease()

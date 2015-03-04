@@ -100,8 +100,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Updating manifest and signing executable..."
-				CommandLine="CALL &quot;$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				Description="Updating manifest..."
+				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -185,8 +185,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Updating manifest and signing executable..."
-				CommandLine="CALL &quot;$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				Description="Updating manifest..."
+				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -225,6 +225,7 @@
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="2"
 				WarningLevel="3"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -243,6 +244,7 @@
 				IgnoreImportLibrary="true"
 				LinkIncremental="1"
 				ModuleDefinitionFile="..\Com\DeviareLiteCOM.def"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -268,8 +270,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Updating manifest and signing executable..."
-				CommandLine="CALL &quot;$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				Description="Updating manifest..."
+				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -307,6 +309,7 @@
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="2"
 				WarningLevel="3"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -326,6 +329,7 @@
 				OutputFile="$(OutDir)\$(ProjectName)64.dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile="..\Com\DeviareLiteCOM64.def"
+				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -351,8 +355,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Updating manifest and signing executable..."
-				CommandLine="CALL &quot;$(ProjectDir)..\Com\BuildPrimaryInterop\build.bat&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				Description="Updating manifest..."
+				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -509,6 +513,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\Com\DotNetCoreHooks.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Com\HookInfo.cpp"
 				>
 			</File>
@@ -576,6 +584,10 @@
 			</File>
 			<File
 				RelativePath="..\Com\dllmain.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Com\DotNetCoreHooks.h"
 				>
 			</File>
 			<File

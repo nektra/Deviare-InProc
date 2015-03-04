@@ -9,6 +9,8 @@
 #include <windows.h>
 #include "..\..\..\Include\NktHookLib.h"
 
+#define DISALLOW_REENTRANCY
+
 //-----------------------------------------------------------
 
 #if _MSC_VER >= 1700
@@ -69,7 +71,13 @@ int WinMainCRTStartup()
   }
 
   dwOsErr = cHookMgr.Hook(&(sMessageBoxW_Hook.nHookId), (LPVOID*)&(sMessageBoxW_Hook.fnMessageBoxW),
-                          fnOrigMessageBoxW, Hooked_MessageBoxW);
+                          fnOrigMessageBoxW, Hooked_MessageBoxW,
+#ifdef DISALLOW_REENTRANCY
+                          NKTHOOKLIB_DisallowReentrancy
+#else //DISALLOW_REENTRANCY
+                          0
+#endif //DISALLOW_REENTRANCY
+                          );
 
   ::MessageBoxW(0, L"This should be hooked", L"HookTest", MB_OK);
   //dwOsErr = cHookMgr.EnableHook(dwHookId_MessageBoxW, FALSE);
@@ -82,7 +90,14 @@ int WinMainCRTStartup()
 
 static int WINAPI Hooked_MessageBoxW(__in_opt HWND hWnd, __in_opt LPCWSTR lpText, __in_opt LPCWSTR lpCaption, __in UINT uType)
 {
+#ifdef DISALLOW_REENTRANCY
+  //NOTE: When a hook is created with DISALLOW_REENTRANCY, then we can call the original function directly.
+  //      The stub will detected the call comes from the same thread and redirect it to the original function.
+  return ::MessageBoxW(hWnd, lpText, L"HOOKED!!!", uType);
+#else //DISALLOW_REENTRANCY
+  //NOTE: If the hook is NOT created with the DISALLOW_REENTRANCY flag, then we must call the returned function pointer.
   return sMessageBoxW_Hook.fnMessageBoxW(hWnd, lpText, L"HOOKED!!!", uType);
+#endif //DISALLOW_REENTRANCY
 }
 
 //NOTE: The code below was added because we are linking without default VC runtime libraries in order to show

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "resource.h"       // main symbols
+#include "CustomRegistryMap.h"
 #if _MSC_VER >= 1700
   #ifdef _WIN64
     #include "DeviareLiteCOM_i64_vs2012.h"
@@ -25,12 +27,17 @@
     #include "DeviareLiteCOM_i_vs2008.h"
   #endif //_WIN64
 #endif
+#include "DotNetCoreHooks.h"
+#include "..\..\Include\NktHookLib.h"
 
 //-----------------------------------------------------------
 
 class CDeviareLiteCOMModule : public CAtlDllModuleT<CDeviareLiteCOMModule>
 {
-public :
+public:
+  CDeviareLiteCOMModule();
+  ~CDeviareLiteCOMModule();
+
   DECLARE_LIBID(LIBID_DeviareLite)
 #ifdef _WIN64
   DECLARE_REGISTRY_APPID_RESOURCEID(IDR_DEVIARELITECOM64, "{7F65AF61-32C2-4f4e-9B91-7C32910503FD}")
@@ -42,3 +49,4 @@ public :
 //-----------------------------------------------------------
 
 extern class CDeviareLiteCOMModule _AtlModule;
+extern HINSTANCE hDllInst;

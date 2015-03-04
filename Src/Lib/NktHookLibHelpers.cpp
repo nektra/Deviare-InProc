@@ -606,7 +606,7 @@ DWORD GetWin32LastError(__in_opt HANDLE hThread)
 DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
                             __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
                             __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
-                            __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
+                            __in DWORD dwCreationFlags, __in_z_opt LPCWSTR lpEnvironment,
                             __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
                             __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW)
 {
@@ -631,8 +631,21 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
   if (fnCreateProcessW == NULL)
     return ERROR_PROC_NOT_FOUND;
   //create process
+  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
+    lpApplicationName = NULL;
+  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
+    lpCommandLine = NULL;
+  if (lpEnvironment != NULL)
+  {
+    if (lpEnvironment[0] != 0)
+      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    else
+      lpEnvironment = NULL;
+  }
+  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
+    lpCurrentDirectory = NULL;
   if (fnCreateProcessW(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles,
-                       dwCreationFlags|CREATE_SUSPENDED, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
+                       dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory, lpStartupInfo,
                        lpProcessInformation) == FALSE)
     return GetWin32LastError();
   //inject dll load at entrypoint
@@ -642,7 +655,7 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
 DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
                                     __in DWORD dwLogonFlags, __in_opt LPCWSTR lpApplicationName,
                                     __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo,
                                     __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW)
 {
@@ -658,6 +671,7 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
   lpfnLoadLibraryW fnLoadLibraryW;
   lpfnFreeLibrary fnFreeLibrary;
   lpfnCreateProcessWithLogonW fnCreateProcessWithLogonW;
+  LPCWSTR sW;
   DWORD dwOsErr;
 
   if (szDllNameW == NULL || szDllNameW[0] == 0)
@@ -681,8 +695,31 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
     return ERROR_PROC_NOT_FOUND;
   }
   //create process
+  if (lpUsername == NULL)
+    lpUsername = L"";
+  if (lpDomain == NULL)
+  {
+    for (sW=lpUsername; *sW != 0 && *sW != L'@'; sW++);
+    if (*sW == 0)
+      lpDomain = L"";
+  }
+  if (lpPassword == NULL)
+    lpPassword = L"";
+  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
+    lpApplicationName = NULL;
+  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
+    lpCommandLine = NULL;
+  if (lpEnvironment != NULL)
+  {
+    if (lpEnvironment[0] != 0)
+      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    else
+      lpEnvironment = NULL;
+  }
+  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
+    lpCurrentDirectory = NULL;
   if (fnCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword, dwLogonFlags, lpApplicationName, lpCommandLine,
-                                dwCreationFlags|CREATE_SUSPENDED, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
+                                dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory, lpStartupInfo,
                                 lpProcessInformation) == FALSE)
   {
     dwOsErr = GetWin32LastError();
@@ -696,7 +733,7 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
 
 DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
                                     __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW)
 {
@@ -734,9 +771,22 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
     return ERROR_PROC_NOT_FOUND;
   }
   //create process
+  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
+    lpApplicationName = NULL;
+  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
+    lpCommandLine = NULL;
+  if (lpEnvironment != NULL)
+  {
+    if (lpEnvironment[0] != 0)
+      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
+    else
+      lpEnvironment = NULL;
+  }
+  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
+    lpCurrentDirectory = NULL;
   if (fnCreateProcessWithTokenW(hToken, dwLogonFlags, lpApplicationName, lpCommandLine,
-                                dwCreationFlags|CREATE_SUSPENDED, lpEnvironment, lpCurrentDirectory, lpStartupInfo,
-                                lpProcessInformation) == FALSE)
+                                dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory,
+                                lpStartupInfo, lpProcessInformation) == FALSE)
   {
     dwOsErr = GetWin32LastError();
     fnFreeLibrary(hAdvApi32Dll);
@@ -929,9 +979,9 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
         aLocalCode[nSize++] = 0x5D;                                       //pop     ebp
         aLocalCode[nSize++] = 0xE9;                                       //jmp     original entrypoint
 #if defined(_M_IX86)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sCtx.Eip) - (DWORD)(lpRemCode+nSize+4);
+        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sCtx.Eax) - (DWORD)(lpRemCode+nSize+4);
 #elif defined(_M_X64)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sWow64Ctx.Eip) - (DWORD)(lpRemCode+nSize+4);
+        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sWow64Ctx.Eax) - (DWORD)(lpRemCode+nSize+4);
 #endif
         nSize += 4;
         break;
@@ -998,7 +1048,7 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
         aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0xFF; aLocalCode[nSize++] = 0x25;
         *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = 0;
         nSize += 4;
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)(sCtx.Rip);
+        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)(sCtx.Rcx);
         nSize += 8;
         break;
 #endif //_M_X64
@@ -1027,11 +1077,11 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
     {
       case NKTHOOKLIB_ProcessPlatformX86:
 #if defined(_M_IX86)
-        sCtx.Eip = (DWORD)(lpRemCode + 48);
+        sCtx.Eax = (DWORD)(lpRemCode + 48);
         if (!NT_SUCCESS(fnNtSetContextThread(lpPI->hThread, &sCtx)))
           dwOsErr = ERROR_ACCESS_DENIED;
 #elif defined(_M_X64)
-        sWow64Ctx.Eip = (DWORD)(lpRemCode + 48);
+        sWow64Ctx.Eax = (DWORD)(lpRemCode + 48);
         if (fnRtlWow64GetThreadContext != NULL && fnRtlWow64SetThreadContext != NULL)
         {
           if (!NT_SUCCESS(fnRtlWow64SetThreadContext(lpPI->hThread, &sWow64Ctx)))
@@ -1047,7 +1097,7 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
 
 #if defined(_M_X64)
       case NKTHOOKLIB_ProcessPlatformX64:
-        sCtx.Rip = (DWORD64)(lpRemCode + 48);
+        sCtx.Rcx = (DWORD64)(lpRemCode + 48);
         if (!NT_SUCCESS(fnNtSetContextThread(lpPI->hThread, &sCtx)))
           dwOsErr = ERROR_ACCESS_DENIED;
         break;

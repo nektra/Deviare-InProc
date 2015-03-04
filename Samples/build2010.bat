@@ -43,14 +43,14 @@ ENDLOCAL
 SETLOCAL
 CALL "%__VCINSTALLDIR%\vcvarsall.bat" x86
 IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x86
-DEVENV CSharp\ApiHook\vs2010\Test.sln /rebuild "Debug|x86"
+DEVENV CSharp\ApiAndMethodsHook\vs2010\Test.sln /rebuild "Debug|x86"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 
 SETLOCAL
 CALL "%__VCINSTALLDIR%\vcvarsall.bat" x64
 IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x64
-DEVENV CSharp\ApiHook\vs2010\Test.sln /rebuild "Debug|x64"
+DEVENV CSharp\ApiAndMethodsHook\vs2010\Test.sln /rebuild "Debug|x64"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 

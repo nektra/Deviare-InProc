@@ -38,7 +38,8 @@
 #define NKTHOOKLIB_DontRemoveOnUnhook                 0x0002
 #define NKTHOOKLIB_DontSkipAnyJumps                   0x0004
 #define NKTHOOKLIB_SkipNullProcsToHook                0x0008
-#define NKTHOOKLIB_AlternativeMethod1                 0x0010
+#define NKTHOOKLIB_UseAbsoluteIndirectJumps           0x0010
+#define NKTHOOKLIB_DisallowReentrancy                 0x0020
 
 #define NKTHOOKLIB_ProcessPlatformX86                      1
 #define NKTHOOKLIB_ProcessPlatformX64                      2
@@ -199,20 +200,20 @@ DWORD GetWin32LastError(__in_opt HANDLE hThread=NULL);
 DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
                             __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
                             __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
-                            __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
+                            __in DWORD dwCreationFlags, __in_z_opt LPCWSTR lpEnvironment,
                             __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
                             __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW);
 
 DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
                                     __in DWORD dwLogonFlags, __in_opt LPCWSTR lpApplicationName,
                                     __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo,
                                     __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW);
 
 DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
                                     __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
+                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW);
 

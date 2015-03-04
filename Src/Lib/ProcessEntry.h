@@ -39,10 +39,6 @@ namespace NktHookLib {
 
 //-----------------------------------------------------------
 
-#define NKTHOOKLIB_PROCESS_MEMBLOCK_SIZE 256
-
-//-----------------------------------------------------------
-
 class CProcessesHandles
 {
 public:
@@ -72,7 +68,7 @@ public:
       return nPlatform;
       };
 
-    LPBYTE AllocateStub(__in LPVOID lpRefAddr);
+    LPBYTE AllocateStub(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize);
     VOID FreeStub(__in LPVOID lpAddr);
 
   private:
@@ -81,7 +77,7 @@ public:
     class CMemBlock : public TNktLnkLstNode<CMemBlock>, public CNktNtHeapBaseObj
     {
     public:
-      CMemBlock(__in HANDLE hProc);
+      CMemBlock(__in HANDLE hProc, __in SIZE_T nSlotSize);
       ~CMemBlock();
 
 #if defined(_M_IX86)
@@ -97,13 +93,21 @@ public:
         return lpBaseAddress;
         };
 
+      SIZE_T GetSlotSize() const
+        {
+        return nSlotSize;
+        };
+
       LPBYTE GetFreeSlot();
       VOID ReleaseSlot(__in LPVOID lpAddr);
 
+      BOOL IsAddressInBlock(__in LPVOID lpAddr);
+
     private:
       HANDLE hProc;
+      SIZE_T nSlotSize;
       LPBYTE lpBaseAddress;
-      BYTE aFreeEntries[((65536 / NKTHOOKLIB_PROCESS_MEMBLOCK_SIZE) + 7) >> 3];
+      LPBYTE lpFreeEntries;
       SIZE_T nFreeCount;
     };
 

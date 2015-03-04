@@ -35,6 +35,12 @@ HINSTANCE hDllInst;
 
 //-----------------------------------------------------------
 
+static LONG __stdcall ICorJitCompiler_compileMethod(__in LPVOID lpThis, __in LPVOID comp, __in LPVOID info,
+                                                    __in unsigned flags, __out BYTE **nativeEntry,
+                                                    __out ULONG *nativeSizeOfCode);
+
+//-----------------------------------------------------------
+
 // DLL Entry Point
 extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
@@ -44,5 +50,18 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpRes
   if (!PrxDllMain(hInstance, dwReason, lpReserved))
     return FALSE;
 #endif
-  return _AtlModule.DllMain(dwReason, lpReserved); 
+  return _AtlModule.DllMain(dwReason, lpReserved);
+}
+
+//-----------------------------------------------------------
+
+CDeviareLiteCOMModule::CDeviareLiteCOMModule() : CAtlDllModuleT<CDeviareLiteCOMModule>()
+{
+  return;
+}
+
+CDeviareLiteCOMModule::~CDeviareLiteCOMModule()
+{
+  DotNetCoreHooks::Finalize();
+  return;
 }
