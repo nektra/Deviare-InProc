@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Primary Interop">
-      <UniqueIdentifier>{d9d94cf2-e9c2-430b-bc4e-831e5b5e2f1c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="RegFree COM">
       <UniqueIdentifier>{5d16b73c-179f-4fd9-b59c-ba0e5ebf3460}</UniqueIdentifier>
     </Filter>
@@ -112,12 +109,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Com\BuildPrimaryInterop\build.bat">
-      <Filter>Primary Interop</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Com\BuildPrimaryInterop\keypair.snk">
-      <Filter>Primary Interop</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest">
       <Filter>RegFree COM</Filter>
     </CustomBuild>

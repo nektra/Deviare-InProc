@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Nektra S.A., Buenos Aires, Argentina.
+ * Copyright (C) 2010-2015 Nektra S.A., Buenos Aires, Argentina.
  * All rights reserved. Contact: http://www.nektra.com
  *
  *
