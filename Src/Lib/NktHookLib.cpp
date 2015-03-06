@@ -33,6 +33,7 @@
 #include "ThreadSuspend.h"
 #include "HookEntry.h"
 #include "NtHeapBaseObj.h"
+#include <intrin.h>
 
 //-----------------------------------------------------------
 
@@ -892,7 +893,7 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
         }
         else
         {
-          _InterlockedExchange((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 1);
+          _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000001);
         }
         if (lpHookEntry->nInstalledCode != 3)
           lpHookEntry->nInstalledCode = 2;
@@ -1024,7 +1025,7 @@ VOID CNktHookLib::UnhookAll()
       }
       else
       {
-        _InterlockedExchange((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 1);
+        _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000001);
       }
       lpHookEntry->nInstalledCode = 3;
     }
@@ -1083,7 +1084,7 @@ DWORD CNktHookLib::RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, BO
             }
             else
             {
-              _InterlockedExchange((LONG volatile *)(lpHookEntry->lpInjCodeAndData+1), 1);
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000100);
             }
           }
           //mark entry as uninstalled
@@ -1140,7 +1141,10 @@ DWORD CNktHookLib::EnableHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __
           }
           else
           {
-            _InterlockedExchange((LONG volatile *)(lpHookEntry->lpInjCodeAndData+1), (bEnable != FALSE) ? 0 : 1);
+            if (bEnable != FALSE)
+              _InterlockedAnd((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0xFFFF00FF);
+            else
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000100);
           }
           break;
         }
