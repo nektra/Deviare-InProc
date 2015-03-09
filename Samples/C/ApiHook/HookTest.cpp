@@ -32,7 +32,7 @@
 #include <windows.h>
 #include "..\..\..\Include\NktHookLib.h"
 
-#define DISALLOW_REENTRANCY
+//#define DISALLOW_REENTRANCY
 
 //-----------------------------------------------------------
 

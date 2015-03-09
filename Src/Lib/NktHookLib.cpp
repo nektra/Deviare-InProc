@@ -422,7 +422,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p += sizeof(ULONG);
             //----
             *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x7A : 0x06;
+            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x7A : 0x0F; //fix by Mikalai
             //check for reentranct
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
@@ -537,6 +537,8 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           dwOsErr = ERROR_ACCESS_DENIED;
           break;
         }
+        NktHookLib::NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData,
+                                               (ULONG)(lpHookEntry->nInjCodeAndDataSize));
         //write return mini stubs
         if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
         {
