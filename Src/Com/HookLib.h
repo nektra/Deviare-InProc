@@ -130,6 +130,10 @@ public:
                                           __in BSTR currentDirectory, __in my_ssize_t startupInfo, __in BSTR dllName,
                                           __deref_out INktHookProcessInfo **ppProcInfo);
 
+  STDMETHOD(InjectDll)(__in LONG pid, __in BSTR dllName);
+
+  STDMETHOD(InjectDllH)(__in my_ssize_t proc, __in BSTR dllName);
+
 private:
   friend class CNktHookInfoImpl;
 

@@ -33,29 +33,44 @@
 #include <windows.h>
 #include <winternl.h>
 
+namespace NktHookLib {
+namespace Internals {
+
 //-----------------------------------------------------------
 
+#ifndef STATUS_SUCCESS
+  #define STATUS_SUCCESS                 ((NTSTATUS)0x00000000L)
+#endif //!STATUS_SUCCESS
 #ifndef STATUS_UNSUCCESSFUL
   #define STATUS_UNSUCCESSFUL            ((NTSTATUS)0xC0000001L)
 #endif //!STATUS_UNSUCCESSFUL
 #ifndef STATUS_NOT_IMPLEMENTED
   #define STATUS_NOT_IMPLEMENTED         ((NTSTATUS)0xC0000002L)
 #endif //!STATUS_NOT_IMPLEMENTED
-#ifndef STATUS_NOT_SUPPORTED
-  #define STATUS_NOT_SUPPORTED           ((NTSTATUS)0xC00000BBL)
-#endif //!STATUS_NOT_SUPPORTED
-#ifndef STATUS_PARTIAL_COPY
-  #define STATUS_PARTIAL_COPY            ((NTSTATUS)0x8000000DL)
-#endif //!STATUS_PARTIAL_COPY
-#ifndef STATUS_NOT_IMPLEMENTED
-  #define STATUS_NOT_IMPLEMENTED         ((NTSTATUS)0xC0000002L)
-#endif //!STATUS_NOT_IMPLEMENTED
 #ifndef STATUS_INFO_LENGTH_MISMATCH
   #define STATUS_INFO_LENGTH_MISMATCH    ((NTSTATUS)0xC0000004L)
 #endif //!STATUS_INFO_LENGTH_MISMATCH
+#ifndef STATUS_NO_MEMORY
+  #define STATUS_NO_MEMORY               ((NTSTATUS)0xC0000017L)
+#endif //!STATUS_NO_MEMORY
+#ifndef STATUS_ACCESS_DENIED
+  #define STATUS_ACCESS_DENIED           ((NTSTATUS)0xC0000022L)
+#endif //!STATUS_ACCESS_DENIED
 #ifndef STATUS_BUFFER_TOO_SMALL
   #define STATUS_BUFFER_TOO_SMALL        ((NTSTATUS)0xC0000023L)
 #endif //!STATUS_BUFFER_TOO_SMALL
+#ifndef STATUS_PROCEDURE_NOT_FOUND
+  #define STATUS_PROCEDURE_NOT_FOUND     ((NTSTATUS)0xC000007AL)
+#endif //!STATUS_PROCEDURE_NOT_FOUND
+#ifndef STATUS_NOT_SUPPORTED
+  #define STATUS_NOT_SUPPORTED           ((NTSTATUS)0xC00000BBL)
+#endif //!STATUS_NOT_SUPPORTED
+#ifndef STATUS_NOT_FOUND
+  #define STATUS_NOT_FOUND               ((NTSTATUS)0xC0000225L)
+#endif //!STATUS_NOT_FOUND
+#ifndef STATUS_PARTIAL_COPY
+  #define STATUS_PARTIAL_COPY            ((NTSTATUS)0x8000000DL)
+#endif //!STATUS_PARTIAL_COPY
 
 #ifndef NKT_ASSERT
   #ifdef _DEBUG
@@ -374,8 +389,6 @@ typedef struct {
 
 //-----------------------------------------------------------
 
-namespace NktHookLib {
-
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, _notused)  \
   NTSTATUS __stdcall Nkt##name parameters;
 #define NKT_PARSE_NTAPI_VOID(name, parameters, _notused)      \
@@ -396,8 +409,9 @@ namespace NktHookLib {
 HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in BOOL bScanMappedImages);
 LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __in_z LPCSTR szFuncNameA);
 
-} //NktHookLib
-
 //-----------------------------------------------------------
+
+} //Internals
+} //NktHookLib
 
 #endif //_NKT_HOOKLIB_DYNAMIC_NTAPI_H

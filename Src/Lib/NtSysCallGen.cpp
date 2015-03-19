@@ -37,7 +37,7 @@
   #define NKT_UNALIGNED
 #endif
 
-using namespace NktHookLib;
+using namespace NktHookLib::Internals;
 
 //-----------------------------------------------------------
 
@@ -431,5 +431,5 @@ static BOOL StrCompareNoCaseA(__in_z LPCSTR szStr1, __in_z LPCSTR szStr2)
   s[1].Buffer = (PCHAR)szStr2;
   for (s[1].Length=0; szStr1[s[1].Length]!=0; s[1].Length++);
   s[1].MaximumLength = s[1].Length;
-  return (NktHookLib::NktRtlCompareString(&s[0], &s[1], TRUE) == 0) ? TRUE : FALSE;
+  return (NktRtlCompareString(&s[0], &s[1], TRUE) == 0) ? TRUE : FALSE;
 }

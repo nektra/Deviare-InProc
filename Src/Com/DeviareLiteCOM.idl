@@ -161,6 +161,14 @@ interface INktHookLib : IDispatch
                                        [in] BSTR commandLine, [in] LONG creationFlags, [in] BSTR environment,
                                        [in] BSTR currentDirectory, [in] my_ssize_t startupInfo, [in] BSTR dllName,
                                        [out,retval] INktHookProcessInfo **ppProcInfo);
+
+  [id(dispidNktHookLibInjectDll),
+   helpstring("Inject a dll in a running process")]
+  HRESULT InjectDll([in] LONG pid, [in] BSTR dllName);
+
+  [id(dispidNktHookLibInjectDllH),
+   helpstring("Inject a dll in a running process")]
+  HRESULT InjectDllH([in] my_ssize_t proc, [in] BSTR dllName);
 };
 
 //-----------------------------------------------------------

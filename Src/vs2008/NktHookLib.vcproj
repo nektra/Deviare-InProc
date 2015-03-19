@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="..\..\Libs\2008"
-			IntermediateDirectory="obj\Debug\x86\Hook"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="4"
 			CharacterSet="0"
 			>
@@ -91,7 +91,7 @@
 		<Configuration
 			Name="Debug|x64"
 			OutputDirectory="..\..\Libs\2008"
-			IntermediateDirectory="obj\Debug\x64\Hook"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="4"
 			CharacterSet="0"
 			>
@@ -161,7 +161,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="..\..\Libs\2008"
-			IntermediateDirectory="obj\Release\x86\Hook"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="4"
 			CharacterSet="0"
 			WholeProgramOptimization="1"
@@ -232,7 +232,7 @@
 		<Configuration
 			Name="Release|x64"
 			OutputDirectory="..\..\Libs\2008"
-			IntermediateDirectory="obj\Release\x64\Hook"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="4"
 			CharacterSet="0"
 			WholeProgramOptimization="1"
@@ -337,6 +337,46 @@
 			<File
 				RelativePath="..\Lib\ProcessEntry.cpp"
 				>
+			</File>
+			<File
+				RelativePath="..\Lib\ProcessInjection.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Lib\RelocatableCode.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(IntDir)&quot;"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(IntDir)&quot;"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(IntDir)&quot;"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(IntDir)&quot;"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\Lib\ThreadSuspend.cpp"
@@ -473,6 +513,96 @@
 						/>
 					</FileConfiguration>
 				</File>
+				<File
+					RelativePath="..\Lib\Asm\RelocatableCode_x64.asm"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML64.EXE /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX64&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML64.EXE /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX64&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML64.EXE /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX64&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML64.EXE /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX64&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\Lib\Asm\RelocatableCode_x86.asm"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML.EXE /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX86&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK&#x0D;&#x0A;"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML.EXE /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX86&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK&#x0D;&#x0A;"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML.EXE /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX86&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK&#x0D;&#x0A;"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling assembler code..."
+							CommandLine="ML.EXE /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;&quot;$(ProjectDir)..\Obj2Inc\Obj2Inc.exe&quot; &quot;$(IntDir)\$(InputName).obj&quot; /out &quot;$(IntDir)\$(InputName).inl&quot; /var RelocatableCodeX86&#x0D;&#x0A;IF ERRORLEVEL 1 GOTO BuildEventFailed&#x0D;&#x0A;GOTO BuildEventOK&#x0D;&#x0A;:BuildEventFailed&#x0D;&#x0A;EXIT 1&#x0D;&#x0A;:BuildEventOK&#x0D;&#x0A;"
+							Outputs="$(IntDir)\$(InputName).inl"
+						/>
+					</FileConfiguration>
+				</File>
 			</Filter>
 		</Filter>
 		<Filter
@@ -506,6 +636,10 @@
 			</File>
 			<File
 				RelativePath="..\Lib\ProcessEntry.h"
+				>
+			</File>
+			<File
+				RelativePath="..\Lib\RelocatableCode.h"
 				>
 			</File>
 			<File

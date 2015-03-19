@@ -35,6 +35,9 @@
 #include "NtHeapBaseObj.h"
 #include <intrin.h>
 
+using namespace NktHookLib::Internals;
+using namespace NktHookLibHelpers;
+
 //-----------------------------------------------------------
 
 #define MAX_SUSPEND_IPRANGES                              10
@@ -62,6 +65,7 @@ static DWORD GetProcessIdFromHandle(__in HANDLE hProc);
 //-----------------------------------------------------------
 
 namespace NktHookLib {
+namespace Internals {
 
 class CInternals : public CNktNtHeapBaseObj
 {
@@ -91,15 +95,16 @@ private:
   } sOptions;
 };
 
+} //Internals
 } //NktHookLib
 
-#define int_data           ((NktHookLib::CInternals*)lpInternals)
+#define int_data           ((CInternals*)lpInternals)
 
 //-----------------------------------------------------------
 
 CNktHookLib::CNktHookLib()
 {
-  lpInternals = new NktHookLib::CInternals();
+  lpInternals = new CInternals();
   return;
 }
 
@@ -157,10 +162,10 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     return ERROR_INVALID_PARAMETER;
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::CProcessesHandles::CEntryPtr cProcEntry;
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry> cNewHooksList;
-    NktHookLib::CHookEntry *lpHookEntry, *lpFirstHookEntryInRound;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CProcessesHandles::CEntryPtr cProcEntry;
+    TNktLnkLst<CHookEntry> cNewHooksList;
+    CHookEntry *lpHookEntry, *lpFirstHookEntryInRound;
     SIZE_T i, k, nSize, nHookIdx, nThisRound, nSizeOfSizeT;
     BYTE aCodeBlock[256], *p, *lpRetStubs[2];
     DWORD dw;
@@ -213,7 +218,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       for (k=0; k<nThisRound; k++)
       {
         //create new entries
-        lpHookEntry = new NktHookLib::CHookEntry(cProcEntry, dwFlags);
+        lpHookEntry = new CHookEntry(cProcEntry, dwFlags);
         if (lpHookEntry == NULL)
         {
           dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
@@ -264,7 +269,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         //build new code and begin with flags location
         p = aCodeBlock;
         //flags
-        NktHookLibHelpers::MemSet(p, 0, nSizeOfSizeT);
+        MemSet(p, 0, nSizeOfSizeT);
         p += nSizeOfSizeT;
         //if we use indirect jumps, store the pointer to our code start here
         if ((lpHookEntry->dwFlags & NKTHOOKLIB_UseAbsoluteIndirectJumps) != 0)
@@ -285,7 +290,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           }
         }
         //write some NOPs for hot-patching double hooks
-        NktHookLibHelpers::MemSet(p, 0x90, 8);
+        MemSet(p, 0x90, 8);
         p += 8;
         //bridge
         switch (cProcEntry->GetPlatform())
@@ -387,7 +392,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             }
             *p++ = 0x5A;                                                         //pop   edx
             lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock);
-            NktHookLibHelpers::MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
+            MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
             p += lpHookEntry->nNewStubSize;
             //----
             *p++ = 0xE9;                                                         //jmp original proc after stub
@@ -509,7 +514,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             }
             *p++ = 0x5A;                                                         //pop   rdx
             lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock);
-            NktHookLibHelpers::MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
+            MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
             p += lpHookEntry->nNewStubSize;
             //----
             *p++ = 0xFF;  *p++ = 0x25;                                          //jmp original proc after stub
@@ -531,14 +536,14 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         lpHookEntry->nInjCodeAndDataSize = (SIZE_T)(p - aCodeBlock);
         NKT_ASSERT(lpHookEntry->nInjCodeAndDataSize < sizeof(aCodeBlock));
         //write inject code
-        if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData, aCodeBlock,
-                                        lpHookEntry->nInjCodeAndDataSize) == FALSE)
+        if (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData, aCodeBlock,
+                     lpHookEntry->nInjCodeAndDataSize) == FALSE)
         {
           dwOsErr = ERROR_ACCESS_DENIED;
           break;
         }
-        NktHookLib::NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData,
-                                               (ULONG)(lpHookEntry->nInjCodeAndDataSize));
+        NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData,
+                                   (ULONG)(lpHookEntry->nInjCodeAndDataSize));
         //write return mini stubs
         if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
         {
@@ -561,7 +566,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
                 //fill with NOPs
                 aCodeBlock[18] = aCodeBlock[19] = 0x90;
                 //write
-                if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 20) == FALSE)
+                if (WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 20) == FALSE)
                 {
                   dwOsErr = ERROR_ACCESS_DENIED;
                   break;
@@ -592,7 +597,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
                 //fill with NOPs
                 aCodeBlock[26] = aCodeBlock[27] = 0x90;
                 //write
-                if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 28) == FALSE)
+                if (WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 28) == FALSE)
                 {
                   dwOsErr = ERROR_ACCESS_DENIED;
                   break;
@@ -645,8 +650,8 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       //do actual hooking
       if (dwOsErr == NO_ERROR)
       {
-        NktHookLib::CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
-        NktHookLib::CNktThreadSuspend::IP_RANGE sIpRanges[MAX_SUSPEND_IPRANGES];
+        CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
+        CNktThreadSuspend::IP_RANGE sIpRanges[MAX_SUSPEND_IPRANGES];
         MEMORY_BASIC_INFORMATION sMbi;
         DWORD dwNewProt, dwOldProt;
         BOOL bThreadsSuspended;
@@ -657,7 +662,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           //suspend threads if not done yet taking into account until 'MAX_SUSPEND_IPRANGES' ahead items
           if (bThreadsSuspended == FALSE && int_data->sOptions.bSuspendThreads != FALSE)
           {
-            NktHookLib::CHookEntry *lpHookEntry2;
+            CHookEntry *lpHookEntry2;
             SIZE_T i;
 
             for (i=0,lpHookEntry2=lpHookEntry; i<nThisRound && i<MAX_SUSPEND_IPRANGES;
@@ -672,10 +677,10 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             bThreadsSuspended = TRUE;
           }
           //do actual hooking
-          NktHookLibHelpers::MemSet(&sMbi, 0, sizeof(sMbi));
+          MemSet(&sMbi, 0, sizeof(sMbi));
           nSize = 0;
-          nNtStatus = NktHookLib::NktNtQueryVirtualMemory(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
-                                                          MyMemoryBasicInformation, &sMbi, sizeof(sMbi), &nSize);
+          nNtStatus = NktNtQueryVirtualMemory(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
+                                              MyMemoryBasicInformation, &sMbi, sizeof(sMbi), &nSize);
           dwNewProt = PAGE_EXECUTE_WRITECOPY;
           if (NT_SUCCESS(nNtStatus))
           {
@@ -702,38 +707,37 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p = lpHookEntry->lpOrigProc;
             nSize = lpHookEntry->GetJumpToHookBytes();
             dwOldProt = 0;
-            nNtStatus = NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
-                                                             dwNewProt, &dwOldProt);
+            nNtStatus = NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dwNewProt, &dwOldProt);
             if (!NT_SUCCESS(nNtStatus))
             {
-              dwOsErr = NktHookLib::NktRtlNtStatusToDosError(nNtStatus);
+              dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
               if (dwOsErr == 0)
                 dwOsErr = ERROR_NOT_SUPPORTED;
               break;
             }
           }
           //replace entry point
-          if (NktHookLibHelpers::WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
-                                          lpHookEntry->aJumpStub, lpHookEntry->GetJumpToHookBytes()) == FALSE)
+          if (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, lpHookEntry->aJumpStub,
+                       lpHookEntry->GetJumpToHookBytes()) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           //restore protection
           if (dwNewProt != (sMbi.Protect & 0xFF))
           {
             p = lpHookEntry->lpOrigProc;
             nSize = lpHookEntry->GetJumpToHookBytes();
-            NktHookLib::NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dwOldProt, &dw);
+            NktNtProtectVirtualMemory(cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dwOldProt, &dw);
           }
           //check write operation result
           if (dwOsErr != NO_ERROR)
             break;
           //flush instruction cache
-          NktHookLib::NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
+          NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
           //mark as installed
           lpHookEntry->nInstalledCode = 1;
           //check if next item to hook is outside any suspended thread range
           if (int_data->sOptions.bSuspendThreads != FALSE && k+1 < nThisRound)
           {
-            NktHookLib::CHookEntry *lpHookEntry2 = lpHookEntry->GetNextEntry();
+            CHookEntry *lpHookEntry2 = lpHookEntry->GetNextEntry();
             SIZE_T nAddrS, nAddrE;
 
             nAddrS = (SIZE_T)(lpHookEntry2->lpOrigProc);
@@ -758,9 +762,9 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       {
         if (int_data->sOptions.bOutputDebug != FALSE)
         {
-          NktHookLibHelpers::DebugPrint("NktHookLib: Hook installed. Proc @ 0x%IX -> 0x%IX (Stub @ 0x%IX) \r\n",
-                    (SIZE_T)(lpHookEntry->lpOrigProc), (SIZE_T)(lpHookEntry->lpNewProc),
-                    (SIZE_T)(lpHookEntry->lpInjCodeAndData));
+          DebugPrint("NktHookLib: Hook installed. Proc @ 0x%IX -> 0x%IX (Stub @ 0x%IX) \r\n",
+                     (SIZE_T)(lpHookEntry->lpOrigProc), (SIZE_T)(lpHookEntry->lpNewProc),
+                     (SIZE_T)(lpHookEntry->lpInjCodeAndData));
         }
         int_data->cHooksList.PushTail(lpHookEntry);
       }
@@ -852,17 +856,17 @@ DWORD CNktHookLib::Unhook(__in SIZE_T nHookId)
 
 DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
 {
-  NktHookLib::TNktLnkLst<NktHookLib::CHookEntry> cToDeleteList;
-  NktHookLib::CHookEntry *lpHookEntry;
+  TNktLnkLst<CHookEntry> cToDeleteList;
+  CHookEntry *lpHookEntry;
 
   if (aHookInfo == NULL || nCount == 0)
     return ERROR_INVALID_PARAMETER;
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
-    NktHookLib::CNktThreadSuspend::IP_RANGE sIpRange[2];
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::Iterator it;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
+    CNktThreadSuspend::IP_RANGE sIpRange[2];
+    TNktLnkLst<CHookEntry>::Iterator it;
     BYTE aTempBuf[8], *p;
     SIZE_T nSize, nHookIdx, nIpRangesCount;
     DWORD dw, dwOsErr, dwCurrPid;
@@ -891,7 +895,7 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
         if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
         {
           BYTE nVal = 1;
-          NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData, &nVal, 1);
+          WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData, &nVal, 1);
         }
         else
         {
@@ -932,29 +936,29 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
           p = lpHookEntry->lpOrigProc;
           nSize = lpHookEntry->nOriginalStubSize;
           dw = 0;
-          nNtStatus = NktHookLib::NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p,
-                                                           &nSize, PAGE_EXECUTE_READWRITE, &dw);
+          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                                PAGE_EXECUTE_READWRITE, &dw);
           if (!NT_SUCCESS(nNtStatus))
           {
             p = lpHookEntry->lpOrigProc;
             nSize = lpHookEntry->nOriginalStubSize;
             dw = 0;
-            nNtStatus = NktHookLib::NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p,
-                                                             &nSize, PAGE_EXECUTE_WRITECOPY, &dw);
+            nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                                  PAGE_EXECUTE_WRITECOPY, &dw);
           }
           if (NT_SUCCESS(nNtStatus))
           {
-            if (NktHookLibHelpers::ReadMem(lpHookEntry->cProcEntry->GetHandle(), aTempBuf, lpHookEntry->lpOrigProc,
-                                           lpHookEntry->GetJumpToHookBytes()) == lpHookEntry->GetJumpToHookBytes() &&
-                NktHookLibHelpers::MemCompare(aTempBuf, lpHookEntry->aJumpStub, lpHookEntry->GetJumpToHookBytes()) == 0)
+            if (ReadMem(lpHookEntry->cProcEntry->GetHandle(), aTempBuf, lpHookEntry->lpOrigProc,
+                        lpHookEntry->GetJumpToHookBytes()) == lpHookEntry->GetJumpToHookBytes() &&
+                MemCompare(aTempBuf, lpHookEntry->aJumpStub, lpHookEntry->GetJumpToHookBytes()) == 0)
             {
-              bOk = NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
-                                                lpHookEntry->aOriginalStub, lpHookEntry->nOriginalStubSize);
+              bOk = WriteMem(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
+                             lpHookEntry->aOriginalStub, lpHookEntry->nOriginalStubSize);
             }
             p = lpHookEntry->lpOrigProc;
             nSize = lpHookEntry->nOriginalStubSize;
-            NktHookLib::NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
-            NktHookLib::NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
+            NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
+            NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
           }
         }
       }
@@ -979,9 +983,9 @@ VOID CNktHookLib::UnhookProcess(__in DWORD dwPid)
 {
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::Iterator it;
-    NktHookLib::CHookEntry *lpHookEntry;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
+    CHookEntry *lpHookEntry;
     HOOK_INFO sHooks[256];
     SIZE_T nCount;
 
@@ -1008,10 +1012,10 @@ VOID CNktHookLib::UnhookAll()
 {
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::Iterator it;
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::IteratorRev itRev;
-    NktHookLib::CHookEntry *lpHookEntry;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
+    TNktLnkLst<CHookEntry>::IteratorRev itRev;
+    CHookEntry *lpHookEntry;
     HOOK_INFO sHooks[256];
     DWORD dwCurrPid;
     SIZE_T nCount;
@@ -1054,16 +1058,16 @@ DWORD CNktHookLib::RemoveHook(__in SIZE_T nHookId, BOOL bDisable)
 
 DWORD CNktHookLib::RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, BOOL bDisable)
 {
-  NktHookLib::TNktLnkLst<NktHookLib::CHookEntry> cToDeleteList;
-  NktHookLib::CHookEntry *lpHookEntry;
+  TNktLnkLst<CHookEntry> cToDeleteList;
+  CHookEntry *lpHookEntry;
 
   if (aHookInfo == NULL || nCount == 0)
     return ERROR_INVALID_PARAMETER;
   if (lpInternals == NULL)
     return ERROR_NOT_ENOUGH_MEMORY;
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::Iterator it;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
     DWORD dwCurrPid;
     SIZE_T nHookIdx;
 
@@ -1120,9 +1124,9 @@ DWORD CNktHookLib::EnableHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __
   if (lpInternals == NULL)
     return ERROR_NOT_ENOUGH_MEMORY;
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    NktHookLib::TNktLnkLst<NktHookLib::CHookEntry>::Iterator it;
-    NktHookLib::CHookEntry *lpHookEntry;
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
+    CHookEntry *lpHookEntry;
     DWORD dwCurrPid;
     SIZE_T nHookIdx;
 
@@ -1161,7 +1165,7 @@ DWORD CNktHookLib::SetSuspendThreadsWhileHooking(__in BOOL bEnable)
   if (lpInternals == NULL)
     return ERROR_NOT_ENOUGH_MEMORY;
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
 
     int_data->sOptions.bSuspendThreads = bEnable;
   }
@@ -1175,7 +1179,7 @@ BOOL CNktHookLib::GetSuspendThreadsWhileHooking()
   b = TRUE;
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
 
     b = int_data->sOptions.bSuspendThreads;
   }
@@ -1187,7 +1191,7 @@ DWORD CNktHookLib::SetEnableDebugOutput(__in BOOL bEnable)
   if (lpInternals == NULL)
     return ERROR_NOT_ENOUGH_MEMORY;
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
 
     int_data->sOptions.bOutputDebug = bEnable;
   }
@@ -1201,7 +1205,7 @@ BOOL CNktHookLib::GetEnableDebugOutput()
   b = TRUE;
   if (lpInternals != NULL)
   {
-    NktHookLib::CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
 
     b = int_data->sOptions.bOutputDebug;
   }
@@ -1251,8 +1255,8 @@ static DWORD GetProcessIdFromHandle(__in HANDLE hProc)
     if (hProc == NKTHOOKLIB_CurrentProcess)
       return NktHookLibHelpers::GetCurrentProcessId();
     NktHookLibHelpers::MemSet(&sPbi, 0, sizeof(sPbi));
-    if (NktHookLib::NktNtQueryInformationProcess(hProc, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi,
-                                                sizeof(sPbi), NULL) >= 0)
+    if (NktNtQueryInformationProcess(hProc, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi, sizeof(sPbi),
+                                     NULL) >= 0)
       return (DWORD)sPbi.UniqueProcessId;
   }
   return 0;

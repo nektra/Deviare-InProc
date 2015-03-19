@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="..\..\bin\2008"
-			IntermediateDirectory="obj\Debug\x86\Com"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="2"
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -107,7 +107,7 @@
 		<Configuration
 			Name="Debug|x64"
 			OutputDirectory="..\..\bin\2008"
-			IntermediateDirectory="obj\Debug\x64\Com"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="2"
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -192,7 +192,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="..\..\bin\2008"
-			IntermediateDirectory="obj\Debug\x86\Com"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="2"
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -277,7 +277,7 @@
 		<Configuration
 			Name="Release|x64"
 			OutputDirectory="..\..\bin\2008"
-			IntermediateDirectory="obj\Debug\x64\Com"
+			IntermediateDirectory="obj\$(ConfigurationName)\$(PlatformName)\$(ProjectName)"
 			ConfigurationType="2"
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -671,82 +671,6 @@
 			<File
 				RelativePath="..\Com\Resource.h"
 				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Primary Interop"
-			>
-			<File
-				RelativePath="..\Com\BuildPrimaryInterop\build.bat"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\Com\BuildPrimaryInterop\keypair.snk"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter

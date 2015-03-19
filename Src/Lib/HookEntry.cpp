@@ -27,10 +27,10 @@
  *
  **/
 
-#include "..\..\Include\NktHookLib.h"
 #include "HookEntry.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 #if defined(_M_X64) || defined(_M_IA64) || defined(_M_AMD64)
   #define NKT_UNALIGNED __unaligned
@@ -203,7 +203,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
 #if defined(_M_X64)
         case NKTHOOKLIB_ProcessPlatformX64:
           //jmp to original call (JMP QWORD PTR [RIP+0h])
-          lpDest[0] = 0xFF;  lpDest[1] = 0x25; //
+          lpDest[0] = 0xFF;  lpDest[1] = 0x25;
           *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
           *((ULONGLONG NKT_UNALIGNED*)(lpDest+6)) = (ULONGLONG)(s[1]);
           nDestInstrLen = 14;
@@ -1522,4 +1522,5 @@ pj_setupfarjump2_x64:
 
 //-----------------------------------------------------------
 
-}
+} //Internals
+} //NktHookLib

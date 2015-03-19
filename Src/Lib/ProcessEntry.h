@@ -36,6 +36,7 @@
 #include "NtHeapBaseObj.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
 
@@ -201,6 +202,7 @@ private:
 
 //-----------------------------------------------------------
 
+} //Internals
 } //NktHookLib
 
 #endif //_NKT_HOOKLIB_PROCESSENTRY_H

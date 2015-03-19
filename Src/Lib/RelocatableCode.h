@@ -27,78 +27,40 @@
  *
  **/
 
-#ifndef _NKT_THREADSUSPEND_H
-#define _NKT_THREADSUSPEND_H
+#ifndef _NKT_HOOKLIB_RELOCATABLECODE_H
+#define _NKT_HOOKLIB_RELOCATABLECODE_H
 
 #include "..\..\Include\NktHookLib.h"
 
 namespace NktHookLib {
 namespace Internals {
+namespace RelocatableCode {
 
 //-----------------------------------------------------------
 
-class CNktThreadSuspend
-{
-public:
-  typedef struct {
-    SIZE_T nStart, nEnd;
-  } IP_RANGE;
-
-  CNktThreadSuspend();
-  ~CNktThreadSuspend();
-
-  DWORD SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, __in SIZE_T nRangesCount);
-  VOID ResumeAll();
-
-  BOOL CheckIfThreadIsInRange(__in SIZE_T nStart, __in SIZE_T nEnd);
-
-  class CAutoResume
-  {
-  public:
-    CAutoResume(__in CNktThreadSuspend *_lpThreadSuspend)
-      {
-      lpThreadSuspend = _lpThreadSuspend;
-      return;
-      };
-
-    ~CAutoResume()
-      {
-      lpThreadSuspend->ResumeAll();
-      return;
-      };
-
-  private:
-    CNktThreadSuspend *lpThreadSuspend;
-  };
-
-private:
-  typedef struct {
-    DWORD dwTid;
-    HANDLE hThread;
-    SIZE_T nCurrIP;
-  } THREAD_ITEM, *LPTHREAD_ITEM;
-
-  DWORD EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __out SIZE_T *lpnEnumMethod,
-                           __out LPDWORD lpdwSessionId);
-  BOOL GrowCheckProcessThreadsMem();
-  DWORD CheckProcessThreads(__in DWORD dwPid, __in SIZE_T nEnumMethod, __in DWORD dwSessionId);
-  BOOL GetProcessSessionId(__in HANDLE hProcess, __out LPDWORD lpdwSessionId);
-
-private:
-  struct {
-    LPTHREAD_ITEM lpList;
-    SIZE_T nCount;
-  } sSuspendedTids;
-  //----
-  struct {
-    LPBYTE lpMem;
-    SIZE_T nSize;
-  } sCheckThreads;
-};
+typedef struct {
+  SIZE_T nOffset_GetModuleBaseAddress;
+  SIZE_T nOffset_GetProcedureAddress;
+} GETMODULEANDPROCADDR_DATA;
 
 //-----------------------------------------------------------
 
+SIZE_T GetModuleAndProcAddr_GetSize(__in LONG nPlatform);
+LPBYTE GetModuleAndProcAddr_GetCode(__in LONG nPlatform, __out GETMODULEANDPROCADDR_DATA &sAddresses);
+
+SIZE_T InjectDllInSuspendedProcess_GetSize(__in LONG nPlatform);
+LPBYTE InjectDllInSuspendedProcess_GetCode(__in LONG nPlatform);
+
+SIZE_T InjectDllInRunningProcess_GetSize(__in LONG nPlatform);
+LPBYTE InjectDllInRunningProcess_GetCode(__in LONG nPlatform);
+
+SIZE_T WaitForEventAtStartup_GetSize(__in LONG nPlatform);
+LPBYTE WaitForEventAtStartup_GetCode(__in LONG nPlatform);
+
+//-----------------------------------------------------------
+
+} //RelocatableCode
 } //Internals
 } //NktHookLib
 
-#endif //_NKT_THREADSUSPEND_H
+#endif //_NKT_HOOKLIB_RELOCATABLECODE_H

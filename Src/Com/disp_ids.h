@@ -44,6 +44,8 @@ typedef [v1_enum] enum eNktDispIds {
   dispidNktHookLibCreateProcessWithDll,
   dispidNktHookLibCreateProcessWithLogonAndDll,
   dispidNktHookLibCreateProcessWithTokenAndDll,
+  dispidNktHookLibInjectDll,
+  dispidNktHookLibInjectDllH,
   //----
   dispidNktHookInfoId = 1,
   dispidNktHookInfoOrigProcAddr,

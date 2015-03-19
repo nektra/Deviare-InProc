@@ -42,6 +42,21 @@ NKT_PARSE_NTAPI_NTSTATUS(NtOpenThreadToken, (__in HANDLE ThreadHandle, __in ACCE
                                              __in BOOLEAN OpenAsSelf, __out PHANDLE TokenHandle),
                          (ThreadHandle, DesiredAccess, OpenAsSelf, TokenHandle))
 
+NKT_PARSE_NTAPI_NTSTATUS(NtDuplicateToken, (__in HANDLE ExistingTokenHandle, __in ACCESS_MASK DesiredAccess,
+                                            __in POBJECT_ATTRIBUTES ObjectAttributes, __in BOOLEAN EffectiveOnly,
+                                            __in TOKEN_TYPE _TokenType, __out PHANDLE NewTokenHandle),
+                         (ExistingTokenHandle, DesiredAccess, ObjectAttributes, EffectiveOnly, _TokenType,
+                          NewTokenHandle))
+
+NKT_PARSE_NTAPI_NTSTATUS(NtQueryInformationToken, (__in HANDLE TokenHandle, __in TOKEN_INFORMATION_CLASS TokenInfoClass,
+                                                   __out PVOID TokenInfo, __in ULONG TokenInfoLength,
+                                                   __out PULONG ReturnLength),
+                         (TokenHandle, TokenInfoClass, TokenInfo, TokenInfoLength, ReturnLength))
+
+NKT_PARSE_NTAPI_NTSTATUS(NtSetInformationToken, (__in HANDLE TokenHandle, __in TOKEN_INFORMATION_CLASS TokenInfoClass,
+                                                 __in PVOID TokenInfo, __in ULONG TokenInfoLength),
+                         (TokenHandle, TokenInfoClass, TokenInfo, TokenInfoLength))
+
 //--------
 
 NKT_PARSE_NTAPI_NTSTATUS(NtGetContextThread, (__in HANDLE ThreadHandle, __out PCONTEXT Context),
@@ -182,6 +197,12 @@ NKT_PARSE_NTAPI_NTSTATUS(NtAdjustPrivilegesToken, (__in HANDLE TokenHandle, __in
                                                    __out PTOKEN_PRIVILEGES PreviousState,
                                                    __out_opt PULONG ReturnLength),
                          (TokenHandle, DisableAllPrivileges, NewState, BufferLength, PreviousState, ReturnLength))
+
+NKT_PARSE_NTAPI_NTSTATUS(NtDuplicateObject, (__in HANDLE SourceProcessHandle, __in HANDLE SourceHandle,
+                                             __in_opt HANDLE TargetProcessHandle, __out_opt PHANDLE TargetHandle,
+                                             __in ACCESS_MASK DesiredAccess, __in ULONG HandleAttr, __in ULONG Options),
+                         (SourceProcessHandle, SourceHandle, TargetProcessHandle, TargetHandle, DesiredAccess,
+                          HandleAttr, Options))
 
 NKT_PARSE_NTAPI_VOID(RtlRaiseException, (__in PEXCEPTION_RECORD ExceptionRecord), (ExceptionRecord))
 

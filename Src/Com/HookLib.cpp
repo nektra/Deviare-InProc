@@ -339,6 +339,24 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token
   return hRes;
 }
 
+STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG pid, __in BSTR dllName)
+{
+  if (dllName == NULL)
+    return E_POINTER;
+  if (dllName[0] == NULL || pid == 0)
+    return E_INVALIDARG;
+  return NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByPidW((DWORD)pid, dllName));
+}
+
+STDMETHODIMP CNktHookLibImpl::InjectDllH(__in my_ssize_t proc, __in BSTR dllName)
+{
+  if (dllName == NULL)
+    return E_POINTER;
+  if (dllName[0] == NULL || proc == 0)
+    return E_INVALIDARG;
+  return NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByHandleW((HANDLE)proc, dllName));
+}
+
 //-----------------------------------------------------------
 
 CNktHookLibImpl::CHookInfo::CHookInfo()

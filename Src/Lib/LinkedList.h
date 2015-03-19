@@ -37,6 +37,7 @@
 #include <windows.h>
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
 
@@ -327,6 +328,7 @@ private:
 
 //-----------------------------------------------------------
 
+} //Internals
 } //NktHookLib
 
 #endif //_NKT_LINKEDLIST_H

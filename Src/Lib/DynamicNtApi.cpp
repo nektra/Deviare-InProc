@@ -27,9 +27,9 @@
  *
  **/
 
+#include "..\..\Include\NktHookLib.h"
 #include "DynamicNtApi.h"
 #include <intrin.h>
-#include "..\..\Include\NktHookLib.h"
 
 #if defined(_M_IX86)
   #pragma intrinsic (_InterlockedExchange)
@@ -52,6 +52,12 @@ extern LPVOID lpUserParam;
 
 } //namespace NktHookLibHelpers
 
+static VOID InitializeInternals();
+static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA);
+
+namespace NktHookLib {
+namespace Internals {
+
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, _notused)  \
   typedef NTSTATUS (__stdcall *lpfn_##name)parameters;        \
   lpfn_##name volatile NktHookLib_fn_##name = NULL;
@@ -67,19 +73,12 @@ extern LPVOID lpUserParam;
 #define NKT_PARSE_NTAPI_ULONG(name, parameters, _notused)     \
   typedef ULONG (__stdcall *lpfn_##name)parameters;           \
   lpfn_##name volatile NktHookLib_fn_##name = NULL;
-extern "C" {
 #include "NtApiDeclarations.h"
-};
 #undef NKT_PARSE_NTAPI_NTSTATUS
 #undef NKT_PARSE_NTAPI_VOID
 #undef NKT_PARSE_NTAPI_PVOID
 #undef NKT_PARSE_NTAPI_BOOLEAN
 #undef NKT_PARSE_NTAPI_ULONG
-
-//-----------------------------------------------------------
-
-static VOID InitializeInternals();
-static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA);
 
 #define NKT_PARSE_NTAPI_NTSTATUS(name, parameters, paramCall) \
 NTSTATUS __stdcall Nkt##name parameters                       \
@@ -126,14 +125,15 @@ ULONG __stdcall Nkt##name parameters                          \
     return 0;                                                 \
   return NktHookLib_fn_##name paramCall;                      \
 }
-namespace NktHookLib {
 #include "NtApiDeclarations.h"
-} //NktHookLib
 #undef NKT_PARSE_NTAPI_NTSTATUS
 #undef NKT_PARSE_NTAPI_VOID
 #undef NKT_PARSE_NTAPI_PVOID
 #undef NKT_PARSE_NTAPI_BOOLEAN
 #undef NKT_PARSE_NTAPI_ULONG
+
+} //Internals
+} //NktHookLib
 
 //-----------------------------------------------------------
 
@@ -143,13 +143,13 @@ static VOID InitializeInternals()
 
   _hNtDll = NULL;
 #if defined(_M_IX86)
-  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                \
-    fn = ResolveNtDllApi(_hNtDll, # name);                                   \
-    _InterlockedExchange((long volatile*)&(NktHookLib_fn_##name), (long)fn);
+  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                                     \
+    fn = ResolveNtDllApi(_hNtDll, # name);                                                        \
+    _InterlockedExchange((long volatile*)&(NktHookLib::Internals::NktHookLib_fn_##name), (long)fn);
 #elif defined(_M_X64)
-  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                \
-    fn = ResolveNtDllApi(_hNtDll, # name);                                   \
-    _InterlockedExchangePointer((void* volatile*)&(NktHookLib_fn_##name), fn);
+  #define NKT_PARSE_NTAPI_NTSTATUS(name, _notused, _notused2)                                       \
+    fn = ResolveNtDllApi(_hNtDll, # name);                                                          \
+    _InterlockedExchangePointer((void* volatile*)&(NktHookLib::Internals::NktHookLib_fn_##name), fn);
 #endif
 #define NKT_PARSE_NTAPI_VOID NKT_PARSE_NTAPI_NTSTATUS
 #define NKT_PARSE_NTAPI_PVOID NKT_PARSE_NTAPI_NTSTATUS
@@ -198,8 +198,9 @@ static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA)
   if (_hNtDll == NULL)
   {
     //Set ScanMappedImages to FALSE to avoid recursion
-   _hNtDll = NktHookLib::GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, L"ntdll.dll", FALSE);
+   _hNtDll = NktHookLib::Internals::GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, L"ntdll.dll", FALSE);
   }
-  return (_hNtDll != NULL) ? NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll, szApiNameA) :
-                             NULL;
+  if (_hNtDll == NULL)
+    return NULL;
+  return NktHookLib::Internals::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, _hNtDll, szApiNameA);
 }

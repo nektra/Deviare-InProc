@@ -31,6 +31,7 @@ using System;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace CreateProcessWithDllTest
 {
@@ -53,16 +54,79 @@ namespace CreateProcessWithDllTest
         static void Main(string[] args)
         {
             string cmdLine, dllName;
-            DeviareLiteInterop.HookLib.STARTUPINFO si;
-            DeviareLiteInterop.HookLib.ProcessInfo pi;
 
             cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\calc.exe";
+            //cmdLine = @"c:\Archivos de programa (x86)\Java\jre1.8.0_40\bin\jp2launcher.exe";
             dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
             dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
-            si = new DeviareLiteInterop.HookLib.STARTUPINFO();
-
-            pi = cHook.CreateProcessWithDll(cmdLine, "", null, null, false, 0, null, null, si, dllName);
+            TestCreateProcessWithDll(cmdLine, dllName);
+            TestCreateProcessAndInjectDll(cmdLine, dllName);
+            TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
         }
+
+        static void TestCreateProcessWithDll(string cmdLine, string dllName)
+        {
+            DeviareLiteInterop.HookLib.STARTUPINFO si;
+            DeviareLiteInterop.HookLib.ProcessInfo pi;
+
+            MessageBox.Show("Launching CALC with a DLL injected\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            try
+            {
+                si = new DeviareLiteInterop.HookLib.STARTUPINFO();
+                pi = cHook.CreateProcessWithDll(cmdLine, "", null, null, false, 0, null, null, si, dllName);
+                WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        static void TestCreateProcessAndInjectDll(string cmdLine, string dllName)
+        {
+            DeviareLiteInterop.HookLib.STARTUPINFO si;
+            DeviareLiteInterop.HookLib.ProcessInfo pi;
+
+            MessageBox.Show("Launching CALC and injecting DLL after startup\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            try
+            {
+                si = new DeviareLiteInterop.HookLib.STARTUPINFO();
+                pi = cHook.CreateProcess(cmdLine, "", null, null, false, 0, null, null, si);
+                System.Threading.Thread.Sleep(1000); //sleep for a while in order to let the process initialize properly
+                cHook.InjectDll(pi.procId, dllName);
+                WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        static void TestCreateSuspendedProcessAndInjectDll(string cmdLine, string dllName)
+        {
+            DeviareLiteInterop.HookLib.STARTUPINFO si;
+            DeviareLiteInterop.HookLib.ProcessInfo pi;
+
+            pi.threadHandle = null;
+            MessageBox.Show("Launching suspended CALC, injecting DLL and resume\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            try
+            {
+                si = new DeviareLiteInterop.HookLib.STARTUPINFO();
+                pi = cHook.CreateProcess(cmdLine, "", null, null, false, DeviareLiteInterop.HookLib.ProcessCreationFlags.CREATE_SUSPENDED, null, null, si);
+                cHook.InjectDll(pi.procId, dllName);
+                cHook.ResumeThread(pi.threadHandle);
+                WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
+            }
+            catch (Exception ex)
+            {
+                if (pi.threadHandle != null && pi.threadHandle.IsInvalid == false)
+                    cHook.ResumeThread(pi.threadHandle);
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
     }
 }

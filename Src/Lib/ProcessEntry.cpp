@@ -35,6 +35,7 @@
 #pragma intrinsic (_InterlockedDecrement)
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
 
@@ -421,4 +422,5 @@ BOOL CProcessesHandles::CEntry::CMemBlock::IsAddressInBlock(__in LPVOID lpAddr)
 
 //-----------------------------------------------------------
 
-}
+} //Internals
+} //NktHookLib

@@ -34,6 +34,12 @@
     <ClCompile Include="..\Lib\DynamicNtApi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Lib\ProcessInjection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Lib\RelocatableCode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Include\NktHookLib.h">
@@ -64,6 +70,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Lib\NtApiDeclarations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Lib\RelocatableCode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Lib\AutoPtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -98,6 +110,12 @@
       <Filter>Source Files\Asm</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Lib\Asm\Helpers_x64.asm">
+      <Filter>Source Files\Asm</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Lib\Asm\RelocatableCode_x64.asm">
+      <Filter>Source Files\Asm</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Lib\Asm\RelocatableCode_x86.asm">
       <Filter>Source Files\Asm</Filter>
     </CustomBuild>
   </ItemGroup>

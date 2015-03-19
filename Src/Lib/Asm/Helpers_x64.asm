@@ -27,8 +27,6 @@
  ;
  ;
 
-;See: http://www.japheth.de/ and http://www.ntcore.com/files/vista_x64.htm
-
 _TEXT SEGMENT
 
 ;---------------------------------------------------------------------------------

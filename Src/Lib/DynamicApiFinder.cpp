@@ -30,6 +30,9 @@
 #include "DynamicNtApi.h"
 #include "..\..\Include\NktHookLib.h"
 
+using namespace NktHookLib::Internals;
+using namespace NktHookLibHelpers;
+
 //-----------------------------------------------------------
 
 static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T nPlatformBits);
@@ -58,6 +61,7 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
 //-----------------------------------------------------------
 
 namespace NktHookLib {
+namespace Internals {
 
 HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in BOOL bScanMappedImages)
 {
@@ -84,7 +88,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
   if (szDllNameW == NULL || szDllNameW[0] == 0)
     return NULL;
   for (nDllNameLen=0; szDllNameW[nDllNameLen]!=0; nDllNameLen++);
-  switch (NktHookLibHelpers::GetProcessPlatform(hProcess))
+  switch (GetProcessPlatform(hProcess))
   {
     case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
@@ -214,7 +218,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
 
   if (lpDllBase == NULL || szFuncNameA == NULL || szFuncNameA[0] == 0)
     return NULL;
-  switch (NktHookLibHelpers::GetProcessPlatform(hProcess))
+  switch (GetProcessPlatform(hProcess))
   {
     case NKTHOOKLIB_ProcessPlatformX86:
       nPlatformBits = 32;
@@ -258,7 +262,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
     default:
       return NULL;
   }
-  if (NktHookLibHelpers::ReadMem(hProcess, &sExpDir, lpExpDir, sizeof(sExpDir)) != sizeof(sExpDir))
+  if (ReadMem(hProcess, &sExpDir, lpExpDir, sizeof(sExpDir)) != sizeof(sExpDir))
     return NULL;
   //get addresses
   lpdwAddressOfFunctions = (LPDWORD)(lpBaseAddr + (SIZE_T)(sExpDir.AddressOfFunctions));
@@ -277,14 +281,12 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
     for (dwTemp32=0; dwTemp32<sExpDir.NumberOfNames; dwTemp32++)
     {
       //get the ordinal
-      if (NktHookLibHelpers::ReadMem(hProcess, &wTemp16, lpwAddressOfNameOrdinals+dwTemp32,
-                                     sizeof(WORD)) != sizeof(WORD) ||
-          NktHookLibHelpers::ReadMem(hProcess, &dw, lpdwAddressOfNames+dwTemp32,
-                                     sizeof(DWORD)) != sizeof(DWORD) ||
+      if (ReadMem(hProcess, &wTemp16, lpwAddressOfNameOrdinals+dwTemp32, sizeof(WORD)) != sizeof(WORD) ||
+          ReadMem(hProcess, &dw, lpdwAddressOfNames+dwTemp32, sizeof(DWORD)) != sizeof(DWORD) ||
           dw == 0)
         continue;
       //get the name
-      nLen = NktHookLibHelpers::ReadMem(hProcess, szBufA, lpBaseAddr+(SIZE_T)dw, 1023);
+      nLen = ReadMem(hProcess, szBufA, lpBaseAddr+(SIZE_T)dw, 1023);
       if (nLen == 0)
         continue;
       szBufA[nLen] = 0;
@@ -296,14 +298,14 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
     dwTemp32 = (DWORD)wTemp16;
   }
   //get address of function
-  if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpdwAddressOfFunctions+dwTemp32, sizeof(DWORD)) != sizeof(DWORD) ||
+  if (ReadMem(hProcess, &dw, lpdwAddressOfFunctions+dwTemp32, sizeof(DWORD)) != sizeof(DWORD) ||
       dw == 0)
     return NULL;
   lpFuncAddr = lpBaseAddr + (SIZE_T)dw;
   if (lpFuncAddr >= lpExpDir && lpFuncAddr < lpExpDir+nExpDirSize)
   {
     //read forwarded function
-    nLen = NktHookLibHelpers::ReadMem(hProcess, szBufA, lpFuncAddr, 1023);
+    nLen = ReadMem(hProcess, szBufA, lpFuncAddr, 1023);
     if (nLen == 0)
       return NULL;
     szBufA[nLen] = 0;
@@ -325,6 +327,7 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
   return lpFuncAddr;
 }
 
+} //Internals
 } //NktHookLib
 
 //-----------------------------------------------------------
@@ -332,9 +335,9 @@ LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in LPVOID lpDllBase, __
 static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T nPlatformBits)
 {
 #if defined(_M_IX86)
-  NKT_HK_PROCESS_BASIC_INFORMATION32 sPbi32;
+  NktHookLib::Internals::NKT_HK_PROCESS_BASIC_INFORMATION32 sPbi32;
 #elif defined(_M_X64)
-  NKT_HK_PROCESS_BASIC_INFORMATION64 sPbi64;
+  NktHookLib::Internals::NKT_HK_PROCESS_BASIC_INFORMATION64 sPbi64;
   ULONGLONG nPeb32;
 #endif
   HRESULT hRes;
@@ -358,14 +361,14 @@ static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T n
     {
       case 32:
 #if defined(_M_IX86)
-        hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi32,
-                                                       sizeof(sPbi32), &k);
+        hRes = NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi32,
+                                            sizeof(sPbi32), &k);
         if (FAILED(hRes))
           return hRes;
         *lplpPeb = (LPBYTE)(sPbi32.PebBaseAddress);
 #elif defined(_M_X64)
-        hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessWow64Information, &nPeb32,
-                                                       sizeof(nPeb32), &k);
+        hRes = NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessWow64Information, &nPeb32,
+                                            sizeof(nPeb32), &k);
         if (FAILED(hRes))
           return hRes;
         *lplpPeb = (LPBYTE)nPeb32;
@@ -374,8 +377,8 @@ static HRESULT GetPeb(__out LPBYTE *lplpPeb, __in HANDLE hProcess, __in SIZE_T n
 
 #if defined(_M_X64)
       case 64:
-        hRes = NktHookLib::NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi64,
-                                                       sizeof(sPbi64), &k);
+        hRes = NktNtQueryInformationProcess(hProcess, (PROCESSINFOCLASS)MyProcessBasicInformation, &sPbi64,
+                                            sizeof(sPbi64), &k);
         if (FAILED(hRes))
           return hRes;
         *lplpPeb = (LPBYTE)(sPbi64.PebBaseAddress);
@@ -399,26 +402,26 @@ static HRESULT CheckImageType(__out NKT_HK_IMAGE_NT_HEADER *lpNtHdr, __in HANDLE
   if (lpNtHdr == NULL || hProcess == NULL || lpBaseAddr == NULL)
     return E_INVALIDARG;
   //----
-  if (NktHookLibHelpers::ReadMem(hProcess, &wTemp16, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_magic),
-                                 sizeof(wTemp16)) != sizeof(wTemp16))
+  if (ReadMem(hProcess, &wTemp16, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_magic),
+              sizeof(wTemp16)) != sizeof(wTemp16))
     return E_FAIL;
   if (wTemp16 != IMAGE_DOS_SIGNATURE)
     return E_FAIL;
   //get header offset
-  if (NktHookLibHelpers::ReadMem(hProcess, &dwTemp32, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_lfanew),
-                                 sizeof(dwTemp32)) != sizeof(dwTemp32))
+  if (ReadMem(hProcess, &dwTemp32, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_lfanew),
+              sizeof(dwTemp32)) != sizeof(dwTemp32))
     return E_FAIL;
   lpNtHdrSrc = lpBaseAddr + (SIZE_T)dwTemp32;
   if (lplpNtHdrAddr != NULL)
     *lplpNtHdrAddr = lpNtHdrSrc;
   //check image type
-  if (NktHookLibHelpers::ReadMem(hProcess, &wTemp16, lpNtHdrSrc + FIELD_OFFSET(IMAGE_NT_HEADERS32, FileHeader.Machine),
-                                 sizeof(wTemp16)) != sizeof(wTemp16))
+  if (ReadMem(hProcess, &wTemp16, lpNtHdrSrc + FIELD_OFFSET(IMAGE_NT_HEADERS32, FileHeader.Machine),
+              sizeof(wTemp16)) != sizeof(wTemp16))
     return E_FAIL;
   switch (wTemp16)
   {
     case IMAGE_FILE_MACHINE_I386:
-      if (NktHookLibHelpers::ReadMem(hProcess, lpNtHdr, lpNtHdrSrc, sizeof(lpNtHdr->u32)) != sizeof(lpNtHdr->u32))
+      if (ReadMem(hProcess, lpNtHdr, lpNtHdrSrc, sizeof(lpNtHdr->u32)) != sizeof(lpNtHdr->u32))
         return E_FAIL;
       //check signature
       if (lpNtHdr->u32.Signature != IMAGE_NT_SIGNATURE)
@@ -426,7 +429,7 @@ static HRESULT CheckImageType(__out NKT_HK_IMAGE_NT_HEADER *lpNtHdr, __in HANDLE
       return (HRESULT)32;
 
     case IMAGE_FILE_MACHINE_AMD64:
-      if (NktHookLibHelpers::ReadMem(hProcess, lpNtHdr, lpNtHdrSrc, sizeof(lpNtHdr->u64)) != sizeof(lpNtHdr->u64))
+      if (ReadMem(hProcess, lpNtHdr, lpNtHdrSrc, sizeof(lpNtHdr->u64)) != sizeof(lpNtHdr->u64))
         return E_FAIL;
       //check signature
       if (lpNtHdr->u64.Signature != IMAGE_NT_SIGNATURE)
@@ -446,25 +449,25 @@ static HRESULT GetFirstLdrEntry32(__out NKT_HK_LDRENTRY32 *lpEntry32, __in LPBYT
     return E_INVALIDARG;
   lpEntry32->hProcess = hProcess;
   //nPeb32+12 => pointer to PEB_LDR_DATA32
-  if (NktHookLibHelpers::ReadMem(hProcess, &dwTemp32, lpPeb+0x0C, sizeof(dwTemp32)) != sizeof(dwTemp32) ||
+  if (ReadMem(hProcess, &dwTemp32, lpPeb+0x0C, sizeof(dwTemp32)) != sizeof(dwTemp32) ||
       dwTemp32 == 0)
     return E_FAIL;
   //check PEB_LDR_DATA32.Initialize flag
-  if (NktHookLibHelpers::ReadMem(hProcess, &nTemp8, (LPBYTE)dwTemp32+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
+  if (ReadMem(hProcess, &nTemp8, (LPBYTE)dwTemp32+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
     return E_FAIL;
   if (nTemp8 == 0)
     return S_FALSE;
   //get PEB_LDR_DATA32.InLoadOrderModuleList.Flink
   lpEntry32->nFirstLink = dwTemp32+0x0C;
-  if (NktHookLibHelpers::ReadMem(hProcess, &(lpEntry32->nCurrLink), (LPBYTE)(lpEntry32->nFirstLink),
-                                 sizeof(lpEntry32->nCurrLink)) != sizeof(lpEntry32->nCurrLink))
+  if (ReadMem(hProcess, &(lpEntry32->nCurrLink), (LPBYTE)(lpEntry32->nFirstLink),
+              sizeof(lpEntry32->nCurrLink)) != sizeof(lpEntry32->nCurrLink))
     return E_FAIL;
   if (lpEntry32->nFirstLink == lpEntry32->nCurrLink)
     return S_FALSE;
   //read first entry
   lpPtr = (LPBYTE)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
-  if (NktHookLibHelpers::ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
-                                 sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
+  if (ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
+              sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
     return E_FAIL;
   lpEntry32->nCurrLink = lpEntry32->sEntry.InLoadOrderLinks.Flink;
   return S_OK;
@@ -479,8 +482,8 @@ static HRESULT GetNextLdrEntry32(__inout NKT_HK_LDRENTRY32 *lpEntry32)
   if (lpEntry32->nFirstLink == lpEntry32->nCurrLink)
     return S_FALSE;
   lpPtr = (LPBYTE)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
-  if (NktHookLibHelpers::ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
-                                 sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
+  if (ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
+              sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
     return E_FAIL;
   lpEntry32->nCurrLink = lpEntry32->sEntry.InLoadOrderLinks.Flink;
   return S_OK;
@@ -494,7 +497,7 @@ HRESULT GetBaseAddress64(__out LPBYTE *lplpBaseAddress, __in LPBYTE lpPeb, __in 
   if (lplpBaseAddress == NULL || lpPeb == NULL || hProcess == NULL)
     return E_INVALIDARG;
   //nPeb64+10 => pointer to IMAGE BASE ADDRESS
-  if (NktHookLibHelpers::ReadMem(hProcess, &qwTemp64, lpPeb+0x10, sizeof(qwTemp64)) != sizeof(qwTemp64) ||
+  if (ReadMem(hProcess, &qwTemp64, lpPeb+0x10, sizeof(qwTemp64)) != sizeof(qwTemp64) ||
       qwTemp64 == 0)
     return E_FAIL;
   *lplpBaseAddress = (LPBYTE)qwTemp64;
@@ -511,25 +514,25 @@ HRESULT GetFirstLdrEntry64(__out NKT_HK_LDRENTRY64 *lpEntry64, __in LPBYTE lpPeb
     return E_INVALIDARG;
   lpEntry64->hProcess = hProcess;
   //nPeb32+24 => pointer to PEB_LDR_DATA64
-  if (NktHookLibHelpers::ReadMem(hProcess, &qwTemp64, lpPeb+0x18, sizeof(qwTemp64)) != sizeof(qwTemp64) ||
+  if (ReadMem(hProcess, &qwTemp64, lpPeb+0x18, sizeof(qwTemp64)) != sizeof(qwTemp64) ||
       qwTemp64 == 0)
     return E_FAIL;
   //check PEB_LDR_DATA64.Initialize flag
-  if (NktHookLibHelpers::ReadMem(hProcess, &nTemp8, (LPBYTE)qwTemp64+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
+  if (ReadMem(hProcess, &nTemp8, (LPBYTE)qwTemp64+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
     return E_FAIL;
   if (nTemp8 == 0)
     return S_FALSE;
   //get PEB_LDR_DATA64.InLoadOrderModuleList.Flink
   lpEntry64->nFirstLink = qwTemp64+0x10;
-  if (NktHookLibHelpers::ReadMem(hProcess, &(lpEntry64->nCurrLink), (LPBYTE)(lpEntry64->nFirstLink),
-                                 sizeof(lpEntry64->nCurrLink)) != sizeof(lpEntry64->nCurrLink))
+  if (ReadMem(hProcess, &(lpEntry64->nCurrLink), (LPBYTE)(lpEntry64->nFirstLink),
+              sizeof(lpEntry64->nCurrLink)) != sizeof(lpEntry64->nCurrLink))
     return E_FAIL;
   if (lpEntry64->nFirstLink == lpEntry64->nCurrLink)
     return S_FALSE;
   //read first entry
   lpPtr = (LPBYTE)(lpEntry64->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY64, InLoadOrderLinks);
-  if (NktHookLibHelpers::ReadMem(lpEntry64->hProcess, &(lpEntry64->sEntry), lpPtr,
-                                 sizeof(lpEntry64->sEntry)) != sizeof(lpEntry64->sEntry))
+  if (ReadMem(lpEntry64->hProcess, &(lpEntry64->sEntry), lpPtr,
+              sizeof(lpEntry64->sEntry)) != sizeof(lpEntry64->sEntry))
     return E_FAIL;
   lpEntry64->nCurrLink = lpEntry64->sEntry.InLoadOrderLinks.Flink;
   return S_OK;
@@ -544,8 +547,8 @@ HRESULT GetNextLdrEntry64(__inout NKT_HK_LDRENTRY64 *lpEntry64)
   if (lpEntry64->nFirstLink == lpEntry64->nCurrLink)
     return S_FALSE;
   lpPtr = (LPBYTE)(lpEntry64->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY64, InLoadOrderLinks);
-  if (NktHookLibHelpers::ReadMem(lpEntry64->hProcess, &(lpEntry64->sEntry), lpPtr,
-                                 sizeof(lpEntry64->sEntry)) != sizeof(lpEntry64->sEntry))
+  if (ReadMem(lpEntry64->hProcess, &(lpEntry64->sEntry), lpPtr,
+              sizeof(lpEntry64->sEntry)) != sizeof(lpEntry64->sEntry))
     return E_FAIL;
   lpEntry64->nCurrLink = lpEntry64->sEntry.InLoadOrderLinks.Flink;
   return S_OK;
@@ -583,7 +586,7 @@ static BOOL RemoteStrNICmpW(__in HANDLE hProcess, __in LPCWSTR szRemoteStrW, __i
   while (nStrLen > 0)
   {
     i = (nStrLen > 128) ? 128 : nStrLen;
-    if (NktHookLibHelpers::ReadMem(hProcess, aBufW, (LPVOID)szRemoteStrW, i*sizeof(WCHAR)) != i*sizeof(WCHAR) ||
+    if (ReadMem(hProcess, aBufW, (LPVOID)szRemoteStrW, i*sizeof(WCHAR)) != i*sizeof(WCHAR) ||
         StrNICmpW(szLocalStrW, aBufW, i) == FALSE)
       return FALSE;
     szRemoteStrW += i;
@@ -666,13 +669,13 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
 
   //check if Win7 or later
   sOvi.dwOSVersionInfoSize = sizeof(sOvi);
-  if (!NT_SUCCESS(NktHookLib::NktRtlGetVersion(&sOvi)))
+  if (!NT_SUCCESS(NktRtlGetVersion(&sOvi)))
     return NULL;
   if (sOvi.dwMajorVersion < 6 || (sOvi.dwMajorVersion == 6 && sOvi.dwMinorVersion < 1))
     return NULL; //only on Win7 or later
   //query importing dll name
-  if (!NT_SUCCESS(NktHookLib::NktNtQueryVirtualMemory(hProcess, (PVOID)lpImportingDllBase, MyMemorySectionName,
-                                                      &usImportingDll, sizeof(usImportingDll), &nRetLen)))
+  if (!NT_SUCCESS(NktNtQueryVirtualMemory(hProcess, (PVOID)lpImportingDllBase, MyMemorySectionName, &usImportingDll,
+                                          sizeof(usImportingDll), &nRetLen)))
     return NULL;
   //find last slash
   dwTemp32 = (DWORD)(usImportingDll.us.Length) / (DWORD)sizeof(WCHAR);
@@ -714,13 +717,13 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
   switch (nPlatformBits)
   {
     case 32:
-      if (NktHookLibHelpers::ReadMem(hProcess, &dwTemp32, lpPeb+0x38, sizeof(dwTemp32)) != sizeof(dwTemp32))
+      if (ReadMem(hProcess, &dwTemp32, lpPeb+0x38, sizeof(dwTemp32)) != sizeof(dwTemp32))
         return NULL;
       lpApiMapSet = (LPBYTE)dwTemp32;
       break;
 #if defined(_M_X64)
     case 64:
-      if (NktHookLibHelpers::ReadMem(hProcess, &qwTemp64, lpPeb+0x68, sizeof(qwTemp64)) != sizeof(qwTemp64))
+      if (ReadMem(hProcess, &qwTemp64, lpPeb+0x68, sizeof(qwTemp64)) != sizeof(qwTemp64))
         return NULL;
       lpApiMapSet = (LPBYTE)qwTemp64;
       break;
@@ -730,7 +733,7 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
   }
   //get apimapset version
   if (lpApiMapSet == NULL ||
-      NktHookLibHelpers::ReadMem(hProcess, &dwTemp32, lpApiMapSet, sizeof(DWORD)) != sizeof(DWORD))
+      ReadMem(hProcess, &dwTemp32, lpApiMapSet, sizeof(DWORD)) != sizeof(DWORD))
     return NULL;
   switch (dwTemp32)
   {
@@ -742,13 +745,12 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
       NKT_HK_APIMAPSET_HOST_ENTRY_V2 sHostEntry, sDefHostEntry, *lpCurrHostEntry;
 
       //read header entry
-      if (NktHookLibHelpers::ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
+      if (ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
         return NULL;
       lpCurrNamespaceEntry = (NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V2*)(lpApiMapSet + sizeof(NKT_HK_APIMAPSET_HEADER_V2));
       for (; sHdr.dwEntriesCount>0; sHdr.dwEntriesCount--,lpCurrNamespaceEntry++)
       {
-        if (NktHookLibHelpers::ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry,
-                                       sizeof(sNamespaceEntry)) == FALSE)
+        if (ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry, sizeof(sNamespaceEntry)) == FALSE)
           return NULL;
         //check if it is the dll we are looking for
         if (sNamespaceEntry.dwNameLength == dwDllToFindLenInBytes &&
@@ -758,13 +760,12 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
           sDefHostEntry.dwLengthRealName = 0xFFFFFFFFUL;
           //scan host entries
           lpPtr = lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwHostModulesOffset);
-          if (NktHookLibHelpers::ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
+          if (ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
             return NULL;
           lpCurrHostEntry = (NKT_HK_APIMAPSET_HOST_ENTRY_V2*)(lpPtr + sizeof(sHostHdr));
           for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
           {
-            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
-                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
+            if (ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32], sizeof(sHostEntry)) != sizeof(sHostEntry))
               return NULL;
             if (sHostEntry.dwLength == 0 || sHostEntry.dwNameOffset == 0)
               continue;
@@ -779,22 +780,22 @@ gotIt_V2:       //retrieve dll name
                 lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
                 if (sHostEntry.dwLength >= 2040)
                   return NULL; //name too long
-                if (NktHookLibHelpers::ReadMem(hProcess, usImportingDll.chDataW, lpPtr,
+                if (ReadMem(hProcess, usImportingDll.chDataW, lpPtr,
                                                (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
                   return NULL;
                 usImportingDll.chDataW[sHostEntry.dwLength / (DWORD)sizeof(WCHAR)] = 0;
-                return NktHookLib::GetRemoteModuleBaseAddress(hProcess, usImportingDll.chDataW, FALSE);
+                return NktHookLib::Internals::GetRemoteModuleBaseAddress(hProcess, usImportingDll.chDataW, FALSE);
               }
             }
             else if (sHostEntry.dwLengthRealName == 0 && sDefHostEntry.dwLengthRealName == 0xFFFFFFFFUL)
             {
-              NktHookLibHelpers::MemCopy(&sDefHostEntry, &sHostEntry, sizeof(sHostEntry));
+              MemCopy(&sDefHostEntry, &sHostEntry, sizeof(sHostEntry));
             }
           }
           //have a default?
           if (sDefHostEntry.dwLengthRealName != 0xFFFFFFFFUL)
           {
-            NktHookLibHelpers::MemCopy(&sHostEntry, &sDefHostEntry, sizeof(sHostEntry));
+            MemCopy(&sHostEntry, &sDefHostEntry, sizeof(sHostEntry));
             goto gotIt_V2;
           }
         }
@@ -809,13 +810,13 @@ gotIt_V2:       //retrieve dll name
       NKT_HK_APIMAPSET_HOST_HEADER_V4 sHostHdr;
       NKT_HK_APIMAPSET_HOST_ENTRY_V4 sHostEntry, sDefHostEntry, *lpCurrHostEntry;
 
-      if (NktHookLibHelpers::ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
+      if (ReadMem(hProcess, &sHdr, lpApiMapSet, sizeof(sHdr)) != sizeof(sHdr))
         return NULL;
       lpCurrNamespaceEntry = (NKT_HK_APIMAPSET_NAMESPACE_ENTRY_V4*)(lpApiMapSet + sizeof(NKT_HK_APIMAPSET_HEADER_V4));
       for (; sHdr.dwEntriesCount>0; sHdr.dwEntriesCount--,lpCurrNamespaceEntry++)
       {
-        if (NktHookLibHelpers::ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry,
-                                       sizeof(sNamespaceEntry)) != sizeof(sNamespaceEntry))
+        if (ReadMem(hProcess, &sNamespaceEntry, lpCurrNamespaceEntry,
+                    sizeof(sNamespaceEntry)) != sizeof(sNamespaceEntry))
           return NULL;
         //check if it is the dll we are looking for
         if ((sNamespaceEntry.dwNameLength1 == dwDllToFindLenInBytes &&
@@ -828,13 +829,12 @@ gotIt_V2:       //retrieve dll name
           sDefHostEntry.dwLengthRealName = 0xFFFFFFFFUL;
           //scan host entries
           lpPtr = lpApiMapSet + (SIZE_T)(sNamespaceEntry.dwHostModulesOffset);
-          if (NktHookLibHelpers::ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
+          if (ReadMem(hProcess, &sHostHdr, lpPtr, sizeof(sHostHdr)) != sizeof(sHostHdr))
             return NULL;
           lpCurrHostEntry = (NKT_HK_APIMAPSET_HOST_ENTRY_V4*)(lpPtr + sizeof(sHostHdr));
           for (dwTemp32=0; dwTemp32<sHostHdr.dwCount; dwTemp32++)
           {
-            if (NktHookLibHelpers::ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32],
-                                           sizeof(sHostEntry)) != sizeof(sHostEntry))
+            if (ReadMem(hProcess, &sHostEntry, &lpCurrHostEntry[dwTemp32], sizeof(sHostEntry)) != sizeof(sHostEntry))
               return NULL;
             if (sHostEntry.dwLength == 0 || sHostEntry.dwNameOffset == 0)
               continue;
@@ -849,22 +849,22 @@ gotIt_V4:       //retrieve dll name
                 lpPtr = lpApiMapSet + (SIZE_T)(sHostEntry.dwNameOffset);
                 if (sHostEntry.dwLength >= 2040)
                   return NULL; //name too long
-                if (NktHookLibHelpers::ReadMem(hProcess, usImportingDll.chDataW, lpPtr,
-                                               (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
+                if (ReadMem(hProcess, usImportingDll.chDataW, lpPtr,
+                            (SIZE_T)(sHostEntry.dwLength)) != (SIZE_T)(sHostEntry.dwLength))
                   return NULL;
                 usImportingDll.chDataW[sHostEntry.dwLength / (DWORD)sizeof(WCHAR)] = 0;
-                return NktHookLib::GetRemoteModuleBaseAddress(hProcess, usImportingDll.chDataW, FALSE);
+                return NktHookLib::Internals::GetRemoteModuleBaseAddress(hProcess, usImportingDll.chDataW, FALSE);
               }
             }
             else if (sHostEntry.dwLengthRealName == 0 && sDefHostEntry.dwLengthRealName == 0xFFFFFFFFUL)
             {
-              NktHookLibHelpers::MemCopy(&sDefHostEntry, &sHostEntry, sizeof(sHostEntry));
+              MemCopy(&sDefHostEntry, &sHostEntry, sizeof(sHostEntry));
             }
           }
           //have a default?
           if (sDefHostEntry.dwLengthRealName != 0xFFFFFFFFUL)
           {
-            NktHookLibHelpers::MemCopy(&sHostEntry, &sDefHostEntry, sizeof(sHostEntry));
+            MemCopy(&sHostEntry, &sDefHostEntry, sizeof(sHostEntry));
             goto gotIt_V4;
           }
         }

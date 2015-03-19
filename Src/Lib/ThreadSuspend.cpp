@@ -29,9 +29,9 @@
 
 #include "ThreadSuspend.h"
 #include "ProcessEntry.h"
-#include "..\..\Include\NktHookLib.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
 
@@ -488,4 +488,7 @@ BOOL CNktThreadSuspend::GetProcessSessionId(__in HANDLE hProcess, __out LPDWORD 
   return FALSE;
 }
 
+//-----------------------------------------------------------
+
+} //Internals
 } //NktHookLib

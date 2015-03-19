@@ -30,6 +30,7 @@
 #include "WaitableObjects.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
 
@@ -182,6 +183,13 @@ BOOL CNktEvent::Set()
   return (NT_SUCCESS(nNtStatus)) ? TRUE : FALSE;
 }
 
+VOID CNktEvent::Attach(__in HANDLE _hEvent)
+{
+  Destroy();
+  hEvent = _hEvent;
+  return;
+}
+
 HANDLE CNktEvent::Detach()
 {
   HANDLE hTempEvent = hEvent;
@@ -189,4 +197,7 @@ HANDLE CNktEvent::Detach()
   return hTempEvent;
 }
 
+//-----------------------------------------------------------
+
+} //Internals
 } //NktHookLib

@@ -39,6 +39,8 @@ Src/Com/DeviareLiteCOM_i*.*
 Src/Com/DeviareLiteCOM_p*.*
 Src/Com/dlldata_*.*
 Src/Com/dlldata64_*.*
+Src/Obj2Inc/obj/
+Src/Obj2Inc/ipch/
 Src/vs2008/obj/
 Src/vs2010/obj/
 Src/vs2010/ipch/

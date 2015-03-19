@@ -36,16 +36,9 @@
 #include "NtHeapBaseObj.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
-
-#ifndef NKT_ASSERT
-  #ifdef _DEBUG
-    #define NKT_ASSERT(x) if (!(x)) __debugbreak();
-  #else
-    #define NKT_ASSERT(x)
-  #endif //_DEBUG
-#endif //!NKT_ASSERT
 
 #pragma intrinsic (_InterlockedExchange)
 #pragma intrinsic (_InterlockedIncrement)
@@ -220,12 +213,21 @@ public:
     return hEvent;
     };
 
+  //The assert on operator& usually indicates a bug.  If this is really
+  //what is needed, however, take the address of the lpPtr member explicitly.
+  HANDLE* operator&()
+    {
+    NKT_ASSERT(hEvent == NULL);
+    return &hEvent;
+    };
+
   BOOL Wait(__in DWORD dwTimeout);
 
   BOOL Reset();
   BOOL Set();
   BOOL Pulse();
 
+  VOID Attach(__in HANDLE hEvent);
   HANDLE Detach();
 
 private:
@@ -257,6 +259,7 @@ private:
 
 //-----------------------------------------------------------
 
+} //Internals
 } //NktHookLib
 
 #endif //_NKT_WAITABLEOBJECTS_H

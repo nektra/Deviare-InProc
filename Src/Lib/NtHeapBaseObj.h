@@ -33,15 +33,25 @@
 #include "..\..\Include\NktHookLib.h"
 
 namespace NktHookLib {
+namespace Internals {
 
 //-----------------------------------------------------------
+
+#ifndef NKT_ASSERT
+  #ifdef _DEBUG
+    #define NKT_ASSERT(x) if (!(x)) __debugbreak();
+  #else
+    #define NKT_ASSERT(x)
+  #endif //_DEBUG
+#endif //!NKT_ASSERT
+
 
 class CNktNtHeapBaseObj
 {
 public:
   void* __cdecl operator new(__in size_t nSize)
     {
-      return NktHookLibHelpers::MemAlloc(nSize);
+    return NktHookLibHelpers::MemAlloc(nSize);
     };
   void* __cdecl operator new[](__in size_t nSize)
     {
@@ -72,6 +82,7 @@ public:
 
 //-----------------------------------------------------------
 
+} //Internals
 } //NktHookLib
 
 #endif //_NKT_HOOKLIB_NTHEAPBASEOBJ_H

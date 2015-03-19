@@ -33,7 +33,7 @@
 
 #pragma intrinsic (_InterlockedIncrement)
 
-using namespace NktHookLib;
+using namespace NktHookLib::Internals;
 
 //-----------------------------------------------------------
 
@@ -50,6 +50,8 @@ using namespace NktHookLib;
 #define ThreadBasicInformation                             0
 #define ThreadBasePriority                                 3
 
+#define ProcessWow64Information         (PROCESSINFOCLASS)26
+
 //-----------------------------------------------------------
 
 typedef struct {
@@ -59,6 +61,28 @@ typedef struct {
   USHORT Reserved;
   ULONG ProcessorFeatureBits;
 } NKT_SYSTEM_PROCESSOR_INFORMATION;
+
+#pragma pack(8)
+typedef struct {
+  LONG ExitStatus;
+  ULONG PebBaseAddress;
+  ULONG AffinityMask;
+  LONG BasePriority;
+  ULONG UniqueProcessId;
+  ULONG InheritedFromUniqueProcessId;
+} __PROCESS_BASIC_INFORMATION32;
+
+typedef struct {
+  LONG ExitStatus;
+  ULONG _dummy1;
+  ULONGLONG PebBaseAddress;
+  ULONGLONG AffinityMask;
+  LONG BasePriority;
+  ULONG _dummy2;
+  ULONGLONG UniqueProcessId;
+  ULONGLONG InheritedFromUniqueProcessId;
+} __PROCESS_BASIC_INFORMATION64;
+#pragma pack()
 
 //-----------------------------------------------------------
 
@@ -81,32 +105,29 @@ extern "C" {
 
 //-----------------------------------------------------------
 
-static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __in DWORD dwCreationFlags,
-                                         __in_z LPCWSTR szDllNameW);
-
-//-----------------------------------------------------------
-
 namespace NktHookLibHelpers {
 
 HINSTANCE GetModuleBaseAddress(__in_z LPCWSTR szDllNameW)
 {
-  return (HINSTANCE)::NktHookLib::GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, szDllNameW, FALSE);
+  return (HINSTANCE)GetRemoteModuleBaseAddress(NKTHOOKLIB_CurrentProcess, szDllNameW, FALSE);
 }
 
 LPVOID GetProcedureAddress(__in HINSTANCE hDll, __in LPCSTR szProcNameA)
 {
-  return ::NktHookLib::GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, (LPVOID)hDll, szProcNameA);
+  return GetRemoteProcedureAddress(NKTHOOKLIB_CurrentProcess, hDll, szProcNameA);
 }
 
 HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in BOOL bScanMappedImages)
 {
-  return (HINSTANCE)::NktHookLib::GetRemoteModuleBaseAddress(hProcess, szDllNameW, bScanMappedImages);
+  return (HINSTANCE)::NktHookLib::Internals::GetRemoteModuleBaseAddress(hProcess, szDllNameW, bScanMappedImages);
 }
 
 LPVOID GetRemoteProcedureAddress(__in HANDLE hProcess, __in HINSTANCE hDll, __in_z LPCSTR szProcNameA)
 {
-  return ::NktHookLib::GetRemoteProcedureAddress(hProcess, (LPVOID)hDll, szProcNameA);
+  return ::NktHookLib::Internals::GetRemoteProcedureAddress(hProcess, (LPVOID)hDll, szProcNameA);
 }
+
+//--------------------------------
 
 int sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, ...)
 {
@@ -152,6 +173,8 @@ int vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wcha
     return 0;
   return ((lpfn_vsnwprintf)NktHookLib_fn_vsnwprintf)(lpDest, nMaxCount, szFormatW, lpArgList);
 }
+
+//--------------------------------
 
 LONG GetProcessorArchitecture()
 {
@@ -506,6 +529,8 @@ int MemCompare(__in const void *lpBuf1, __in const void *lpBuf2, __in SIZE_T nCo
   return (int)(b1[0] - b2[0]);
 }
 
+//--------------------------------
+
 VOID DebugPrint(__in LPCSTR szFormatA, ...)
 {
   va_list argptr;
@@ -545,12 +570,16 @@ VOID DebugVPrint(__in LPCSTR szFormatA, __in va_list argptr)
   return;
 }
 
+//--------------------------------
+
 VOID SetInternalApiResolverCallback(__in lpfnInternalApiResolver _fnInternalApiResolver, __in LPVOID _lpUserParam)
 {
   fnInternalApiResolver = _fnInternalApiResolver;
   lpUserParam = _lpUserParam;
   return;
 }
+
+//--------------------------------
 
 DWORD GetWin32LastError(__in_opt HANDLE hThread)
 {
@@ -564,568 +593,92 @@ DWORD GetWin32LastError(__in_opt HANDLE hThread)
   {
 #if defined(_M_IX86)
     lpPtr = (LPBYTE)__readfsdword(0x18); //get TEB
-    dwErr = *((DWORD*)(lpPtr+0x34));        //TEB.LastErrorValue
+    return *((DWORD*)(lpPtr+0x34));        //TEB.LastErrorValue
 #elif defined(_M_X64)
     lpPtr = (LPBYTE)__readgsqword(0x30); //get TEB
-    dwErr = *((DWORD*)(lpPtr+0x68));        //TEB.LastErrorValue
+    return *((DWORD*)(lpPtr+0x68));        //TEB.LastErrorValue
 #endif
   }
-  else
+  //not current thread
+  nNtStatus = NktNtQueryInformationThread(hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi, sizeof(sTbi), NULL);
+  if (!NT_SUCCESS(nNtStatus))
+    return 0xFFFFFFFFUL;
+  dwProcId = (DWORD)(sTbi.ClientId.UniqueProcess);
+  hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
+  if (hProc == NULL)
+    hProc = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
+  if (hProc == NULL)
+    return 0xFFFFFFFFUL;
+  switch (GetProcessPlatform(hProc))
   {
-    nNtStatus = NktNtQueryInformationThread(hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi, sizeof(sTbi),
-                                            NULL);
-    if (!NT_SUCCESS(nNtStatus))
-      return 0xFFFFFFFFUL;
-    dwProcId = (DWORD)(sTbi.ClientId.UniqueProcess);
-    hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
-    if (hProc == NULL)
-      hProc = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
-    if (hProc == NULL)
-      return 0xFFFFFFFFUL;
-    switch (GetProcessPlatform(hProc))
-    {
-      case NKTHOOKLIB_ProcessPlatformX86:
-        if (ReadMem(hProc, &dwErr, (LPBYTE)sTbi.TebBaseAddress + 0x34, sizeof(DWORD)) != sizeof(DWORD))
-          dwErr = 0xFFFFFFFFUL;
-        break;
-#if defined(_M_X64)
-      case NKTHOOKLIB_ProcessPlatformX64:
-        if (ReadMem(hProc, &dwErr, (LPBYTE)sTbi.TebBaseAddress + 0x68, sizeof(DWORD)) != sizeof(DWORD))
-          dwErr = 0xFFFFFFFFUL;
-        break;
-#endif //_M_X64
-      default:
+    case NKTHOOKLIB_ProcessPlatformX86:
+      if (ReadMem(hProc, &dwErr, (LPBYTE)sTbi.TebBaseAddress + 0x34, sizeof(DWORD)) != sizeof(DWORD))
         dwErr = 0xFFFFFFFFUL;
-        break;
-    }
-    NktNtClose(hProc);
+      break;
+#if defined(_M_X64)
+    case NKTHOOKLIB_ProcessPlatformX64:
+      if (ReadMem(hProc, &dwErr, (LPBYTE)sTbi.TebBaseAddress + 0x68, sizeof(DWORD)) != sizeof(DWORD))
+        dwErr = 0xFFFFFFFFUL;
+      break;
+#endif //_M_X64
+    default:
+      dwErr = 0xFFFFFFFFUL;
+      break;
   }
+  NktNtClose(hProc);
   return dwErr;
 }
 
-DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
-                            __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
-                            __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes, __in BOOL bInheritHandles,
-                            __in DWORD dwCreationFlags, __in_z_opt LPCWSTR lpEnvironment,
-                            __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
-                            __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW)
+BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
 {
-  typedef BOOL (WINAPI *lpfnCreateProcessW)(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
-                                            __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
-                                            __in_opt LPSECURITY_ATTRIBUTES lpThreadAttributes,
-                                            __in BOOL bInheritHandles, __in DWORD dwCreationFlags,
-                                            __in_opt LPVOID lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
-                                            __in LPSTARTUPINFOW lpStartupInfo,
-                                            __out LPPROCESS_INFORMATION lpProcessInformation);
-  HINSTANCE hKernel32Dll;
-  lpfnCreateProcessW fnCreateProcessW;
+  NKT_HK_THREAD_BASIC_INFORMATION sTbi;
+  LPBYTE lpPtr;
+  NTSTATUS nNtStatus;
+  DWORD dwProcId;
+  HANDLE hProc;
+  BOOL b;
 
-  //check parameters
-  if (szDllNameW == NULL || szDllNameW[0] == 0)
-    return ERROR_INVALID_PARAMETER;
-  //get needed api from kernel32
-  hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
-  if (hKernel32Dll == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  fnCreateProcessW = (lpfnCreateProcessW)GetProcedureAddress(hKernel32Dll, "CreateProcessW");
-  if (fnCreateProcessW == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  //create process
-  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
-    lpApplicationName = NULL;
-  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
-    lpCommandLine = NULL;
-  if (lpEnvironment != NULL)
+  if (hThread == NULL || hThread == NKTHOOKLIB_CurrentThread)
   {
-    if (lpEnvironment[0] != 0)
-      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
-    else
-      lpEnvironment = NULL;
+#if defined(_M_IX86)
+    lpPtr = (LPBYTE)__readfsdword(0x18);        //get TEB
+    *((DWORD*)(lpPtr+0x34)) = dwErrorCode; //TEB.LastErrorValue
+#elif defined(_M_X64)
+    lpPtr = (LPBYTE)__readgsqword(0x30);        //get TEB
+    *((DWORD*)(lpPtr+0x68)) = dwErrorCode; //TEB.LastErrorValue
+#endif
+    return TRUE;
   }
-  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
-    lpCurrentDirectory = NULL;
-  if (fnCreateProcessW(lpApplicationName, lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles,
-                       dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory, lpStartupInfo,
-                       lpProcessInformation) == FALSE)
-    return GetWin32LastError();
-  //inject dll load at entrypoint
-  return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW);
+  //not current thread
+  nNtStatus = NktNtQueryInformationThread(hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi, sizeof(sTbi), NULL);
+  if (!NT_SUCCESS(nNtStatus))
+    return FALSE;
+  dwProcId = (DWORD)(sTbi.ClientId.UniqueProcess);
+  hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_WRITE, FALSE, dwProcId);
+  if (hProc == NULL)
+    hProc = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_WRITE, FALSE, dwProcId);
+  if (hProc == NULL)
+    return FALSE;
+  switch (GetProcessPlatform(hProc))
+  {
+    case NKTHOOKLIB_ProcessPlatformX86:
+      b = WriteMem(hProc, (LPBYTE)sTbi.TebBaseAddress + 0x34, &dwErrorCode, sizeof(DWORD));
+      break;
+#if defined(_M_X64)
+    case NKTHOOKLIB_ProcessPlatformX64:
+      b = WriteMem(hProc, (LPBYTE)sTbi.TebBaseAddress + 0x68, &dwErrorCode, sizeof(DWORD));
+      break;
+#endif //_M_X64
+  }
+  NktNtClose(hProc);
+  return b;
 }
 
-DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
-                                    __in DWORD dwLogonFlags, __in_opt LPCWSTR lpApplicationName,
-                                    __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
-                                    __in LPSTARTUPINFOW lpStartupInfo,
-                                    __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW)
+BOOL SetWin32LastErrorFromNtStatus(__in NTSTATUS nNtStatus, __in_opt HANDLE hThread)
 {
-  typedef HMODULE (WINAPI *lpfnLoadLibraryW)(__in_z LPCWSTR lpFileNameW);
-  typedef HMODULE (WINAPI *lpfnFreeLibrary)(__in HMODULE hLibModule);
-  typedef BOOL (WINAPI *lpfnCreateProcessWithLogonW)(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain,
-                                         __in_z LPCWSTR lpPassword, __in DWORD dwLogonFlags,
-                                         __in_opt LPCWSTR lpApplicationName, __inout_opt LPWSTR lpCommandLine,
-                                         __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
-                                         __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
-                                         __out LPPROCESS_INFORMATION lpProcessInformation);
-  HINSTANCE hKernel32Dll, hAdvApi32Dll;
-  lpfnLoadLibraryW fnLoadLibraryW;
-  lpfnFreeLibrary fnFreeLibrary;
-  lpfnCreateProcessWithLogonW fnCreateProcessWithLogonW;
-  LPCWSTR sW;
-  DWORD dwOsErr;
-
-  if (szDllNameW == NULL || szDllNameW[0] == 0)
-    return ERROR_INVALID_PARAMETER;
-  //get needed api from kernel32
-  hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
-  if (hKernel32Dll == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  fnLoadLibraryW = (lpfnLoadLibraryW)GetProcedureAddress(hKernel32Dll, "LoadLibraryW");
-  fnFreeLibrary = (lpfnFreeLibrary)GetProcedureAddress(hKernel32Dll, "FreeLibrary");
-  if (fnLoadLibraryW == NULL || fnFreeLibrary == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  //load advapi32.dll
-  hAdvApi32Dll = fnLoadLibraryW(L"advapi32.dll");
-  if (hAdvApi32Dll == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  fnCreateProcessWithLogonW = (lpfnCreateProcessWithLogonW)GetProcedureAddress(hAdvApi32Dll, "CreateProcessWithLogonW");
-  if (fnCreateProcessWithLogonW == NULL)
-  {
-    fnFreeLibrary(hAdvApi32Dll);
-    return ERROR_PROC_NOT_FOUND;
-  }
-  //create process
-  if (lpUsername == NULL)
-    lpUsername = L"";
-  if (lpDomain == NULL)
-  {
-    for (sW=lpUsername; *sW != 0 && *sW != L'@'; sW++);
-    if (*sW == 0)
-      lpDomain = L"";
-  }
-  if (lpPassword == NULL)
-    lpPassword = L"";
-  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
-    lpApplicationName = NULL;
-  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
-    lpCommandLine = NULL;
-  if (lpEnvironment != NULL)
-  {
-    if (lpEnvironment[0] != 0)
-      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
-    else
-      lpEnvironment = NULL;
-  }
-  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
-    lpCurrentDirectory = NULL;
-  if (fnCreateProcessWithLogonW(lpUsername, lpDomain, lpPassword, dwLogonFlags, lpApplicationName, lpCommandLine,
-                                dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory, lpStartupInfo,
-                                lpProcessInformation) == FALSE)
-  {
-    dwOsErr = GetWin32LastError();
-    fnFreeLibrary(hAdvApi32Dll);
-    return dwOsErr;
-  }
-  fnFreeLibrary(hAdvApi32Dll);
-  //inject dll load at entrypoint
-  return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW);
+  return SetWin32LastError(::NktRtlNtStatusToDosError(nNtStatus), hThread);
 }
-
-DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
-                                    __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
-                                    __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
-                                    __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
-                                    __in_z LPCWSTR szDllNameW)
-{
-  typedef HMODULE (WINAPI *lpfnLoadLibraryW)(__in_z LPCWSTR lpFileNameW);
-  typedef HMODULE (WINAPI *lpfnFreeLibrary)(__in HMODULE hLibModule);
-  typedef BOOL (WINAPI *lpfnCreateProcessWithTokenW)(__in HANDLE hToken, __in DWORD dwLogonFlags,
-                                         __in_z_opt LPCWSTR lpApplicationName, __inout_opt LPWSTR lpCommandLine,
-                                         __in DWORD dwCreationFlags, __in_opt LPVOID lpEnvironment,
-                                         __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
-                                         __out LPPROCESS_INFORMATION lpProcessInformation);
-  HINSTANCE hKernel32Dll, hAdvApi32Dll;
-  lpfnLoadLibraryW fnLoadLibraryW;
-  lpfnFreeLibrary fnFreeLibrary;
-  lpfnCreateProcessWithTokenW fnCreateProcessWithTokenW;
-  DWORD dwOsErr;
-
-  if (szDllNameW == NULL || szDllNameW[0] == 0)
-    return ERROR_INVALID_PARAMETER;
-  //get needed api from kernel32
-  hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
-  if (hKernel32Dll == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  fnLoadLibraryW = (lpfnLoadLibraryW)GetProcedureAddress(hKernel32Dll, "LoadLibraryW");
-  fnFreeLibrary = (lpfnFreeLibrary)GetProcedureAddress(hKernel32Dll, "FreeLibrary");
-  if (fnLoadLibraryW == NULL || fnFreeLibrary == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  //load advapi32.dll
-  hAdvApi32Dll = fnLoadLibraryW(L"advapi32.dll");
-  if (hAdvApi32Dll == NULL)
-    return ERROR_PROC_NOT_FOUND;
-  fnCreateProcessWithTokenW = (lpfnCreateProcessWithTokenW)GetProcedureAddress(hAdvApi32Dll, "CreateProcessWithTokenW");
-  if (fnCreateProcessWithTokenW == NULL)
-  {
-    fnFreeLibrary(hAdvApi32Dll);
-    return ERROR_PROC_NOT_FOUND;
-  }
-  //create process
-  if (lpApplicationName != NULL && lpApplicationName[0] == 0)
-    lpApplicationName = NULL;
-  if (lpCommandLine != NULL && lpCommandLine[0] == 0 && lpApplicationName == NULL)
-    lpCommandLine = NULL;
-  if (lpEnvironment != NULL)
-  {
-    if (lpEnvironment[0] != 0)
-      dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
-    else
-      lpEnvironment = NULL;
-  }
-  if (lpCurrentDirectory != NULL && lpCurrentDirectory[0] == 0)
-    lpCurrentDirectory = NULL;
-  if (fnCreateProcessWithTokenW(hToken, dwLogonFlags, lpApplicationName, lpCommandLine,
-                                dwCreationFlags|CREATE_SUSPENDED, (LPVOID)lpEnvironment, lpCurrentDirectory,
-                                lpStartupInfo, lpProcessInformation) == FALSE)
-  {
-    dwOsErr = GetWin32LastError();
-    fnFreeLibrary(hAdvApi32Dll);
-    return dwOsErr;
-  }
-  fnFreeLibrary(hAdvApi32Dll);
-  //inject dll load at entrypoint
-  return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW);
-}
-
-} //namespace NktHookLibHelpers
 
 //-----------------------------------------------------------
 
-static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __in DWORD dwCreationFlags,
-                                         __in_z LPCWSTR szDllNameW)
-{
-  typedef NTSTATUS (NTAPI *lpfnNtGetContextThread)(__in HANDLE hThread, __inout PCONTEXT lpContext);
-  typedef NTSTATUS (NTAPI *lpfnNtSetContextThread)(__in HANDLE hThread, __in CONST PCONTEXT lpContext);
-#if defined(_M_X64)
-  typedef NTSTATUS (NTAPI *lpfnRtlWow64GetThreadContext)(__in HANDLE hThread, __inout PWOW64_CONTEXT lpContext);
-  typedef NTSTATUS (NTAPI *lpfnRtlWow64SetThreadContext)(__in HANDLE hThread, __in CONST PWOW64_CONTEXT lpContext);
-#endif //_M_X64
-  DWORD dwOsErr;
-  HINSTANCE hNtDll, hRemNtDll;
-  LPVOID fnRemLdrLoadDll;
-  lpfnNtGetContextThread fnNtGetContextThread;
-  lpfnNtSetContextThread fnNtSetContextThread;
-#if defined(_M_X64)
-  lpfnRtlWow64GetThreadContext fnRtlWow64GetThreadContext;
-  lpfnRtlWow64SetThreadContext fnRtlWow64SetThreadContext;
-#endif //_M_X64
-  BYTE aLocalCode[1024], *lpRemCode;
-  LONG nProcPlatform;
-  SIZE_T nSize, nDllLen;
-  CONTEXT sCtx;
-#if defined(_M_X64)
-  WOW64_CONTEXT sWow64Ctx, *lpWow64Ctx = NULL;
-#endif //_M_X64
-
-  hNtDll = NktHookLibHelpers::GetModuleBaseAddress(L"ntdll.dll");
-  hRemNtDll = NktHookLibHelpers::GetRemoteModuleBaseAddress(lpPI->hProcess, L"ntdll.dll", TRUE);
-  if (hNtDll == NULL || hRemNtDll != NULL)
-  {
-    fnRemLdrLoadDll = NktHookLibHelpers::GetRemoteProcedureAddress(lpPI->hProcess, hRemNtDll, "LdrLoadDll");
-    fnNtGetContextThread = (lpfnNtGetContextThread)NktHookLibHelpers::GetProcedureAddress(hNtDll, "NtGetContextThread");
-    fnNtSetContextThread = (lpfnNtSetContextThread)NktHookLibHelpers::GetProcedureAddress(hNtDll, "NtSetContextThread");
-#if defined(_M_X64)
-    fnRtlWow64GetThreadContext = (lpfnRtlWow64GetThreadContext)NktHookLibHelpers::GetProcedureAddress(hNtDll,
-                                                                                     "RtlWow64GetThreadContext");
-    fnRtlWow64SetThreadContext = (lpfnRtlWow64SetThreadContext)NktHookLibHelpers::GetProcedureAddress(hNtDll,
-                                                                                     "RtlWow64SetThreadContext");
-#endif //_M_X64
-    dwOsErr = (fnRemLdrLoadDll != NULL && fnNtGetContextThread != NULL &&
-               fnNtSetContextThread != NULL) ? ERROR_SUCCESS : ERROR_PROC_NOT_FOUND;
-  }
-  else
-  {
-    dwOsErr = ERROR_PROC_NOT_FOUND;
-  }
-  //allocate memory in remote process
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    //calculate dll name length
-    for (nDllLen=0; nDllLen<16384 && szDllNameW[nDllLen]!=0; nDllLen++);
-    nDllLen *= sizeof(WCHAR);
-    if (nDllLen >= 32768)
-      return E_INVALIDARG;
-    nSize = 48 + 256 + nDllLen;
-    nSize = ((nSize + 4095) & (~4095));
-    lpRemCode = NULL;
-    if (!NT_SUCCESS(NktNtAllocateVirtualMemory(lpPI->hProcess, (PVOID*)&lpRemCode, 0, &nSize, MEM_COMMIT,
-                                               PAGE_EXECUTE_READWRITE)))
-      dwOsErr = ERROR_ACCESS_DENIED;
-  }
-  //check process platform and retrieve main thread's entrypoint
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    switch (nProcPlatform = NktHookLibHelpers::GetProcessPlatform(lpPI->hProcess))
-    {
-      case NKTHOOKLIB_ProcessPlatformX86:
-#if defined(_M_IX86)
-        sCtx.ContextFlags = CONTEXT_FULL;
-        if (!NT_SUCCESS(fnNtGetContextThread(lpPI->hThread, &sCtx)))
-          dwOsErr = ERROR_ACCESS_DENIED;
-
-#elif defined(_M_X64)
-        if (fnRtlWow64GetThreadContext != NULL && fnRtlWow64SetThreadContext != NULL)
-        {
-          sWow64Ctx.ContextFlags = CONTEXT_FULL;
-          if (!NT_SUCCESS(fnRtlWow64GetThreadContext(lpPI->hThread, &sWow64Ctx)))
-            dwOsErr = ERROR_ACCESS_DENIED;
-        }
-        else
-        {
-          //try to locate the pointer to the WOW64_CONTEXT data by reading the thread's TLS slot 1
-          NKT_HK_THREAD_BASIC_INFORMATION sTbi;
-          LPBYTE lpTlsSlot;
-
-          if (NT_SUCCESS(NktNtQueryInformationThread(lpPI->hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi,
-                                                     sizeof(sTbi), NULL)))
-          {
-            lpTlsSlot = (LPBYTE)(sTbi.TebBaseAddress) + 0x0E10 + 1*sizeof(DWORD);
-            if (NktHookLibHelpers::ReadMem(lpPI->hProcess, &lpWow64Ctx, lpTlsSlot,
-                                           sizeof(lpWow64Ctx)) != sizeof(lpWow64Ctx) ||
-                NktHookLibHelpers::ReadMem(lpPI->hProcess, &sWow64Ctx, lpWow64Ctx,
-                                           sizeof(sWow64Ctx)) != sizeof(sWow64Ctx))
-            {
-              dwOsErr = ERROR_ACCESS_DENIED;
-            }
-          }
-          else
-          {
-            dwOsErr = ERROR_ACCESS_DENIED;
-          }
-        }
-#endif
-        break;
-
-#if defined(_M_X64)
-      case NKTHOOKLIB_ProcessPlatformX64:
-        sCtx.ContextFlags = CONTEXT_FULL;
-        if (!NT_SUCCESS(fnNtGetContextThread(lpPI->hThread, &sCtx)))
-          dwOsErr = ERROR_ACCESS_DENIED;
-        break;
-#endif //_M_X64
-
-      default:
-        dwOsErr = ERROR_UNSUPPORTED_TYPE;
-        break;
-    }
-  }
-  //build code
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    NktHookLibHelpers::MemSet(aLocalCode, 0, sizeof(aLocalCode));
-    //search path (lpRemCode + 16)
-    aLocalCode[16] = '.';
-    //dll characteristics (lpRemCode + 24)
-    //dll to load UNICODE_STRING (lpRemCode + 32 / buffer pointer will be stored later)
-    *((USHORT NKT_UNALIGNED*)(aLocalCode+32)) = (USHORT)nDllLen;
-    *((USHORT NKT_UNALIGNED*)(aLocalCode+34)) = (USHORT)nDllLen;
-    nSize = 48; //offset to code start
-    //remote code starts at offset 48
-    switch (nProcPlatform)
-    {
-      case NKTHOOKLIB_ProcessPlatformX86:
-        aLocalCode[nSize++] = 0x55;                                       //push    ebp
-        aLocalCode[nSize++] = 0x8B; aLocalCode[nSize++] = 0xEC;           //mov     ebp, esp
-        aLocalCode[nSize++] = 0x50;                                       //push    eax
-        aLocalCode[nSize++] = 0x53;                                       //push    ebx
-        aLocalCode[nSize++] = 0x51;                                       //push    ecx
-        aLocalCode[nSize++] = 0x52;                                       //push    edx
-        aLocalCode[nSize++] = 0x56;                                       //push    esi
-        aLocalCode[nSize++] = 0x57;                                       //push    edi
-        aLocalCode[nSize++] = 0x9C;                                       //pushf
-        //----
-        aLocalCode[nSize++] = 0xB8;                                       //mov     eax, lpRemCode (hInst*)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)lpRemCode;
-        nSize += 4;
-        aLocalCode[nSize++] = 0x50;                                       //push    eax
-        //----
-        aLocalCode[nSize++] = 0xB8;                                       //mov     eax, lpRemCode+32 (DllName)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)lpRemCode + 32;
-        nSize += 4;
-        aLocalCode[nSize++] = 0x50;                                       //push    eax
-        //----
-        aLocalCode[nSize++] = 0xB8;                                       //mov     eax, lpRemCode+24 (DllCharact)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)lpRemCode + 24;
-        nSize += 4;
-        aLocalCode[nSize++] = 0x50;                                       //push    eax
-        //----
-        aLocalCode[nSize++] = 0xB8;                                       //mov     eax, lpRemCode+16 (SearchPath)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)lpRemCode + 16;
-        nSize += 4;
-        aLocalCode[nSize++] = 0x50;                                       //push    eax
-        //----
-        aLocalCode[nSize++] = 0xB8;                                       //mov     eax, ADDRESS OF LdrLoadDll
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)fnRemLdrLoadDll;
-        nSize += 4;
-        aLocalCode[nSize++] = 0xFF; aLocalCode[nSize++] = 0xD0;           //call    eax
-        //----
-        aLocalCode[nSize++] = 0x9D;                                       //popf
-        aLocalCode[nSize++] = 0x5F;                                       //pop     edi
-        aLocalCode[nSize++] = 0x5E;                                       //pop     esi
-        aLocalCode[nSize++] = 0x5A;                                       //pop     edx
-        aLocalCode[nSize++] = 0x59;                                       //pop     ecx
-        aLocalCode[nSize++] = 0x5B;                                       //pop     ebx
-        aLocalCode[nSize++] = 0x58;                                       //pop     eax
-        aLocalCode[nSize++] = 0x5D;                                       //pop     ebp
-        aLocalCode[nSize++] = 0xE9;                                       //jmp     original entrypoint
-#if defined(_M_IX86)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sCtx.Eax) - (DWORD)(lpRemCode+nSize+4);
-#elif defined(_M_X64)
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = (DWORD)(sWow64Ctx.Eax) - (DWORD)(lpRemCode+nSize+4);
-#endif
-        nSize += 4;
-        break;
-
-#if defined _M_X64
-      case NKTHOOKLIB_ProcessPlatformX64:
-        aLocalCode[nSize++] = 0x50;                                       //push    rax
-        aLocalCode[nSize++] = 0x53;                                       //push    rbx
-        aLocalCode[nSize++] = 0x51;                                       //push    rcx
-        aLocalCode[nSize++] = 0x52;                                       //push    rdx
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x50;           //push    r8
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x51;           //push    r9
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x52;           //push    r10
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x53;           //push    r11
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x54;           //push    r12
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x55;           //push    r13
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x56;           //push    r14
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x57;           //push    r15
-        aLocalCode[nSize++] = 0x56;                                       //push    rsi
-        aLocalCode[nSize++] = 0x57;                                       //push    rdi
-        aLocalCode[nSize++] = 0x9C;                                       //pushfq
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0x83;           //sub     rsp, 40h
-        aLocalCode[nSize++] = 0xEC; aLocalCode[nSize++] = 0x40;
-        //----
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0xB9;           //mov     rcx, lpRemCode+16 (SearchPath)
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)lpRemCode + 16;
-        nSize += 8;
-        //----
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0xBA;           //mov     rdx, lpRemCode+24 (DllCharact)
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)lpRemCode + 24;
-        nSize += 8;
-        //----
-        aLocalCode[nSize++] = 0x49; aLocalCode[nSize++] = 0xB8;           //mov     r8, lpRemCode+32 (DllName)
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)lpRemCode + 32;
-        nSize += 8;
-        //----
-        aLocalCode[nSize++] = 0x49; aLocalCode[nSize++] = 0xB9;           //mov     r9, lpRemCode (hInst*)
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)lpRemCode;
-        nSize += 8;
-        //----
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0xB8;           //mov     rax, ADDRESS OF LdrLoadDll
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)fnRemLdrLoadDll;
-        nSize += 8;
-        aLocalCode[nSize++] = 0xFF; aLocalCode[nSize++] = 0xD0;           //call    rax
-        //----
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0x83;           //add     rsp, 40h
-        aLocalCode[nSize++] = 0xC4; aLocalCode[nSize++] = 0x40;
-        aLocalCode[nSize++] = 0x9D;                                       //popfq
-        aLocalCode[nSize++] = 0x5F;                                       //pop     rdi
-        aLocalCode[nSize++] = 0x5E;                                       //pop     rsi
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5F;           //pop     r15
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5E;           //pop     r14
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5D;           //pop     r13
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5C;           //pop     r12
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5B;           //pop     r11
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x5A;           //pop     r10
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x59;           //pop     r9
-        aLocalCode[nSize++] = 0x41; aLocalCode[nSize++] = 0x58;           //pop     r8
-        aLocalCode[nSize++] = 0x5A;                                       //pop     rdx
-        aLocalCode[nSize++] = 0x59;                                       //pop     rcx
-        aLocalCode[nSize++] = 0x5B;                                       //pop     rbx
-        aLocalCode[nSize++] = 0x58;                                       //pop     rax
-        //----
-        aLocalCode[nSize++] = 0x48; aLocalCode[nSize++] = 0xFF; aLocalCode[nSize++] = 0x25;
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+nSize)) = 0;
-        nSize += 4;
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+nSize)) = (ULONGLONG)(sCtx.Rcx);
-        nSize += 8;
-        break;
-#endif //_M_X64
-    }
-    //store dll unicode buffer pointer
-    switch (nProcPlatform)
-    {
-      case NKTHOOKLIB_ProcessPlatformX86:
-        *((DWORD NKT_UNALIGNED*)(aLocalCode+36)) = (DWORD)(lpRemCode + nSize);
-        break;
-#if defined(_M_X64)
-      case NKTHOOKLIB_ProcessPlatformX64:
-        *((ULONGLONG NKT_UNALIGNED*)(aLocalCode+40)) = (ULONGLONG)(lpRemCode + nSize);
-        break;
-#endif //_M_X64
-    }
-    //write code and dll name on target process
-    if (NktHookLibHelpers::WriteMem(lpPI->hProcess, lpRemCode, aLocalCode, nSize) == FALSE ||
-        NktHookLibHelpers::WriteMem(lpPI->hProcess, lpRemCode+nSize, (LPVOID)szDllNameW, nDllLen) == FALSE)
-      dwOsErr = ERROR_ACCESS_DENIED;
-  }
-  //change main thread's entrypoint
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    switch (nProcPlatform)
-    {
-      case NKTHOOKLIB_ProcessPlatformX86:
-#if defined(_M_IX86)
-        sCtx.Eax = (DWORD)(lpRemCode + 48);
-        if (!NT_SUCCESS(fnNtSetContextThread(lpPI->hThread, &sCtx)))
-          dwOsErr = ERROR_ACCESS_DENIED;
-#elif defined(_M_X64)
-        sWow64Ctx.Eax = (DWORD)(lpRemCode + 48);
-        if (fnRtlWow64GetThreadContext != NULL && fnRtlWow64SetThreadContext != NULL)
-        {
-          if (!NT_SUCCESS(fnRtlWow64SetThreadContext(lpPI->hThread, &sWow64Ctx)))
-            dwOsErr = ERROR_ACCESS_DENIED;
-        }
-        else
-        {
-          if (NktHookLibHelpers::WriteMem(lpPI->hProcess, lpWow64Ctx, &sWow64Ctx, sizeof(sWow64Ctx)) != sizeof(sWow64Ctx))
-            dwOsErr = ERROR_ACCESS_DENIED;
-        }
-#endif
-        break;
-
-#if defined(_M_X64)
-      case NKTHOOKLIB_ProcessPlatformX64:
-        sCtx.Rcx = (DWORD64)(lpRemCode + 48);
-        if (!NT_SUCCESS(fnNtSetContextThread(lpPI->hThread, &sCtx)))
-          dwOsErr = ERROR_ACCESS_DENIED;
-        break;
-#endif //_M_X64
-    }
-  }
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    if ((dwCreationFlags & CREATE_SUSPENDED) == 0)
-      NktNtResumeThread(lpPI->hThread, NULL);
-  }
-  else
-  {
-    typedef NTSTATUS (NTAPI *lpfnNtTerminateProcess)(__in_opt HANDLE ProcessHandle, __in NTSTATUS ExitStatus);
-    lpfnNtTerminateProcess fnNtTerminateProcess;
-    HINSTANCE hNtDll;
-
-    hNtDll = NktHookLibHelpers::GetModuleBaseAddress(L"ntdll.dll");
-    if (hNtDll != NULL)
-    {
-      fnNtTerminateProcess = (lpfnNtTerminateProcess)NktHookLibHelpers::GetProcedureAddress(hNtDll,
-                                                                                            "NtTerminateProcess");
-      if (fnNtTerminateProcess != NULL)
-        fnNtTerminateProcess(lpPI->hProcess, STATUS_UNSUCCESSFUL);
-    }
-    NktNtClose(lpPI->hProcess);
-    NktNtClose(lpPI->hThread);
-    NktHookLibHelpers::MemSet(lpPI, 0, sizeof(PROCESS_INFORMATION));
-  }
-  return dwOsErr;
-}
+} //namespace NktHookLibHelpers

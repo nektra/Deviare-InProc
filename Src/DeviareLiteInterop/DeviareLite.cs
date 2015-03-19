@@ -31,12 +31,14 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace DeviareLiteInterop
 {
     public sealed class HookLib
     {
         #region Public Enums
+        [Flags]
         public enum HookFlags : int
         {
             DontSkipInitialJumps     = 0x01,
@@ -45,6 +47,29 @@ namespace DeviareLiteInterop
             SkipNullProcsToHook      = 0x08,
             UseAbsoluteIndirectJumps = 0x10,
             AllowReentrancy          = 0x20
+        }
+
+        [Flags]
+        public enum ProcessCreationFlags : uint
+        {
+            NONE = 0x00000000,
+            DEBUG_PROCESS = 0x00000001,
+            DEBUG_ONLY_THIS_PROCESS = 0x00000002,
+            CREATE_SUSPENDED = 0x00000004,
+            DETACHED_PROCESS = 0x00000008,
+            CREATE_NEW_CONSOLE = 0x00000010,
+            CREATE_NEW_PROCESS_GROUP = 0x00000200,
+            CREATE_UNICODE_ENVIRONMENT = 0x00000400,
+
+            CREATE_PROTECTED_PROCESS = 0x00040000,
+            CREATE_BREAKAWAY_FROM_JOB = 0x01000000,
+            CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
+            CREATE_DEFAULT_ERROR_MODE = 0x04000000,
+            CREATE_NO_WINDOW = 0x08000000,
+            CREATE_SEPARATE_WOW_VDM = 0x00001000,
+            CREATE_SHARED_WOW_VDM = 0x00001000,
+            EXTENDED_STARTUPINFO_PRESENT = 0x00080000,
+            INHERIT_PARENT_AFFINITY = 0x00010000
         }
         #endregion
 
@@ -80,11 +105,10 @@ namespace DeviareLiteInterop
             public int inheritHandle;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
         public struct ProcessInfo
         {
-            public IntPtr procHandle;
-            public IntPtr threadHandle;
+            public SafeWaitHandle procHandle;
+            public SafeWaitHandle threadHandle;
             public int procId;
             public int threadId;
         }
@@ -223,8 +247,55 @@ namespace DeviareLiteInterop
             return Obj2IntPtr(o);
         }
 
+        public ProcessInfo CreateProcess(string applicationName, string commandLine, Nullable<SECURITY_ATTRIBUTES> processAttributes,
+                                         Nullable<SECURITY_ATTRIBUTES> threadAttributes, bool inheritHandles, ProcessCreationFlags creationFlags,
+                                         string environment, string currentDirectory, Nullable<STARTUPINFO> startupInfo)
+        {
+            PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+            IntPtr procAttr = IntPtr.Zero;
+            IntPtr threadAttr = IntPtr.Zero;
+            IntPtr stInfo = IntPtr.Zero;
+
+            if (processAttributes.HasValue)
+            {
+                procAttr = Marshal.AllocHGlobal(Marshal.SizeOf(processAttributes.Value));
+                Marshal.StructureToPtr(processAttributes.Value, procAttr, false);
+            }
+            if (threadAttributes.HasValue)
+            {
+                threadAttr = Marshal.AllocHGlobal(Marshal.SizeOf(threadAttributes.Value));
+                Marshal.StructureToPtr(threadAttributes.Value, threadAttr, false);
+            }
+            if (startupInfo.HasValue)
+            {
+                stInfo = Marshal.AllocHGlobal(Marshal.SizeOf(startupInfo.Value));
+                Marshal.StructureToPtr(startupInfo.Value, stInfo, false);
+            }
+            if (NativeCreateProcess(applicationName, commandLine, procAttr, threadAttr, inheritHandles, (uint)creationFlags, environment, currentDirectory, stInfo, out pi) == false)
+            {
+                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+            }
+
+            ProcessInfo _pi = new ProcessInfo();
+            _pi.procHandle = new SafeWaitHandle(pi.procHandle, true);
+            _pi.threadHandle = new SafeWaitHandle(pi.threadHandle, true);
+            _pi.procId = pi.procId;
+            _pi.threadId = pi.threadId;
+            return _pi;
+        }
+
+        public void ResumeThread(SafeWaitHandle threadHandle)
+        {
+            ResumeThread(threadHandle.DangerousGetHandle());
+        }
+
+        public void ResumeThread(IntPtr threadHandle)
+        {
+            NativeResumeThread(threadHandle);
+        }
+
         public ProcessInfo CreateProcessWithDll(string applicationName, string commandLine, Nullable<SECURITY_ATTRIBUTES> processAttributes,
-                                                Nullable<SECURITY_ATTRIBUTES> threadAttributes, bool inheritHandles, int creationFlags,
+                                                Nullable<SECURITY_ATTRIBUTES> threadAttributes, bool inheritHandles, ProcessCreationFlags creationFlags,
                                                 string environment, string currentDirectory, Nullable<STARTUPINFO> startupInfo, string dllName)
         {
             ProcessInfo pi = new ProcessInfo();
@@ -261,8 +332,8 @@ namespace DeviareLiteInterop
                 object o = this.Invoke(this.hookLib, "CreateProcessWithDll", new object[] { applicationName, commandLine,
                                        IntPtr2Obj(procAttr), IntPtr2Obj(threadAttr), ih, creationFlags, environment,
                                        currentDirectory, IntPtr2Obj(stInfo), dllName });
-                pi.procHandle = Obj2IntPtr(this.GetProperty(o, "ProcessHandle"));
-                pi.threadHandle = Obj2IntPtr(this.GetProperty(o, "ThreadHandle"));
+                pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
+                pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
                 pi.threadId = (int)(this.GetProperty(o, "ThreadId"));
             }
@@ -283,7 +354,7 @@ namespace DeviareLiteInterop
         }
 
         public ProcessInfo CreateProcessWithLogonAndDll(string userName, string domain, string password, int logonFlags,
-                                                        string applicationName, string commandLine, int creationFlags,
+                                                        string applicationName, string commandLine, ProcessCreationFlags creationFlags,
                                                         string environment, string currentDirectory,
                                                         Nullable<STARTUPINFO> startupInfo, string dllName)
         {
@@ -314,8 +385,8 @@ namespace DeviareLiteInterop
                 object o = this.Invoke(this.hookLib, "CreateProcessWithLogonAndDll", new object[] { userName, domain, password,
                                        logonFlags, applicationName, commandLine, creationFlags, environment,
                                        currentDirectory, IntPtr2Obj(stInfo), dllName });
-                pi.procHandle = Obj2IntPtr(this.GetProperty(o, "ProcessHandle"));
-                pi.threadHandle = Obj2IntPtr(this.GetProperty(o, "ThreadHandle"));
+                pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
+                pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
                 pi.threadId = (int)(this.GetProperty(o, "ThreadId"));
             }
@@ -332,7 +403,7 @@ namespace DeviareLiteInterop
         }
 
         public ProcessInfo CreateProcessWithTokenAndDll(IntPtr token, int logonFlags, string applicationName, string commandLine,
-                                                        int creationFlags, string environment, string currentDirectory,
+                                                        ProcessCreationFlags creationFlags, string environment, string currentDirectory,
                                                         Nullable<STARTUPINFO> startupInfo, string dllName)
         {
             ProcessInfo pi = new ProcessInfo();
@@ -356,8 +427,8 @@ namespace DeviareLiteInterop
                 object o = this.Invoke(this.hookLib, "CreateProcessWithTokenAndDll", new object[] { IntPtr2Obj(token),
                                        logonFlags, applicationName, commandLine, creationFlags, environment,
                                        currentDirectory, IntPtr2Obj(stInfo), dllName });
-                pi.procHandle = Obj2IntPtr(this.GetProperty(o, "ProcessHandle"));
-                pi.threadHandle = Obj2IntPtr(this.GetProperty(o, "ThreadHandle"));
+                pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
+                pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
                 pi.threadId = (int)(this.GetProperty(o, "ThreadId"));
             }
@@ -373,10 +444,31 @@ namespace DeviareLiteInterop
             return pi;
         }
 
+        public void InjectDll(int pid, string dllName)
+        {
+            this.Invoke(this.hookLib, "InjectDll", new object[] { pid, dllName });
+        }
+
+        public void InjectDllH(IntPtr procHandle, string dllName)
+        {
+            this.Invoke(this.hookLib, "InjectDll", new object[] { IntPtr2Obj(procHandle), dllName });
+        }
+
         #region Private Vars
         private Object hookLib;
         private Type hookInfoType;
         private IntPtr dummy;
+        #endregion
+
+        #region Private Structs
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION
+        {
+            public IntPtr procHandle;
+            public IntPtr threadHandle;
+            public int procId;
+            public int threadId;
+        }
         #endregion
 
         #region Internal Helpers
@@ -434,6 +526,35 @@ namespace DeviareLiteInterop
                 return new IntPtr((long)o);
             return IntPtr.Zero;
         }
+
+        private SafeWaitHandle DuplicateAndConvertToSafeWaitHandle(IntPtr h)
+        {
+            IntPtr hDup;
+
+            if (NativeDuplicateHandle(NativeGetCurrentProcess(), h, NativeGetCurrentProcess(), out hDup, 0, false, 2) == false)
+                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+            return new SafeWaitHandle(hDup, true);
+        }
+        #endregion
+
+        #region P/Invoke
+        [DllImport("kernel32.dll", EntryPoint = "CreateProcess", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern bool NativeCreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes,
+                                                       IntPtr lpThreadAttributes, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
+                                                       uint dwCreationFlags, string lpEnvironment, string lpCurrentDirectory,
+                                                       IntPtr lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll", EntryPoint = "ResumeThread")]
+        private static extern uint NativeResumeThread(IntPtr hThread);
+
+        [DllImport("kernel32.dll", EntryPoint = "DuplicateHandle", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool NativeDuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle,
+                                                         out IntPtr lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle,
+                                                         uint dwOptions);
+
+        [DllImport("kernel32.dll", EntryPoint = "GetCurrentProcess")]
+        static extern IntPtr NativeGetCurrentProcess();
         #endregion
     }
 }

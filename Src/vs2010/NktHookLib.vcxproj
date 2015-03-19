@@ -65,22 +65,22 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>..\..\Libs\2010\</OutDir>
-    <IntDir>obj\Debug\x86\Hook\</IntDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <TargetName>NktHookLib_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>..\..\Libs\2010\</OutDir>
-    <IntDir>obj\Debug\x64\Hook\</IntDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <TargetName>NktHookLib64_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>..\..\Libs\2010\</OutDir>
-    <IntDir>obj\Release\x86\Hook\</IntDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <TargetName>NktHookLib</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>..\..\Libs\2010\</OutDir>
-    <IntDir>obj\Release\x64\Hook\</IntDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <TargetName>NktHookLib64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -174,6 +174,13 @@
     <ClCompile Include="..\Lib\NktHookLibHelpers.cpp" />
     <ClCompile Include="..\Lib\NtSysCallGen.cpp" />
     <ClCompile Include="..\Lib\ProcessEntry.cpp" />
+    <ClCompile Include="..\Lib\ProcessInjection.cpp" />
+    <ClCompile Include="..\Lib\RelocatableCode.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\Lib\ThreadSuspend.cpp" />
     <ClCompile Include="..\Lib\WaitableObjects.cpp" />
     <ClCompile Include="..\Lib\libudis86\GetInstructionLength.cpp" />
@@ -203,8 +210,105 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).obj</Outputs>
     </CustomBuild>
+    <CustomBuild Include="..\Lib\Asm\RelocatableCode_x64.asm">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling assembler code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\%(Filename).inl</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\%(Filename).inl</Outputs>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <FileType>Document</FileType>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\%(Filename).inl</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).inl</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+    </CustomBuild>
+    <CustomBuild Include="..\Lib\Asm\RelocatableCode_x86.asm">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\%(Filename).inl</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).inl</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling assembler code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\%(Filename).inl</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\%(Filename).inl</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+"$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+IF ERRORLEVEL 1 GOTO BuildEventFailed
+GOTO BuildEventOK
+:BuildEventFailed
+EXIT 1
+:BuildEventOK
+</Command>
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Lib\AutoPtr.h" />
     <ClInclude Include="..\Lib\DynamicNtApi.h" />
     <ClInclude Include="..\Lib\NtApiDeclarations.h" />
     <ClInclude Include="..\Lib\HookEntry.h" />
@@ -213,6 +317,7 @@
     <ClInclude Include="..\..\Include\NktHookLib.h" />
     <ClInclude Include="..\Lib\NtHeapBaseObj.h" />
     <ClInclude Include="..\Lib\ProcessEntry.h" />
+    <ClInclude Include="..\Lib\RelocatableCode.h" />
     <ClInclude Include="..\Lib\ThreadSuspend.h" />
     <ClInclude Include="..\Lib\WaitableObjects.h" />
   </ItemGroup>
