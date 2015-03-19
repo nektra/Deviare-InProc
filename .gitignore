@@ -20,6 +20,11 @@ Samples/C/ApiHook/vs2010/obj/
 Samples/C/ApiHook/vs2010/ipch/
 Samples/C/ApiHook/vs2012/obj/
 Samples/C/ApiHook/vs2012/ipch/
+Samples/C/InjectDll/vs2008/obj/
+Samples/C/InjectDll/vs2010/obj/
+Samples/C/InjectDll/vs2010/ipch/
+Samples/C/InjectDll/vs2012/obj/
+Samples/C/InjectDll/vs2012/ipch/
 Samples/C/TestDll/vs2008/obj/
 Samples/C/TestDll/vs2010/obj/
 Samples/C/TestDll/vs2010/ipch/

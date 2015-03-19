@@ -41,19 +41,20 @@ namespace Internals {
 template <class T>
 class TNktAutoPtrBase : public CNktNtHeapBaseObj
 {
-public:
-  TNktAutoPtrBase()
+protected:
+  TNktAutoPtrBase() : CNktNtHeapBaseObj()
     {
     lpPtr = NULL;
     return;
     };
 
-  TNktAutoPtrBase(__in T* _lpPtr)
+  TNktAutoPtrBase(__in T* _lpPtr) : CNktNtHeapBaseObj()
     {
     lpPtr = _lpPtr;
     return;
     };
 
+public:
   T* Get()
     {
     return lpPtr;
@@ -127,7 +128,8 @@ public:
     };
 
 protected:
-  virtual VOID Delete(__inout T *lpObj)=0;
+  virtual VOID Delete(__inout T *lpObj)
+    { };
 
 protected:
   T *lpPtr;

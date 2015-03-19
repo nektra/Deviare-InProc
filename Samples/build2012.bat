@@ -29,6 +29,20 @@ ENDLOCAL
 SETLOCAL
 CALL "%__VCINSTALLDIR%\vcvarsall.bat" x86
 IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x86
+DEVENV C\InjectDll\vs2012\InjectDll.sln /rebuild "Release|Win32"
+IF NOT %ERRORLEVEL% == 0 goto bad_compile
+ENDLOCAL
+
+SETLOCAL
+CALL "%__VCINSTALLDIR%\vcvarsall.bat" x64
+IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x64
+DEVENV C\InjectDll\vs2012\InjectDll.sln /rebuild "Release|x64"
+IF NOT %ERRORLEVEL% == 0 goto bad_compile
+ENDLOCAL
+
+SETLOCAL
+CALL "%__VCINSTALLDIR%\vcvarsall.bat" x86
+IF "%VCINSTALLDIR%" == "" GOTO err_cantsetupvs_x86
 DEVENV C\TestDll\vs2012\TestDll.sln /rebuild "Release|Win32"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL

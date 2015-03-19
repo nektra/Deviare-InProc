@@ -1395,10 +1395,6 @@ static NTSTATUS GenerateRestrictedThreadToken(__in HANDLE hProcess, __out HANDLE
   *lphThreadToken = NULL;
   //get OS version
   NktHookLibHelpers::MemSet(&sOvi, 0, sizeof(sOvi));
-  nNtStatus = NktRtlGetVersion(&sOvi);
-  if (!NT_SUCCESS(nNtStatus))
-    return nNtStatus;
-  memset(&sOvi, 0, sizeof(sOvi));
   sOvi.dwOSVersionInfoSize = sizeof(sOvi);
   nNtStatus = NktRtlGetVersion(&sOvi);
   if (!NT_SUCCESS(nNtStatus))
