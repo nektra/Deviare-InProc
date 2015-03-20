@@ -90,7 +90,7 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     wprintf_s(L"Error: Invalid dll name specified.\n");
     return 1;
   }
-  dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, argv[1]);
+  dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, argv[2]);
   if (dwOsErr != ERROR_SUCCESS)
   {
     wprintf_s(L"Error: Cannot inject Dll in target process [0x%08X]\n", dwOsErr);
