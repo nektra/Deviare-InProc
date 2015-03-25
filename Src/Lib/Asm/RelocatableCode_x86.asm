@@ -484,25 +484,21 @@ INJECTDLLINSUSPENDEDPROCESS_SECTION_START:
 
 ALIGN 4
 InjectDllInSuspendedProcess PROC
-_GETPROCADDR_1     EQU 0
-_GETMODBASEADDR_1  EQU 8
-_HINST_1           EQU 16
-_SEARCHPATH_1      EQU 24
-_DLLCHARACT_1      EQU 28
-_DLLNAME_1         EQU 32
-_SZ_NTDLLDLL_1     EQU 48
-_SZ_LDRLOADDLL_1   EQU 72
+_GETPROCADDR_1      EQU 0
+_GETMODBASEADDR_1   EQU 4
+_HINST_1            EQU 8
+_DLLNAME_1          EQU 12
+_SZ_KERNEL32DLL_1   EQU 16
+_SZ_LOADLIBRARYW_1  EQU 48
 
-    db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
-    db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: will hold the dll instance
-    db   '.', 0, 0, 0                                                ;offset 24: search path
-    db   4 DUP (0h)                                                  ;offset 28: dll characteristics
-    db   16 DUP (0h)                                                 ;offset 32: UNICODE_STRING of dll to inject
-    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 48: L"ntdll.dll"
-    db   'LdrLoadDll', 0, 0, 0, 0, 0, 0                              ;offset 72: "LdrLoadDll"
+    db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
+    db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
+    db   4 DUP (0h)                                                  ;offset 8: will hold the dll instance
+    db   4 DUP (0h)                                                  ;offset 12: pointer to dll name
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 16: L"kernel32.dll"
+    db   'LoadLibraryW', 0, 0, 0, 0                                  ;offset 48: "LoadLibraryW"
 
-    ;offset 88: code start
+    ;offset 64: code start
     push ebp
     mov  ebp, esp
     push eax
@@ -513,16 +509,16 @@ _SZ_LDRLOADDLL_1   EQU 72
     push edi
     pushfd
 
-    ;get ntdll.dll base address
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_NTDLLDLL_1
+    ;get kernel32.dll base address
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_KERNEL32DLL_1
     push eax
     GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
     call DWORD PTR [eax]
     test eax, eax
     je   @@done
 
-    ;get address of LdrLoadDll
-    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_LDRLOADDLL_1
+    ;get address of LoadLibraryW
+    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_LOADLIBRARYW_1
     push ecx
     push eax ;hinstance
     GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
@@ -531,16 +527,12 @@ _SZ_LDRLOADDLL_1   EQU 72
     je   @@done
 
     ;load library
-    mov  edx, eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _HINST_1
-    push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
-    push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLCHARACT_1
-    push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SEARCHPATH_1
-    push eax
-    call edx
+    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
+    push DWORD PTR [ecx]
+    call eax
+    ;save hInstance
+    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _HINST_1
+    mov DWORD PTR [ecx], eax
 
 @@done:
     popfd
@@ -568,42 +560,40 @@ INJECTDLLINRUNNINGPROCESS_SECTION_START:
 ALIGN 4
 InjectDllInRunningProcess PROC
 _GETPROCADDR_2                    EQU 0
-_GETMODBASEADDR_2                 EQU 8
-_HINST_2                          EQU 16
-_SEARCHPATH_2                     EQU 24
-_DLLCHARACT_2                     EQU 28
-_DLLNAME_2                        EQU 32
-_READYEVENT_2                     EQU 48
-_CONTINUEEVENT_2                  EQU 56
-_ADDR_LDRLOADDLL_2                EQU 64
-_ADDR_NTCLOSE_2                   EQU 72
-_ADDR_NTSETEVENT_2                EQU 80
-_ADDR_NTWAITFORMULTIPLEOBJECTS_2  EQU 88
-_SZ_NTDLLDLL_2                    EQU 96
-_SZ_LDRLOADDLL_2                  EQU 120
-_SZ_NTCLOSE_2                     EQU 136
-_SZ_NTSETEVENT_2                  EQU 144
-_SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 156
+_GETMODBASEADDR_2                 EQU 4
+_HINST_2                          EQU 8
+_DLLNAME_2                        EQU 12
+_READYEVENT_2                     EQU 16
+_CONTINUEEVENT_2                  EQU 20
+_ADDR_LOADLIBRARYW_2              EQU 24
+_ADDR_NTCLOSE_2                   EQU 28
+_ADDR_NTSETEVENT_2                EQU 32
+_ADDR_NTWAITFORMULTIPLEOBJECTS_2  EQU 36
+_SZ_KERNEL32DLL_2                 EQU 40
+_SZ_LOADLIBRARYW_2                EQU 72
+_SZ_NTDLLDLL_2                    EQU 88
+_SZ_NTCLOSE_2                     EQU 120
+_SZ_NTSETEVENT_2                  EQU 128
+_SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 144
 
-    db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
-    db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: will hold the dll instance
-    db   '.', 0, 0, 0                                                ;offset 24: search path
-    db   4 DUP (0h)                                                  ;offset 28: dll characteristics
-    db   16 DUP (0h)                                                 ;offset 32: UNICODE_STRING of dll to inject
-    db   8 DUP (0h)                                                  ;offset 48: ready event handle
-    db   8 DUP (0h)                                                  ;offset 56: continue event handle
-    db   8 DUP (0h)                                                  ;offset 64: address of LdrLoadDll
-    db   8 DUP (0h)                                                  ;offset 72: address of NtClose
-    db   8 DUP (0h)                                                  ;offset 80: address of NtSetEvent
-    db   8 DUP (0h)                                                  ;offset 88: address of NtWaitForMultipleObjects
-    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 96: L"ntdll.dll"
-    db   'LdrLoadDll', 0, 0, 0, 0, 0, 0                              ;offset 120: "LdrLoadDll"
-    db   'NtClose', 0                                                ;offset 136: "NtClose"
-    db   'NtSetEvent', 0, 0                                          ;offset 144: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0, 0, 0, 0                      ;offset 156: "NtWaitForMultipleObjects"
+    db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
+    db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
+    db   4 DUP (0h)                                                  ;offset 8: will hold the dll instance
+    db   4 DUP (0h)                                                  ;offset 12: pointer to dll name
+    db   4 DUP (0h)                                                  ;offset 16: ready event handle
+    db   4 DUP (0h)                                                  ;offset 20: continue event handle
+    db   4 DUP (0h)                                                  ;offset 24: address of LoadLibraryW
+    db   4 DUP (0h)                                                  ;offset 28: address of NtClose
+    db   4 DUP (0h)                                                  ;offset 32: address of NtSetEvent
+    db   4 DUP (0h)                                                  ;offset 36: address of NtWaitForMultipleObjects
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 40: L"kernel32.dll"
+    db   'LoadLibraryW', 0, 0, 0, 0                                  ;offset 72: "LoadLibraryW"
+    dw   'n','t','d','l','l','.','d','l','l', 0,0,0,0,0,0,0          ;offset 88: L"ntdll.dll"
+    db   'NtClose', 0                                                ;offset 120: "NtClose"
+    db   'NtSetEvent', 0,0,0,0,0,0                                   ;offset 128: "NtSetEvent"
+    db   'NtWaitForMultipleObjects', 0,0,0,0,0,0,0,0                 ;offset 144: "NtWaitForMultipleObjects"
 
-    ;offset 184: code start
+    ;offset 176: code start
     push ebp
     mov  ebp, esp
     push eax
@@ -613,6 +603,27 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 156
     push esi
     push edi
     pushfd
+
+    ;get kernel32.dll base address
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_KERNEL32DLL_2
+    push eax
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
+    call DWORD PTR [eax]
+    test eax, eax
+    je   @@done
+
+    mov edx, eax ;save hinstance
+    GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
+
+    ;get address of LoadLibraryW
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_LOADLIBRARYW_2
+    push eax
+    push edx ;hinstance
+    call DWORD PTR [ebx]
+    test eax, eax
+    je   @@done
+    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
+    mov  DWORD PTR [ecx], eax
 
     ;get ntdll.dll base address
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTDLLDLL_2
@@ -624,16 +635,6 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 156
 
     mov edx, eax ;save hinstance
     GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
-
-    ;get address of LdrLoadDll
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_LDRLOADDLL_2
-    push eax
-    push edx ;hinstance
-    call DWORD PTR [ebx]
-    test eax, eax
-    je   @@done
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LDRLOADDLL_2
-    mov  DWORD PTR [ecx], eax
 
     ;get address of NtClose
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTCLOSE_2
@@ -685,16 +686,13 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 156
 @@:
 
     ;load library
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _HINST_2
-    push eax
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
-    push eax
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLCHARACT_2
-    push eax
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SEARCHPATH_2
-    push eax
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LDRLOADDLL_2
+    push DWORD PTR [eax]
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
     call DWORD PTR [eax]
+    ;save hInstance
+    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _HINST_2
+    mov DWORD PTR [ecx], eax
 
     ;set continue event
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2

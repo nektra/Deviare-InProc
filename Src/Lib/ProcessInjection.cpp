@@ -636,7 +636,7 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
       DWORD dw[6];
 #if defined(_M_X64)
       ULONGLONG ull[6];
-#endif
+#endif //_M_X64
 
       switch (nProcPlatform)
       {
@@ -677,7 +677,7 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
               NktHookLibHelpers::WriteMem(hSuspendedProc, d+k-8, &ull[5], 8) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
-#endif
+#endif //_M_X64
       }
       d += _DOALIGN(k, 8);
     }
@@ -785,7 +785,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
       case NKTHOOKLIB_ProcessPlatformX86:
 #if defined(_M_X64)
       case NKTHOOKLIB_ProcessPlatformX64:
-#endif
+#endif //_M_X64
         break;
       default:
         dwOsErr = ERROR_CALL_NOT_IMPLEMENTED;
@@ -828,22 +828,19 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     //write new startup data
     if (dwOsErr == ERROR_SUCCESS)
     {
-      DWORD dw[3], dwDllLen;
+      DWORD dw[3];
 #if defined(_M_X64)
       ULONGLONG ull[3];
-#endif
+#endif //_M_X64
 
-      dwDllLen = (DWORD)nDllLen | ((DWORD)nDllLen << 16);
       switch (nProcPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX86:
           dw[0] = (DWORD)(lpRemCode + gmpa_data.nOffset_GetProcedureAddress);
           dw[1] = (DWORD)(lpRemCode + gmpa_data.nOffset_GetModuleBaseAddress);
           dw[2] = (DWORD)(d + _DOALIGN(k, 8));
-          if (NktHookLibHelpers::WriteMem(hProcess, d, &dw[0], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+8, &dw[1], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+32, &dwDllLen, 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+36, &dw[2], 4) == FALSE)
+          if (NktHookLibHelpers::WriteMem(hProcess, d, &dw[0], 2*sizeof(DWORD)) == FALSE ||
+              NktHookLibHelpers::WriteMem(hProcess, d+12, &dw[2], 4) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
 
@@ -852,13 +849,11 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
           ull[0] = (ULONGLONG)(lpRemCode + gmpa_data.nOffset_GetProcedureAddress);
           ull[1] = (ULONGLONG)(lpRemCode + gmpa_data.nOffset_GetModuleBaseAddress);
           ull[2] = (ULONGLONG)(d + _DOALIGN(k, 8));
-          if (NktHookLibHelpers::WriteMem(hProcess, d, &ull[0], 8) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+8, &ull[1], 8) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+32, &dwDllLen, 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+40, &ull[2], 8) == FALSE)
+          if (NktHookLibHelpers::WriteMem(hProcess, d, &ull[0], 2*sizeof(ULONGLONG)) == FALSE ||
+              NktHookLibHelpers::WriteMem(hProcess, d+24, &ull[2], 8) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
-#endif
+#endif //_M_X64
       }
       d += _DOALIGN(k, 8);
     }
@@ -922,6 +917,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
   if (dwOsErr == ERROR_SUCCESS && bIsInitialized == FALSE)
   {
     HANDLE hThread;
+
     nNtStatus = GetPrimaryThread(hProcess, &hThread);
     if (NT_SUCCESS(nNtStatus))
     {
@@ -951,18 +947,16 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     DWORD dw[2];
 #if defined(_M_X64)
     ULONGLONG ull[2];
-#endif
+#endif //_M_X64
     LPBYTE d;
 
-    d = lpRemCode;
-    d += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
+    d = lpRemCode + _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
     switch (nProcPlatform)
     {
       case NKTHOOKLIB_ProcessPlatformX86:
         dw[0] = (DWORD)hRemReadyEvent;
         dw[1] = (DWORD)hRemContinueEvent;
-        if (NktHookLibHelpers::WriteMem(hProcess, d+48, &dw[0], 4) == FALSE ||
-            NktHookLibHelpers::WriteMem(hProcess, d+56, &dw[1], 4) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, d+16, dw, 2*sizeof(DWORD)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
         break;
 
@@ -970,11 +964,10 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
       case NKTHOOKLIB_ProcessPlatformX64:
         ull[0] = (ULONGLONG)hRemReadyEvent;
         ull[1] = (ULONGLONG)hRemContinueEvent;
-        if (NktHookLibHelpers::WriteMem(hProcess, d+48, &ull[0], 8) == FALSE ||
-            NktHookLibHelpers::WriteMem(hProcess, d+56, &ull[1], 8) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, d+32, ull, 2*sizeof(ULONGLONG)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
         break;
-#endif
+#endif //_M_X64
     }
     //flush instruction cache (flushing a data write?)
     if (dwOsErr == ERROR_SUCCESS)
@@ -984,7 +977,18 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
   if (dwOsErr == ERROR_SUCCESS)
   {
     k = _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
-    dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode+k+184, NULL, &hNewThread);
+    switch (nProcPlatform)
+    {
+      case NKTHOOKLIB_ProcessPlatformX86:
+        k += 176;
+        break;
+#if defined(_M_X64)
+      case NKTHOOKLIB_ProcessPlatformX64:
+        k += 216;
+        break;
+#endif //_M_X64
+    }
+    dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode+k, NULL, &hNewThread);
   }
   //done
   if (dwOsErr == ERROR_SUCCESS)
@@ -1148,12 +1152,11 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
     //write new startup data
     if (dwOsErr == ERROR_SUCCESS)
     {
-      DWORD dw[4], dwDllLen;
+      DWORD dw[4];
 #if defined(_M_X64)
       ULONGLONG ull[4];
 #endif
 
-      dwDllLen = (DWORD)nDllLen | ((DWORD)nDllLen << 16);
       switch (nProcPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX86:
@@ -1166,10 +1169,8 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
           dw[3] = (DWORD)sWow64Ctx.Eax;
 #endif
           dw[3] -= (DWORD)(d+k);
-          if (NktHookLibHelpers::WriteMem(hProcess, d, &dw[0], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+8, &dw[1], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+32, &dwDllLen, 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+36, &dw[2], 4) == FALSE ||
+          if (NktHookLibHelpers::WriteMem(hProcess, d, dw, 2*sizeof(DWORD)) == FALSE ||
+              NktHookLibHelpers::WriteMem(hProcess, d+12, &dw[2], 4) == FALSE ||
               NktHookLibHelpers::WriteMem(hProcess, d+k-4, &dw[3], 4) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
@@ -1180,10 +1181,8 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
           ull[1] = (ULONGLONG)(lpRemCode + gmpa_data.nOffset_GetModuleBaseAddress);
           ull[2] = (ULONGLONG)(d + _DOALIGN(k, 8));
           ull[3] = (ULONGLONG)sCtx.Rcx;
-          if (NktHookLibHelpers::WriteMem(hProcess, d, &ull[0], 8) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+8, &ull[1], 8) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+32, &dwDllLen, 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hProcess, d+40, &ull[2], 8) == FALSE ||
+          if (NktHookLibHelpers::WriteMem(hProcess, d, ull, 2*sizeof(ULONGLONG)) == FALSE ||
+              NktHookLibHelpers::WriteMem(hProcess, d+24, &ull[2], 8) == FALSE ||
               NktHookLibHelpers::WriteMem(hProcess, d+k-8, &ull[3], 8) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
@@ -1250,16 +1249,16 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
   //change main thread's entrypoint
   if (dwOsErr == ERROR_SUCCESS)
   {
-    LPBYTE d = lpRemCode + _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8) + 88;
+    LPBYTE d = lpRemCode + _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
 
     switch (nProcPlatform)
     {
       case NKTHOOKLIB_ProcessPlatformX86:
 #if defined(_M_IX86)
-        sCtx.Eax = (DWORD)d;
+        sCtx.Eax = (DWORD)(d+64);
         nNtStatus = NktNtSetContextThread(hMainThread, &sCtx);
 #elif defined(_M_X64)
-        sWow64Ctx.Eax = (DWORD)d;
+        sWow64Ctx.Eax = (DWORD)(d+64);
         if (fnRtlWow64GetThreadContext != NULL && fnRtlWow64SetThreadContext != NULL)
         {
           nNtStatus = fnRtlWow64SetThreadContext(hMainThread, &sWow64Ctx);
@@ -1276,7 +1275,7 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
 
 #if defined(_M_X64)
       case NKTHOOKLIB_ProcessPlatformX64:
-        sCtx.Rcx = (DWORD64)d;
+        sCtx.Rcx = (DWORD64)(d+80);
         nNtStatus = NktNtSetContextThread(hMainThread, &sCtx);
         if (!NT_SUCCESS(nNtStatus))
           dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
