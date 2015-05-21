@@ -98,4 +98,4 @@ contact Nektra here <http://www.nektra.com/contact/>.
 This library uses a portion of UDis86 project <http://udis86.sourceforge.net/>,
 authored, copyrighted and maintained by Vivek Thampi. UDis86 is licensed under
 the terms of BSD License. For any questions referring to UDis86 contact the
-author at <vivek[at]sig9[dot]com>.
+author at vivek[at]sig9[dot]com.
