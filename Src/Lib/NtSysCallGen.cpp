@@ -41,7 +41,9 @@ using namespace NktHookLib::Internals;
 
 //-----------------------------------------------------------
 
-static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits);
+static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits,
+                                __in PRTL_OSVERSIONINFOW lpOsVerInfoW, __in LPBYTE lpData,
+                                __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount);
 static DWORD HelperConvertVAToRaw(__in DWORD dwVirtAddr, __in IMAGE_SECTION_HEADER *lpImgSect, __in SIZE_T nSecCount);
 static BOOL IsNtOrZw(__in_z LPCSTR szApiA);
 static BOOL StrCompareNoCaseA(__in_z LPCSTR szStr1, __in_z LPCSTR szStr2);
@@ -74,6 +76,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
   IMAGE_EXPORT_DIRECTORY *lpExpDir;
   DWORD dwRawAddr, *lpdwAddressOfFunctions, *lpdwAddressOfNames;
   WORD wOrd, *lpwAddressOfNameOrdinals;
+  RTL_OSVERSIONINFOW sOsVerInfoW;
   LPSTR sA;
 
   if (lpnCodeSize != NULL)
@@ -82,6 +85,9 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
     return ERROR_INVALID_PARAMETER;
   for (i=0; i<nDefsCount; i++)
     lpDefs[i].nOffset = (SIZE_T)-1;
+  NktHookLibHelpers::MemSet(&sOsVerInfoW, 0, sizeof(sOsVerInfoW));
+  sOsVerInfoW.dwOSVersionInfoSize = sizeof(sOsVerInfoW);
+  NktRtlGetVersion(&sOsVerInfoW);
   switch (nPlatform)
   {
     case NKTHOOKLIB_ProcessPlatformX86:
@@ -245,7 +251,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
             //create new stub
             lpDefs[k].nOffset = nDestSize;
             nCodeSize = GenerateNtSysCall((lpCode != NULL) ? (LPBYTE)lpCode+nDestSize : NULL, lpFileFuncAddr,
-                                          nPlatformBits);
+                                          nPlatformBits, &sOsVerInfoW, lpData, lpFileImgSect, nSecCount);
             if (nCodeSize == 0)
             {
               nNtStatus = STATUS_UNSUCCESSFUL;
@@ -282,29 +288,68 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
 
 //-----------------------------------------------------------
 
-static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits)
+static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits,
+                                __in PRTL_OSVERSIONINFOW lpOsVerInfoW, __in LPBYTE lpData,
+                                __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount)
 {
-  SIZE_T i, k, nInstrLen, nCurrSize, nExtraSize;
+  SIZE_T k, nSrcOfs, nInstrLen, nCurrSize, nExtraSize, nDestSize, nMainCodeSize;
+  DWORD dwRawAddr;
   LPBYTE lpSrc, d, lpStub;
 
   //stage 1: scan for a return
-  nCurrSize = nExtraSize = 0;
+  nSrcOfs = nCurrSize = nExtraSize = 0;
   while (nCurrSize < 128)
   {
-    if (lpFileFuncAddr[nCurrSize] == 0xC2)
+    if (lpFileFuncAddr[nSrcOfs] == 0xC2)
     {
+      nSrcOfs += 3;
       nCurrSize += 3;
       break;
     }
-    if (lpFileFuncAddr[nCurrSize] == 0xC3)
+    if (lpFileFuncAddr[nSrcOfs] == 0xC3)
     {
+      nSrcOfs++;
       nCurrSize++;
       break;
+    }
+    //handle special case for Windows 10 x86
+    if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
+        lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
+    {
+      //call edx
+      dwRawAddr = HelperConvertVAToRaw(*((ULONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1)), lpFileImgSect, nSecCount);
+      lpSrc = lpData + dwRawAddr;
+      nSrcOfs += 7;
+      nCurrSize += 5;
+      k = nDestSize = 0;
+      while (nDestSize < 128)
+      {
+        if (lpSrc[k] == 0xFF && lpSrc[k] == 0xE2)
+        {
+          nDestSize += 2;
+          break;
+        }
+        if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00)
+        {
+          k += 7;
+          nDestSize += 12;
+          continue;
+        }
+        nInstrLen = NktHookLibHelpers::GetInstructionLength(lpSrc+k, 128, (BYTE)nPlatformBits, NULL);
+        k += nInstrLen;
+        nDestSize += nInstrLen;
+      }
+      //add to extra size
+      if (nDestSize >= 128)
+        return NULL; //unsupported size
+      nExtraSize += nDestSize;
+      continue;
     }
     if (lpFileFuncAddr[nCurrSize] == 0xE8)
     {
       //near call found, calculate size too
-      lpSrc = lpFileFuncAddr+nCurrSize+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+nCurrSize+1));
+      lpSrc = lpFileFuncAddr+nSrcOfs+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1));
+      nSrcOfs += 5;
       nCurrSize += 5;
       k = 0;
       while (k < 128)
@@ -326,48 +371,94 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       if (k >= 128)
         return 0; //unsupported size
       nExtraSize += k;
+      continue;
     }
-    else
-    {
-      nInstrLen = NktHookLibHelpers::GetInstructionLength(lpFileFuncAddr+nCurrSize, 128, (BYTE)nPlatformBits, NULL);
-      nCurrSize += nInstrLen;
-    }
+    //no special behavior
+    nInstrLen = NktHookLibHelpers::GetInstructionLength(lpFileFuncAddr+nCurrSize, 128, (BYTE)nPlatformBits, NULL);
+    nSrcOfs += nInstrLen;
+    nCurrSize += nInstrLen;
   }
   if (nCurrSize+nExtraSize > 256)
     return 0; //unsupported size
+  nMainCodeSize = nCurrSize;
   if (lpDest != NULL)
   {
     //stage 2: copy
     lpStub = (LPBYTE)lpDest;
-    i = nExtraSize = 0;
-    while (i < 128)
+    nSrcOfs = nCurrSize = nExtraSize = 0;
+    while (nCurrSize < 128)
     {
-      if (lpFileFuncAddr[i] == 0xC2)
+      if (lpFileFuncAddr[nSrcOfs] == 0xC2)
       {
-        NktHookLibHelpers::MemCopy(lpStub+i, lpFileFuncAddr+i, 3);
-        i += 3;
+        NktHookLibHelpers::MemCopy(lpStub+nCurrSize, lpFileFuncAddr+nSrcOfs, 3);
+        nSrcOfs += 3;
+        nCurrSize += 3;
         break;
       }
-      if (lpFileFuncAddr[i] == 0xC3)
+      if (lpFileFuncAddr[nSrcOfs] == 0xC3)
       {
-        lpStub[i] = lpFileFuncAddr[i];
-        i++;
+        lpStub[nCurrSize++] = lpFileFuncAddr[nSrcOfs++];
         break;
       }
-      if (lpFileFuncAddr[i] == 0xE8)
+      //handle special case for Windows 10 x86
+      if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
+          lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
+      {
+        //call edx
+        dwRawAddr = HelperConvertVAToRaw(*((ULONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1)), lpFileImgSect, nSecCount);
+        lpStub[nCurrSize] = 0xE8;
+        *((ULONG NKT_UNALIGNED*)(lpStub+nCurrSize+1)) = (ULONG)(nMainCodeSize+nExtraSize - (nCurrSize+5));
+        lpSrc = lpData + dwRawAddr;
+        nSrcOfs += 7;
+        nCurrSize += 5;
+        d = lpStub+nMainCodeSize+nExtraSize;
+        k = nDestSize = 0;
+        while (nDestSize < 128)
+        {
+          if (lpSrc[k] == 0xFF && lpSrc[k] == 0xE2)
+          {
+            NktHookLibHelpers::MemCopy(d+nDestSize, lpSrc+k, 2);
+            nDestSize += 2;
+            break;
+          }
+          if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00)
+          {
+            d[nDestSize] = 0x6A; d[nDestSize+1] = 0x33;                     //push 0x0033
+            d[nDestSize+2] = 0xE8;                                          //call +0
+            d[nDestSize+3] = d[nDestSize+4] =
+              d[nDestSize+5] = d[nDestSize+6] = 0x00;
+            d[nDestSize+7] = 0x83;  d[nDestSize+8] = 0x05;                  //add DWORD PTR [esp], 5
+            d[nDestSize+9] = 0x24;  d[nDestSize+10] = 0x04;
+            d[nDestSize+11] = 0xCB;                                         //retf
+            k += 7;
+            nDestSize += 12;
+            continue;
+          }
+          nInstrLen = NktHookLibHelpers::GetInstructionLength(lpSrc+k, 128, (BYTE)nPlatformBits, NULL);
+          NktHookLibHelpers::MemCopy(d+nDestSize, lpSrc+k, nInstrLen);
+          k += nInstrLen;
+          nDestSize += nInstrLen;
+        }
+        //add to extra size
+        NKT_ASSERT(nDestSize < 128);
+        nExtraSize += nDestSize;
+        continue;
+      }
+      if (lpFileFuncAddr[nSrcOfs] == 0xE8)
       {
         //near call found, relocate
-        lpStub[i] = 0xE8;
-        *((ULONG NKT_UNALIGNED*)(lpStub+i+1)) = (ULONG)(nCurrSize+nExtraSize - (i+5));
-        lpSrc = lpFileFuncAddr+i+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+i+1));
-        i += 5;
-        d = lpStub+nCurrSize+nExtraSize;
+        lpStub[nSrcOfs] = 0xE8;
+        *((ULONG NKT_UNALIGNED*)(lpStub+nSrcOfs+1)) = (ULONG)(nMainCodeSize+nExtraSize - (nSrcOfs+5));
+        lpSrc = lpFileFuncAddr+nSrcOfs+5 + (SSIZE_T) *((LONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1));
+        nSrcOfs += 5;
+        nCurrSize += 5;
+        d = lpStub+nMainCodeSize+nExtraSize;
         k = 0;
         while (k < 128)
         {
           if (lpSrc[k] == 0xC2)
           {
-            memcpy(d+k, lpSrc+k, 3);
+            NktHookLibHelpers::MemCopy(d+k, lpSrc+k, 3);
             k += 3;
             break;
           }
@@ -384,17 +475,16 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
         //add to extra size
         NKT_ASSERT(k < 128);
         nExtraSize += k;
+        continue;
       }
-      else
-      {
-        nInstrLen = NktHookLibHelpers::GetInstructionLength(lpFileFuncAddr+i, 128, (BYTE)nPlatformBits, NULL);
-        NktHookLibHelpers::MemCopy(lpStub+i, lpFileFuncAddr+i, nInstrLen);
-        i += nInstrLen;
-      }
+      nInstrLen = NktHookLibHelpers::GetInstructionLength(lpFileFuncAddr+nSrcOfs, 128, (BYTE)nPlatformBits, NULL);
+      NktHookLibHelpers::MemCopy(lpStub+nCurrSize, lpFileFuncAddr+nSrcOfs, nInstrLen);
+      nSrcOfs += nInstrLen;
+      nCurrSize += nInstrLen;
     }
-    NKT_ASSERT(i == nCurrSize);
+    NKT_ASSERT(nMainCodeSize == nCurrSize);
   }
-  return nCurrSize+nExtraSize;
+  return nMainCodeSize+nExtraSize;
 }
 
 static DWORD HelperConvertVAToRaw(__in DWORD dwVirtAddr, __in IMAGE_SECTION_HEADER *lpImgSect, __in SIZE_T nSecCount)
