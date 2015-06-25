@@ -192,26 +192,38 @@
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\%(Filename).obj</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\%(Filename).obj</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
     </CustomBuild>
     <CustomBuild Include="..\Lib\Asm\Helpers_x86.asm">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\%(Filename).obj</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).obj</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling assembler code...</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling assembler code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\%(Filename).obj</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\%(Filename).obj</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)\%(Filename).obj" "%(FullPath)"</Command>
     </CustomBuild>
     <CustomBuild Include="..\Lib\Asm\RelocatableCode_x64.asm">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -220,7 +232,7 @@ GOTO BuildEventOK
 EXIT 1
 :BuildEventOK
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -240,7 +252,7 @@ EXIT 1
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)\%(Filename).inl</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)\%(Filename).inl</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -249,7 +261,7 @@ GOTO BuildEventOK
 EXIT 1
 :BuildEventOK
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ML64.EXE /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -262,7 +274,7 @@ EXIT 1
     <CustomBuild Include="..\Lib\Asm\RelocatableCode_x86.asm">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling assembler code...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling assembler code...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -271,7 +283,7 @@ GOTO BuildEventOK
 EXIT 1
 :BuildEventOK
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -286,7 +298,7 @@ EXIT 1
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling assembler code...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\%(Filename).inl</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\%(Filename).inl</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
@@ -295,7 +307,7 @@ GOTO BuildEventOK
 EXIT 1
 :BuildEventOK
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ML.EXE /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 "$(ProjectDir)..\Obj2Inc\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
