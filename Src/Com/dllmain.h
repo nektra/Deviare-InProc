@@ -31,7 +31,19 @@
 
 #include "resource.h"       // main symbols
 #include "CustomRegistryMap.h"
-#if _MSC_VER >= 1700
+#if _MSC_VER >= 1900
+  #ifdef _WIN64
+    #include "DeviareLiteCOM_i64_vs2015.h"
+  #else //_WIN64
+    #include "DeviareLiteCOM_i_vs2015.h"
+  #endif //_WIN64
+#elif _MSC_VER >= 1800
+  #ifdef _WIN64
+    #include "DeviareLiteCOM_i64_vs2013.h"
+  #else //_WIN64
+    #include "DeviareLiteCOM_i_vs2013.h"
+  #endif //_WIN64
+#elif _MSC_VER >= 1700
   #ifdef _WIN64
     #include "DeviareLiteCOM_i64_vs2012.h"
   #else //_WIN64

@@ -31,7 +31,11 @@
 
 //-----------------------------------------------------------
 
-#if _MSC_VER >= 1700
+#if _MSC_VER >= 1900
+  #define X_LIBPATH "2015"
+#elif _MSC_VER >= 1800
+  #define X_LIBPATH "2013"
+#elif _MSC_VER >= 1700
   #define X_LIBPATH "2012"
 #elif  _MSC_VER >= 1600
   #define X_LIBPATH "2010"
