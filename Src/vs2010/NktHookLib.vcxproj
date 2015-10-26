@@ -96,12 +96,6 @@
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Lib />
-    <PreBuildEvent>
-      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
-    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
-)
-</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -123,12 +117,6 @@
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Lib />
-    <PreBuildEvent>
-      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
-    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
-)
-</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -147,12 +135,6 @@
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Lib />
-    <PreBuildEvent>
-      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
-    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
-)
-</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -174,12 +156,6 @@
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Lib />
-    <PreBuildEvent>
-      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
-    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
-)
-</Command>
-    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Lib\DynamicApiFinder.cpp" />

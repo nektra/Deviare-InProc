@@ -27,10 +27,6 @@
 			CharacterSet="0"
 			>
 			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
-			/>
-			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
@@ -96,10 +92,6 @@
 			ConfigurationType="4"
 			CharacterSet="0"
 			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
-			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>
@@ -169,10 +161,6 @@
 			WholeProgramOptimization="1"
 			>
 			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
-			/>
-			<Tool
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
@@ -240,10 +228,6 @@
 			CharacterSet="0"
 			WholeProgramOptimization="1"
 			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
-			/>
 			<Tool
 				Name="VCCustomBuildTool"
 			/>

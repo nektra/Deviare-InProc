@@ -2,11 +2,7 @@
 SET __FOUND=
 FOR %%X IN (python.exe) DO ( SET __FOUND=%%~$PATH:X )
 IF "%__FOUND%" == "" (
-    IF "%VisualStudioDir%" == "" (
-        ECHO Error: Cannot locate Python 2.7
-    ) ELSE (
-        ECHO Please run "Src\Lib\libudis86\generate_tables.bat" before building this package. It requires Python 2.7 or later.
-    )
+    ECHO Error: Cannot locate Python 2.7
     EXIT /B 1
 )
 RD "%~dp0tables" /S /Q >NUL 2>NUL

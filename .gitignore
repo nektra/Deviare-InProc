@@ -21,5 +21,4 @@ Src/Com/DeviareLiteCOM_i*.*
 Src/Com/DeviareLiteCOM_p*.*
 Src/Com/dlldata_*.*
 Src/Com/dlldata64_*.*
-Src/Lib/libudis86/tables/
 obj/
