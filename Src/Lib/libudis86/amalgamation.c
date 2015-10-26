@@ -30,12 +30,12 @@
 #include "amalgamation_defines.h"
 
 #include "stdint.h"
-#include "decode.h"
-#include "extern.h"
-#include "itab.h"
-#include "syn.h"
-#include "types.h"
-#include "udint.h"
+#include "source\libudis86\decode.h"
+#include "source\libudis86\extern.h"
+#include "tables\itab.h"
+#include "source\libudis86\syn.h"
+#include "source\libudis86\types.h"
+#include "source\libudis86\udint.h"
 #include <intrin.h>
 #include <stdarg.h>
 
@@ -63,23 +63,23 @@ static void NktHookLib_memset(__out void *lpDest, __in int nVal, __in size_t nCo
 #define sprintf  NktHookLib_sprintf
 #define memset  NktHookLib_memset
 
-#include "decode.c"
-#include "itab.c"
+#include "source\libudis86\decode.c"
+#include "tables\itab.c"
 
 #define opr_cast    NktHookLib_ATT_opr_cast
 #define gen_operand NktHookLib_ATT_gen_operand
-#include "syn-att.c"
+#include "source\libudis86\syn-att.c"
 #undef gen_operand
 #undef opr_cast
 
 #define opr_cast NktHookLib_INTEL_opr_cast
 #define gen_operand NktHookLib_INTEL_gen_operand
-#include "syn-intel.c"
+#include "source\libudis86\syn-intel.c"
 #undef gen_operand
 #undef opr_cast
 
-#include "udis86.c"
-#include "syn.c"
+#include "source\libudis86\udis86.c"
+#include "source\libudis86\syn.c"
 
 #undef memset
 #undef sprintf

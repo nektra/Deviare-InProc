@@ -98,9 +98,14 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"$(ProjectDir)..\Lib\libudis86";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
+    <PreBuildEvent>
+      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
+    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
+)
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -120,9 +125,14 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"$(ProjectDir)..\Lib\libudis86";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
+    <PreBuildEvent>
+      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
+    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
+)
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -139,9 +149,14 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"$(ProjectDir)..\Lib\libudis86";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
+    <PreBuildEvent>
+      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
+    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
+)
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -161,15 +176,25 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>"$(ProjectDir)..\Lib\libudis86";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
+    <PreBuildEvent>
+      <Command>IF NOT EXIST "$(ProjectDir)..\Lib\libudis86\tables\itab.c" (
+    CALL "$(ProjectDir)..\Lib\libudis86\generate_tables.bat"
+)
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Lib\DynamicApiFinder.cpp" />
     <ClCompile Include="..\Lib\DynamicNtApi.cpp" />
     <ClCompile Include="..\Lib\HookEntry.cpp" />
-    <ClCompile Include="..\Lib\libudis86\amalgamation.c" />
+    <ClCompile Include="..\Lib\libudis86\amalgamation.c">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\Lib\NktHookLib.cpp" />
     <ClCompile Include="..\Lib\NktHookLibHelpers.cpp" />
     <ClCompile Include="..\Lib\NtSysCallGen.cpp" />
@@ -183,7 +208,12 @@
     </ClCompile>
     <ClCompile Include="..\Lib\ThreadSuspend.cpp" />
     <ClCompile Include="..\Lib\WaitableObjects.cpp" />
-    <ClCompile Include="..\Lib\libudis86\GetInstructionLength.cpp" />
+    <ClCompile Include="..\Lib\libudis86\GetInstructionLength.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\LICENSE.COMMERCIAL" />

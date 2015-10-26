@@ -30,10 +30,11 @@
 #include "..\..\..\Include\NktHookLib.h"
 
 extern "C" {
+  #include "stdint.h"
   #include "amalgamation_defines.h"
-  #include "types.h"
-  #include "extern.h"
-  #include "itab.h"
+  #include "source\libudis86\types.h"
+  #include "source\libudis86\extern.h"
+  #include "tables\itab.h"
 };
 
 //-----------------------------------------------------------

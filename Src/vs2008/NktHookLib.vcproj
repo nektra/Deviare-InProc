@@ -28,6 +28,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -46,7 +47,7 @@
 				AdditionalOptions="/Gs999999"
 				Optimization="0"
 				EnableIntrinsicFunctions="false"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\Lib\libudis86&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
@@ -97,6 +98,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -116,7 +118,7 @@
 				AdditionalOptions="/Gs999999"
 				Optimization="0"
 				EnableIntrinsicFunctions="false"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\Lib\libudis86&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN32;WIN64;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				ExceptionHandling="0"
@@ -168,6 +170,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -187,7 +190,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="false"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\Lib\libudis86&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="0"
@@ -239,6 +242,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="IF NOT EXIST &quot;$(ProjectDir)..\Lib\libudis86\tables\itab.c&quot; (&#x0D;&#x0A;    CALL &quot;$(ProjectDir)..\Lib\libudis86\generate_tables.bat&quot;&#x0D;&#x0A;)&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -259,7 +263,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="false"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\Lib\libudis86&quot;"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN32;WIN64;NDEBUG;_LIB"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="0"
@@ -392,6 +396,38 @@
 				<File
 					RelativePath="..\Lib\libudis86\amalgamation.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\Lib\libudis86\GetInstructionLength.cpp"
@@ -401,7 +437,7 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -409,7 +445,7 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -417,7 +453,7 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -425,7 +461,7 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
+							AdditionalIncludeDirectories="$(ProjectDir)..\lib\libudis86\source\libudis86;$(ProjectDir)..\lib\libudis86\tables"
 						/>
 					</FileConfiguration>
 				</File>
@@ -443,7 +479,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -453,7 +489,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -464,7 +500,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -474,7 +510,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\x86_amd64\ML64.EXE&quot; /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -488,7 +524,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -499,7 +535,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -509,7 +545,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
@@ -520,7 +556,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling assembler code..."
-							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;"
+							CommandLine="&quot;$(VCInstallDir)bin\ML.EXE&quot; /safeseh /c /nologo /Fo&quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 							Outputs="$(IntDir)\$(InputName).obj"
 						/>
 					</FileConfiguration>
