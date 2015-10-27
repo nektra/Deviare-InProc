@@ -118,6 +118,7 @@ public:
     HANDLE h;
     LONG nPlatform;
     LONG volatile nRefCount;
+    LONG volatile nStubAllocMutex;
     TNktLnkLst<CMemBlock> cMemBlocksList;
   };
 
@@ -196,8 +197,12 @@ public:
   static HANDLE CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAccess);
 
 private:
+  VOID RemoveKilledProcesses();
+
+private:
   CNktFastMutex cMtx;
   TNktLnkLst<CEntry> cEntries;
+  LONG volatile nRemoveKilledCounter;
 };
 
 //-----------------------------------------------------------

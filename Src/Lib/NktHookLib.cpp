@@ -313,7 +313,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p += sizeof(ULONG);
             //----
             *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x51 : 0x06;
+            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x54 : 0x06;
             //check for reentranct
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {

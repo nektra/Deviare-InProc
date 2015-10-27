@@ -48,6 +48,7 @@ namespace Internals {
 
 CProcessesHandles::CProcessesHandles()
 {
+  _InterlockedExchange(&nRemoveKilledCounter, 0);
   return;
 }
 
@@ -71,6 +72,7 @@ CProcessesHandles::CEntry* CProcessesHandles::Get(__in DWORD dwPid)
 
   if (dwPid == 0)
     return NULL;
+  RemoveKilledProcesses();
   for (lpEntry=it.Begin(cEntries); lpEntry!=NULL; lpEntry=it.Next())
   {
     if (lpEntry->dwPid == dwPid)
@@ -171,6 +173,15 @@ HANDLE CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAcc
   return hProc;
 }
 
+VOID CProcessesHandles::RemoveKilledProcesses()
+{
+  if ((_InterlockedIncrement(&nRemoveKilledCounter) & 0xFF) == 0xFF)
+  {
+    //TODO: Remove non-existant processes from list
+  }
+  return;
+}
+
 //-----------------------------------------------------------
 
 CProcessesHandles::CEntry::CEntry(__in DWORD _dwPid, __in HANDLE _h, __in LONG _nPlatform) : TNktLnkLstNode<CEntry>(),
@@ -180,6 +191,7 @@ CProcessesHandles::CEntry::CEntry(__in DWORD _dwPid, __in HANDLE _h, __in LONG _
   h = _h;
   nPlatform = _nPlatform;
   _InterlockedExchange(&nRefCount, 1);
+  _InterlockedExchange(&nStubAllocMutex, 0);
   return;
 }
 
@@ -219,6 +231,7 @@ LONG CProcessesHandles::CEntry::GetCurrPlatform()
 
 LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize)
 {
+  CNktSimpleLockNonReentrant cLock(&nStubAllocMutex);
   TNktLnkLst<CMemBlock>::Iterator it;
   CMemBlock *lpBlock;
   LPBYTE lpPtr;
@@ -268,10 +281,11 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_
   }
   cMemBlocksList.PushHead(lpBlock);
   return lpBlock->GetFreeSlot();
-};
+}
 
 VOID CProcessesHandles::CEntry::FreeStub(__in LPVOID lpAddr)
 {
+  CNktSimpleLockNonReentrant cLock(&nStubAllocMutex);
   TNktLnkLst<CMemBlock>::Iterator it;
   CMemBlock *lpBlock;
 
@@ -285,7 +299,7 @@ VOID CProcessesHandles::CEntry::FreeStub(__in LPVOID lpAddr)
   }
   NKT_ASSERT(FALSE);
   return;
-};
+}
 
 //-----------------------------------------------------------
 

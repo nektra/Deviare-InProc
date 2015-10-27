@@ -79,7 +79,34 @@ static void NktHookLib_memset(__out void *lpDest, __in int nVal, __in size_t nCo
 #undef opr_cast
 
 #include "source\libudis86\udis86.c"
+
+//HACK: The original 'ud_syn_rel_target' uses a 64-bit right shift operations. Because of this the compiler inserts
+//      a call to '__aullshr', a Visual C runtime routine.
+//
+//      Because we don't want to depend on CRT...
+//      ... a) we added a replacement code for that function.
+uint64_t NktHookLib_ud_syn_rel_target(struct ud *u, struct ud_operand *opr)
+{
+  switch (opr->size)
+  {
+    case 8: return (u->pc + opr->lval.sbyte)  & 0x00000000000000ffull;
+    case 16: return (u->pc + opr->lval.sword)  & 0x000000000000ffffull;
+    case 32: return (u->pc + opr->lval.sdword) & 0x00000000ffffffffull;
+    default: UD_ASSERT(!"invalid relative offset size.");
+      return 0ull;
+  }
+}
+
+//      ... b) rename the original function and compile it as inline so, because it won't be used, the linker
+//             will discard it.
+#undef ud_syn_rel_target
+#define ud_syn_rel_target           __forceinline __notused_ud_syn_rel_target
+
 #include "source\libudis86\syn.c"
+
+//      ... c) restore
+#undef ud_syn_rel_target
+#define ud_syn_rel_target           NktHookLib_ud_syn_rel_target
 
 #undef memset
 #undef sprintf
