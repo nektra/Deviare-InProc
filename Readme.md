@@ -6,7 +6,7 @@ and [SpyStudio Application Monitor](http://www.nektra.com/products/spystudio-api
 Deviare is an alternative to Microsoft Detours® but with a dual license distribution.
 
 The library is coded in C++ and provides all the facilities required to
-instrumenting binary libraries during runtime. It includes support for both 32
+instrument binary libraries during runtime. It includes support for both 32
 and 64 bit applications and it implements the interception verifying different
 situations that can crash the process. If you need to intercept any Win32
 functions or any other code, this library makes it easier than ever.
@@ -38,7 +38,7 @@ Visual Studio to rebuild the libraries.
 The *LIBS* subfolder contains precompiled libraries of the product.
 
 To use the library in your project, add the reference to the `NktHookLib.h` file
-located in the *INCLUDE* forder and ensure to link with the correct library.
+located in the *INCLUDE* folder and ensure to link with the correct library.
 The provided HookTest sample contains `#pragma` sentences you can use to tell
 the linker to add the libraries depending on the platform.  
 
@@ -55,7 +55,7 @@ C# samples to see .net method hooking in action.
 # C RUN-TIME LESS
 
 Although the library functionallity remains the same, the code was modified to
-make it independant from Visual Studio's CRT libraries.
+make it independent from Visual Studio's CRT libraries.
 
 Deviare In-Proc base library only depends on *NTDLL.DLL*, no *kernel32.dll* nor
 another library is used.
@@ -63,10 +63,10 @@ another library is used.
 It also does a dynamic discovery of needed apis in order to eliminate
 *NTDLL.DLL* static binding when used in an application or dll. This allows
 developers to use the library, for e.g., in custom dll's that will be injected
-in non-initialized processes that ware launched in a suspended state.
+in non-initialized processes that were launched in a suspended state.
 
 The C ApiHook sample provided with this package was also modified in order to
-demostrate how to build an executable with minimal imported api's. Because
+demonstrate how to build an executable with minimal imported api's. Because
 Visual Studio's compiler & linker inserts undesired Microsoft's specific code
 and data, the sample contains some hacks and modified compiler switches to
 circumvent this behavior.
@@ -76,7 +76,7 @@ circumvent this behavior.
 # BUG REPORTS
 
 If you experience something you think might be a bug in Deviare In-Proc, please
-report it in GitHub repository or write us in <http://www.nektra.com/contact/>.
+report it in GitHub repository or write to us in <http://www.nektra.com/contact/>.
 
 Describe what you did, what happened, what kind of computer you have, which
 operating system you're using, and anything else you think might be relevant.
