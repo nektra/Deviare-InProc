@@ -1299,6 +1299,11 @@ static DWORD InjectDllInSuspendedProcess(__in HANDLE hProcess, __in HANDLE hMain
 static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCodeStart, __in LPVOID lpThreadParam,
                                           __out LPHANDLE lphNewThread)
 {
+  typedef struct _CLIENT_ID {
+    HANDLE UniqueProcess;
+    HANDLE UniqueThread;
+  } CLIENT_ID;
+
   typedef HANDLE (WINAPI *lpfnCreateRemoteThread)(__in HANDLE hProcess, __in LPSECURITY_ATTRIBUTES lpThreadAttributes,
                                                   __in SIZE_T dwStackSize, __in LPTHREAD_START_ROUTINE lpStartAddress,
                                                   __in LPVOID lpParameter, __in DWORD dwCreationFlags,
@@ -1309,8 +1314,14 @@ static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCo
                                                   __in ULONG CreateFlags, __in SIZE_T ZeroBits,
                                                   __in SIZE_T SizeOfStackCommit, __in SIZE_T SizeOfStackReserve,
                                                   __in LPVOID lpBytesBuffer);
+  typedef NTSTATUS(WINAPI *lpfnRtlCreateUserThread)(__in HANDLE ProcessHandle, __in_opt PSECURITY_DESCRIPTOR lpSecDescr,
+                                                    __in BOOLEAN CreateSuspended, __in_opt ULONG StackZeroBits,
+                                                    __in_opt SIZE_T StackReserve, __in_opt SIZE_T StackCommit,
+                                                    __in LPTHREAD_START_ROUTINE StartAddress, __in_opt PVOID Parameter,
+                                                    __out_opt PHANDLE ThreadHandle, __out_opt CLIENT_ID *ClientId);
   lpfnNtCreateThreadEx fnNtCreateThreadEx;
   lpfnCreateRemoteThread fnCreateRemoteThread;
+  lpfnRtlCreateUserThread fnRtlCreateUserThread;
   HINSTANCE hNtDll, hKernel32Dll;
   DWORD dwOsErr;
   HANDLE hThreadToken;
@@ -1319,45 +1330,54 @@ static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCo
   NKT_ASSERT(lphNewThread != NULL);
   *lphNewThread = NULL;
   fnNtCreateThreadEx = NULL;
+  fnRtlCreateUserThread = NULL;
   fnCreateRemoteThread = NULL;
   //locate needed functions
   hNtDll = NktHookLibHelpers::GetModuleBaseAddress(L"ntdll.dll");
-  hKernel32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"kernel32.dll");
   if (hNtDll != NULL)
   {
-    dwOsErr = ERROR_SUCCESS;
     fnNtCreateThreadEx = (lpfnNtCreateThreadEx)NktHookLibHelpers::GetProcedureAddress(hNtDll, "NtCreateThreadEx");
-    if (fnNtCreateThreadEx == NULL)
-    {
-      fnCreateRemoteThread = (lpfnCreateRemoteThread)NktHookLibHelpers::GetProcedureAddress(hKernel32Dll,
-                                                                                            "CreateRemoteThread");
-      if (fnCreateRemoteThread == NULL)
-        dwOsErr = ERROR_PROC_NOT_FOUND;
-    }
+    fnRtlCreateUserThread = (lpfnRtlCreateUserThread)NktHookLibHelpers::GetProcedureAddress(hNtDll,
+                                                                                            "RtlCreateUserThread");
   }
-  else
+  hKernel32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"kernel32.dll");
+  if (hKernel32Dll != NULL)
   {
-    dwOsErr = ERROR_PROC_NOT_FOUND;
+    fnCreateRemoteThread = (lpfnCreateRemoteThread)NktHookLibHelpers::GetProcedureAddress(hKernel32Dll,
+                                                                                          "CreateRemoteThread");
   }
-  //create remote thread or change entrypoint depending if process is initialized or not
+  if (fnNtCreateThreadEx == NULL && fnRtlCreateUserThread == NULL && fnCreateRemoteThread == NULL)
+    return ERROR_PROC_NOT_FOUND;
+  //create remote thread using 'NtCreateThreadEx' if available
+  dwOsErr = 0xFFFFFFFFUL;
+  if (fnNtCreateThreadEx != NULL)
+  {
+    nNtStatus = fnNtCreateThreadEx(lphNewThread, 0x001FFFFFUL, NULL, hProcess, (LPTHREAD_START_ROUTINE)lpCodeStart,
+                                    lpThreadParam, THREAD_CREATE_FLAGS_CREATE_SUSPENDED, 0, NULL, NULL, NULL);
+    dwOsErr = (NT_SUCCESS(nNtStatus)) ? ERROR_SUCCESS : NktRtlNtStatusToDosError(nNtStatus);
+  }
+  /*
+  //on error, create remote thread using 'RtlCreateUserThread' if available
+  if (dwOsErr != ERROR_SUCCESS)
+  {
+    nNtStatus = fnRtlCreateUserThread(hProcess, NULL, TRUE, 0, 0, 0, (LPTHREAD_START_ROUTINE)lpCodeStart, lpThreadParam,
+                                      lphNewThread, NULL);
+    dwOsErr = (NT_SUCCESS(nNtStatus)) ? ERROR_SUCCESS : NktRtlNtStatusToDosError(nNtStatus);
+  }
+  */
+  //on error, create remote thread using 'CreateRemoteThread' if available
+  if (dwOsErr != ERROR_SUCCESS)
+  {
+    DWORD dwTid;
+
+    *lphNewThread = fnCreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)lpCodeStart, lpThreadParam,
+                                         CREATE_SUSPENDED, &dwTid);
+    dwOsErr = (*lphNewThread != NULL) ? ERROR_SUCCESS : NktHookLibHelpers::GetWin32LastError();
+  }
+  //on success, set restricted token if needed
   if (dwOsErr == ERROR_SUCCESS)
   {
-    //create remote thread
-    if (fnNtCreateThreadEx != NULL)
-    {
-      nNtStatus = fnNtCreateThreadEx(lphNewThread, 0x001FFFFFUL, NULL, hProcess, (LPTHREAD_START_ROUTINE)lpCodeStart,
-                                     lpThreadParam, THREAD_CREATE_FLAGS_CREATE_SUSPENDED, 0, NULL, NULL, NULL);
-    }
-    else
-    {
-      DWORD dwTid;
-
-      *lphNewThread = fnCreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)lpCodeStart,
-                                        lpThreadParam, CREATE_SUSPENDED, &dwTid);
-      nNtStatus = ((*lphNewThread) != NULL) ? STATUS_SUCCESS : STATUS_ACCESS_DENIED;
-    }
-    if (NT_SUCCESS(nNtStatus))
-      nNtStatus = GenerateRestrictedThreadToken(hProcess, &hThreadToken);
+    nNtStatus = GenerateRestrictedThreadToken(hProcess, &hThreadToken);
     //set thread's restricted token if needed
     if (NT_SUCCESS(nNtStatus) && hThreadToken != NULL)
     {
@@ -1367,6 +1387,7 @@ static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCo
     if (!NT_SUCCESS(nNtStatus))
       dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
   }
+  //done
   return dwOsErr;
 }
 

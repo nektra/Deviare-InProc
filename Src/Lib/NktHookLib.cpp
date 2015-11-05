@@ -167,7 +167,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     TNktLnkLst<CHookEntry> cNewHooksList;
     CHookEntry *lpHookEntry, *lpFirstHookEntryInRound;
     SIZE_T i, k, nSize, nHookIdx, nThisRound, nSizeOfSizeT;
-    BYTE aCodeBlock[256], *p, *lpRetStubs[2];
+    BYTE aCodeBlock[256], *p, *lpRetStubs[2], *lpCallOrigOfs[2];
     DWORD dw;
     NTSTATUS nNtStatus;
 
@@ -293,6 +293,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         MemSet(p, 0x90, 8);
         p += 8;
         //bridge
+        lpCallOrigOfs[0] = lpCallOrigOfs[1] = NULL;
         switch (cProcEntry->GetPlatform())
         {
           case NKTHOOKLIB_ProcessPlatformX86:
@@ -313,7 +314,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p += sizeof(ULONG);
             //----
             *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x54 : 0x06;
+            lpCallOrigOfs[0] = p++;
             //check for reentranct
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
@@ -333,7 +334,8 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----  L1:
               *p++ = 0x3B;  *p++ = 0x02;                                         //cmp   eax, DWORD PTR [edx]
               //----
-              *p++ = 0x74;  *p++ = 0x3D;                                         //jz    CALL_ORIGINAL
+              *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
+              lpCallOrigOfs[1] = p++;
               //----
               *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 14h
               *((ULONG NKT_UNALIGNED*)p) = 0x0014;
@@ -384,6 +386,9 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
                                          ((ULONG)(lpHookEntry->lpInjCodeAndData) + (ULONG)(p+4-aCodeBlock));
             p += sizeof(ULONG);
             //---- CALL_ORIGINAL:
+            *lpCallOrigOfs[0] = (BYTE)(p - (lpCallOrigOfs[0]+1));
+            if (lpCallOrigOfs[1] != NULL)
+              *lpCallOrigOfs[1] = (BYTE)(p - (lpCallOrigOfs[1]+1));
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
               *p++ = 0x59;                                                       //pop   ecx
@@ -427,7 +432,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p += sizeof(ULONG);
             //----
             *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            *p++ = ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0) ? 0x7A : 0x0F; //fix by Mikalai
+            lpCallOrigOfs[0] = p++;
             //check for reentranct
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
@@ -448,7 +453,8 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----  L1:
               *p++ = 0x3B;  *p++ = 0x02;                                         //cmp   eax, DWORD PTR [rdx]
               //----
-              *p++ = 0x74;  *p++ = 0x5A;                                         //jz    CALL_ORIGINAL
+              *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
+              lpCallOrigOfs[1] = p++;
               //----
               *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 1Ch
               *((ULONG NKT_UNALIGNED*)p) = 0x001C;
@@ -506,6 +512,9 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpNewProc);
             p += sizeof(ULONGLONG);
             //---- CALL_ORIGINAL:
+            *lpCallOrigOfs[0] = (BYTE)(p - (lpCallOrigOfs[0]+1));
+            if (lpCallOrigOfs[1] != NULL)
+              *lpCallOrigOfs[1] = (BYTE)(p - (lpCallOrigOfs[1]+1));
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
               *p++ = 0x59;                                                       //pop   rcx

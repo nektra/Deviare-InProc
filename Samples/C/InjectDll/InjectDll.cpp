@@ -73,32 +73,66 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
   DWORD dwOsErr, dwPid;
   LPWSTR szStopW;
 
+  //check arguments
   if (argc != 3)
   {
-    wprintf_s(L"Use: InjectDLL pid path-to-dll\n");
+    wprintf_s(L"Use: InjectDLL path-to-exe|process-id path-to-dll\n");
     return 1;
   }
-  dwPid = (DWORD)wcstoul(argv[1], &szStopW, 10);
-  if (dwPid == 0 || *szStopW != 0)
+  //if first argument is numeric, assume a process ID
+  if (argv[1][0] >= L'0' && argv[1][0] <= L'9')
   {
-    wprintf_s(L"Error: Invalid process ID specified.\n");
-    return 1;
+    dwPid = (DWORD)wcstoul(argv[1], &szStopW, 10);
+    if (dwPid == 0 || *szStopW != 0)
+    {
+      wprintf_s(L"Error: Invalid process ID specified.\n");
+      return 1;
+    }
+    if (dwPid == ::GetCurrentProcessId())
+    {
+      wprintf_s(L"Error: Cannot inject a dll into myself.\n");
+      return 1;
+    }
   }
-  if (dwPid == ::GetCurrentProcessId())
+  else
   {
-    wprintf_s(L"Error: Cannot inject a dll into myself.\n");
-    return 1;
+    //assume a process path to execute
+    dwPid = 0;
   }
+  //take dll name
   if (argv[2][0] == 0)
   {
     wprintf_s(L"Error: Invalid dll name specified.\n");
     return 1;
   }
-  dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, argv[2]);
-  if (dwOsErr != ERROR_SUCCESS)
+  //execute action
+  if (dwPid != 0)
   {
-    wprintf_s(L"Error: Cannot inject Dll in target process [0x%08X]\n", dwOsErr);
-    return 2;
+
+    //if a process ID was specified, inject dll into that process
+    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, argv[2]);
+    if (dwOsErr != ERROR_SUCCESS)
+    {
+      wprintf_s(L"Error: Cannot inject Dll in target process [0x%08X]\n", dwOsErr);
+      return 2;
+    }
+  }
+  else
+  {
+    STARTUPINFOW sSiW;
+    PROCESS_INFORMATION sPi;
+
+    memset(&sSiW, 0, sizeof(sSiW));
+    sSiW.cb = (DWORD)sizeof(sSiW);
+    memset(&sPi, 0, sizeof(sPi));
+    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sSiW, &sPi, argv[2]);
+    if (dwOsErr != ERROR_SUCCESS)
+    {
+      wprintf_s(L"Error: Cannot launch process and inject dll [0x%08X]\n", dwOsErr);
+      return 2;
+    }
+    ::CloseHandle(sPi.hThread);
+    ::CloseHandle(sPi.hProcess);
   }
   wprintf_s(L"Dll successfully injected!\n");
   return 0;
