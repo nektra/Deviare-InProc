@@ -6,7 +6,7 @@ SET __SolutionDir=
 IF [%~1] == [] (
     ECHO Use: BUILD.BAT [options]
     ECHO Where 'options' can be
-    ECHO    /MSVCVERSION ^(2008^|2010^|2012^|2013^)
+    ECHO    /MSVCVERSION ^(2008^|2010^|2012^|2013^|2015^)
     ENDLOCAL
     PAUSE
     EXIT /B 1
@@ -40,6 +40,9 @@ IF /I [%~1] == [/MSVCVERSION] (
     ) ELSE IF /I [%~2] == [2013] (
         SET __ComnTools=%VS120COMNTOOLS%
         SET __SolutionDir=vs2013
+    ) ELSE IF /I [%~2] == [2015] (
+        SET __ComnTools=%VS140COMNTOOLS%
+        SET __SolutionDir=vs2015
     ) ELSE (
         ECHO Error: Unsupported Visual Studio version
         ENDLOCAL

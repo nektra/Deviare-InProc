@@ -113,7 +113,7 @@ HINSTANCE GetRemoteModuleBaseAddress(__in HANDLE hProcess, __in_z LPCWSTR szDllN
         {
           if (sLdrEntry32.sEntry.DllBase != 0 &&
               RemoteCompareUnicodeString32(hProcess, &(sLdrEntry32.sEntry.BaseDllName), szDllNameW, nDllNameLen) != FALSE)
-            return (HINSTANCE)(sLdrEntry32.sEntry.DllBase);
+            return (HINSTANCE)(SIZE_T)(sLdrEntry32.sEntry.DllBase);
           hRes = GetNextLdrEntry32(&sLdrEntry32);
         }
         if (hRes == S_FALSE)
@@ -453,19 +453,19 @@ static HRESULT GetFirstLdrEntry32(__out NKT_HK_LDRENTRY32 *lpEntry32, __in LPBYT
       dwTemp32 == 0)
     return E_FAIL;
   //check PEB_LDR_DATA32.Initialize flag
-  if (ReadMem(hProcess, &nTemp8, (LPBYTE)dwTemp32+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
+  if (ReadMem(hProcess, &nTemp8, (LPBYTE)(SIZE_T)dwTemp32+0x04, sizeof(nTemp8)) != sizeof(nTemp8))
     return E_FAIL;
   if (nTemp8 == 0)
     return S_FALSE;
   //get PEB_LDR_DATA32.InLoadOrderModuleList.Flink
   lpEntry32->nFirstLink = dwTemp32+0x0C;
-  if (ReadMem(hProcess, &(lpEntry32->nCurrLink), (LPBYTE)(lpEntry32->nFirstLink),
+  if (ReadMem(hProcess, &(lpEntry32->nCurrLink), (LPBYTE)(SIZE_T)(lpEntry32->nFirstLink),
               sizeof(lpEntry32->nCurrLink)) != sizeof(lpEntry32->nCurrLink))
     return E_FAIL;
   if (lpEntry32->nFirstLink == lpEntry32->nCurrLink)
     return S_FALSE;
   //read first entry
-  lpPtr = (LPBYTE)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
+  lpPtr = (LPBYTE)(SIZE_T)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
   if (ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
               sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
     return E_FAIL;
@@ -481,7 +481,7 @@ static HRESULT GetNextLdrEntry32(__inout NKT_HK_LDRENTRY32 *lpEntry32)
     return E_INVALIDARG;
   if (lpEntry32->nFirstLink == lpEntry32->nCurrLink)
     return S_FALSE;
-  lpPtr = (LPBYTE)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
+  lpPtr = (LPBYTE)(SIZE_T)(lpEntry32->nCurrLink) - FIELD_OFFSET(NKT_HK_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks);
   if (ReadMem(lpEntry32->hProcess, &(lpEntry32->sEntry), lpPtr,
               sizeof(lpEntry32->sEntry)) != sizeof(lpEntry32->sEntry))
     return E_FAIL;
@@ -561,7 +561,7 @@ static BOOL RemoteCompareUnicodeString32(__in HANDLE hProcess, __in NKT_HK_UNICO
 {
   if ((SIZE_T)(lpRemoteStr->Length) != nStrLen*sizeof(WCHAR))
     return FALSE;
-  return RemoteStrNICmpW(hProcess, (LPCWSTR)(lpRemoteStr->Buffer), szLocalStrW, nStrLen);
+  return RemoteStrNICmpW(hProcess, (LPCWSTR)(SIZE_T)(lpRemoteStr->Buffer), szLocalStrW, nStrLen);
 }
 
 #if defined(_M_X64)
@@ -719,7 +719,7 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
     case 32:
       if (ReadMem(hProcess, &dwTemp32, lpPeb+0x38, sizeof(dwTemp32)) != sizeof(dwTemp32))
         return NULL;
-      lpApiMapSet = (LPBYTE)dwTemp32;
+      lpApiMapSet = (LPBYTE)(SIZE_T)dwTemp32;
       break;
 #if defined(_M_X64)
     case 64:
