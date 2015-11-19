@@ -97,7 +97,8 @@ BOOL CNktEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_o
   if (szName != NULL)
   {
     sName.Buffer = (PWSTR)szName;
-    sName.Length = (USHORT)(wcslen(szName) * sizeof(WCHAR));
+    for (sName.Length=0; sName.Length<32767 && szName[sName.Length]!=0; sName.Length++);
+    sName.Length <<= 1;
     sName.MaximumLength = sName.Length;
   }
   InitializeObjectAttributes(&sObjAttr, (szName != NULL) ? &sName : NULL, 0, NULL, NULL);
@@ -120,7 +121,8 @@ BOOL CNktEvent::Open(__in_z_opt LPCWSTR szName)
   if (szName != NULL)
   {
     sName.Buffer = (PWSTR)szName;
-    sName.Length = (USHORT)(wcslen(szName) * sizeof(WCHAR));
+    for (sName.Length=0; sName.Length<32767 && szName[sName.Length]!=0; sName.Length++);
+    sName.Length <<= 1;
     sName.MaximumLength = sName.Length;
   }
   InitializeObjectAttributes(&sObjAttr, (szName != NULL) ? &sName : NULL, 0, NULL, NULL);
