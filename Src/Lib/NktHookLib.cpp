@@ -278,7 +278,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           switch (cProcEntry->GetPlatform())
           {
             case NKTHOOKLIB_ProcessPlatformX86:
-              *((ULONG NKT_UNALIGNED*)p) = (ULONG)(lpHookEntry->lpInjCodeAndData + 2 * nSizeOfSizeT);
+              *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData + 2 * nSizeOfSizeT);
               p += sizeof(ULONG);
               break;
 #if defined(_M_X64)
@@ -306,7 +306,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             }
             //----
             *p++ = 0xBA;                                                         //mov   edx, OFFSET lpInjCode
-            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(lpHookEntry->lpInjCodeAndData);
+            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData);
             p += sizeof(ULONG);
             //----
             *p++ = 0xF7;  *p++ = 0x02;                                           //test  DWORD PTR [edx], 00000101h
@@ -382,8 +382,9 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             *p++ = 0x5A;                                                         //pop   edx
             //----
             *p++ = 0xE9;                                                         //jmp   hooked proc
-            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(lpHookEntry->lpNewProc) -
-                                         ((ULONG)(lpHookEntry->lpInjCodeAndData) + (ULONG)(p+4-aCodeBlock));
+            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpNewProc) -
+                                         ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData) +
+                                         (ULONG)(ULONG_PTR)(p+4-aCodeBlock));
             p += sizeof(ULONG);
             //---- CALL_ORIGINAL:
             *lpCallOrigOfs[0] = (BYTE)(p - (lpCallOrigOfs[0]+1));
@@ -401,15 +402,17 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             p += lpHookEntry->nNewStubSize;
             //----
             *p++ = 0xE9;                                                         //jmp original proc after stub
-            *((ULONG NKT_UNALIGNED*)p) = ((ULONG)(lpHookEntry->lpOrigProc) + (ULONG)(lpHookEntry->nOriginalStubSize)) -
-                                         ((ULONG)(lpHookEntry->lpInjCodeAndData) + (ULONG)(p+4-aCodeBlock));
+            *((ULONG NKT_UNALIGNED*)p) = ((ULONG)(ULONG_PTR)(lpHookEntry->lpOrigProc) +
+                                          (ULONG)(ULONG_PTR)(lpHookEntry->nOriginalStubSize)) -
+                                         ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData) +
+                                          (ULONG)(ULONG_PTR)(p+4-aCodeBlock));
             p += sizeof(ULONG);
             //----
             if ((lpHookEntry->dwFlags & NKTHOOKLIB_DisallowReentrancy) != 0)
             {
               p = (LPBYTE)(((SIZE_T)p + 3) & (~3)); //align 4
               *((ULONG NKT_UNALIGNED*)lpRetStubs[0]) = *((ULONG NKT_UNALIGNED*)lpRetStubs[1]) =
-                  ((ULONG)(lpHookEntry->lpInjCodeAndData) + (ULONG)(p-aCodeBlock));
+                  (ULONG)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock)));
             }
             break;
 
@@ -568,7 +571,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
                 *((ULONG NKT_UNALIGNED*)&aCodeBlock[5]) = 0;
                 //----
                 aCodeBlock[9] = 0xF0;  aCodeBlock[10] = 0x83;  aCodeBlock[11] = 0x25; //lock and DWORD PTR [ministub], 0
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[12]) = (ULONG)p;
+                *((ULONG NKT_UNALIGNED*)&aCodeBlock[12]) = (ULONG)((ULONG_PTR)p);
                 aCodeBlock[16] = 0x00;
                 //----
                 aCodeBlock[17] = 0xC3;                                                //ret
@@ -628,12 +631,13 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           {
             case NKTHOOKLIB_ProcessPlatformX86:
               //32-bit jumps are absolute
-              dw = (DWORD)(lpHookEntry->lpInjCodeAndData + nSizeOfSizeT);
+              dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData + nSizeOfSizeT));
               break;
 #if defined(_M_X64)
             case NKTHOOKLIB_ProcessPlatformX64:
               //64-bit jumps are relative
-              dw = (DWORD)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT) - (DWORD)(lpHookEntry->lpOrigProc+6);
+              dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT)) -
+                   (DWORD)((ULONG_PTR)(lpHookEntry->lpOrigProc+6));
               break;
 #endif //_M_X64
           }
@@ -643,7 +647,8 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         {
           //32-bit & 64-bit jumps are relative
           lpHookEntry->aJumpStub[0] = 0xE9; //JMP
-          dw = (DWORD)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT) - (DWORD)(lpHookEntry->lpOrigProc+5);
+          dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT)) -
+               (DWORD)((ULONG_PTR)(lpHookEntry->lpOrigProc+5));
           *((DWORD NKT_UNALIGNED*)(lpHookEntry->aJumpStub+1)) = dw;
         }
         //set id

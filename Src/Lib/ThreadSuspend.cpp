@@ -320,7 +320,7 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
     }
     //find the target process
     lpCurrProc = lpSysProcInfo;
-    while (lpCurrProc != NULL && (DWORD)(lpCurrProc->UniqueProcessId) != dwPid)
+    while (lpCurrProc != NULL && (DWORD)((ULONG_PTR)(lpCurrProc->UniqueProcessId)) != dwPid)
     {
       lpCurrProc = (lpCurrProc->NextEntryOffset != 0) ? NEXT_PROCESS(lpCurrProc) : NULL;
     }
@@ -436,7 +436,7 @@ DWORD CNktThreadSuspend::CheckProcessThreads(__in DWORD dwPid, __in SIZE_T nEnum
   }
   //find the current process
   lpCurrProc = lpSysProcInfo;
-  while (lpCurrProc != NULL && (DWORD)(lpCurrProc->UniqueProcessId) != dwPid)
+  while (lpCurrProc != NULL && (DWORD)((ULONG_PTR)(lpCurrProc->UniqueProcessId)) != dwPid)
   {
     lpCurrProc = (lpCurrProc->NextEntryOffset != 0) ? NEXT_PROCESS(lpCurrProc) : NULL;
   }

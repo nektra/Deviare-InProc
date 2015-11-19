@@ -79,34 +79,7 @@ static void NktHookLib_memset(__out void *lpDest, __in int nVal, __in size_t nCo
 #undef opr_cast
 
 #include "source\libudis86\udis86.c"
-
-//HACK: The original 'ud_syn_rel_target' uses a 64-bit right shift operations. Because of this the compiler inserts
-//      a call to '__aullshr', a Visual C runtime routine.
-//
-//      Because we don't want to depend on CRT...
-//      ... a) we added a replacement code for that function.
-uint64_t NktHookLib_ud_syn_rel_target(struct ud *u, struct ud_operand *opr)
-{
-  switch (opr->size)
-  {
-    case 8: return (u->pc + opr->lval.sbyte)  & 0x00000000000000ffull;
-    case 16: return (u->pc + opr->lval.sword)  & 0x000000000000ffffull;
-    case 32: return (u->pc + opr->lval.sdword) & 0x00000000ffffffffull;
-    default: UD_ASSERT(!"invalid relative offset size.");
-      return 0ull;
-  }
-}
-
-//      ... b) rename the original function and compile it as inline so, because it won't be used, the linker
-//             will discard it.
-#undef ud_syn_rel_target
-#define ud_syn_rel_target           __forceinline __notused_ud_syn_rel_target
-
 #include "source\libudis86\syn.c"
-
-//      ... c) restore
-#undef ud_syn_rel_target
-#define ud_syn_rel_target           NktHookLib_ud_syn_rel_target
 
 #undef memset
 #undef sprintf
@@ -169,3 +142,75 @@ static void NktHookLib_memset(__out void *lpDest, __in int nVal, __in size_t nCo
   return;
 }
 #undef XISALIGNED
+
+//-----------------------------------------------------------
+
+//HACKS: Some functions in LibUDis86 uses 64-bit shift operations. On 32-bit, Visual C++ generates some dependency
+//       on C Runtime by using '__allshl' and '__aullshr' helpers. We try to remove that dependency by creating our
+//       replacements and telling the linker to use a weak symbol using an undocumented pragma directive.
+
+#ifdef _M_IX86
+
+__declspec(naked) void _allshl_X()
+{
+  __asm
+  {
+    ; Handle shifts of 64 or more bits(all get 0)
+    cmp     cl, 64
+    jae     short ReturnZero
+    ; Handle shifts of between 0 and 31 bits
+    cmp     cl, 32
+    jae     short MoreThanOrEqualTo32
+    shld    edx, eax, cl
+    shl     eax, cl
+    ret
+
+    ; Handle shifts of between 32 and 63 bits
+MoreThanOrEqualTo32:
+    mov     edx, eax
+    xor     eax, eax
+    and     cl, 31
+    shl     edx, cl
+    ret
+
+    ; return 0 in edx:eax
+ReturnZero:
+    xor     eax, eax
+    xor     edx, edx
+    ret
+  }
+}
+
+__declspec(naked) void _aullshr_X()
+{
+  __asm
+  {
+    cmp     cl, 64
+    jae     short ReturnZero
+    ; Handle shifts of between 0 and 31 bits
+    cmp     cl, 32
+    jae     short MoreThanOrEqualTo32
+    shrd    eax, edx, cl
+    shr     edx, cl
+    ret
+    ; Handle shifts of between 32 and 63 bits
+MoreThanOrEqualTo32:
+    mov     eax, edx
+    xor     edx, edx
+    and     cl, 31
+    shr     eax, cl
+    ret
+    ; return 0 in edx:eax
+ReturnZero:
+    xor     eax, eax
+    xor     edx, edx
+    ret
+  }
+}
+
+#pragma comment(linker, "/alternatename:__allshl=__allshl_default_nkthooklib")
+#pragma comment(linker, "/alternatename:__aullshr=__aullshr_default_nkthooklib")
+const void* _allshl_default_nkthooklib = (void*)&_allshl_X;
+const void* _aullshr_default_nkthooklib = (void*)&_aullshr_X;
+
+#endif // _M_IX86

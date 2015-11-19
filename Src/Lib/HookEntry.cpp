@@ -116,10 +116,10 @@ LPBYTE CHookEntry::SkipJumpInstructions(__in LPBYTE lpPtr)
       switch (cProcEntry->GetPlatform())
       {
         case NKTHOOKLIB_ProcessPlatformX86:
-          if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aTempBuf, (LPBYTE)(ULONG)nOfs,
+          if (NktHookLibHelpers::ReadMem(cProcEntry->GetHandle(), aTempBuf, (LPBYTE)((ULONG_PTR)(ULONG)nOfs),
                                          sizeof(ULONG)) != sizeof(ULONG))
             return NULL;
-          lpPtr = (LPBYTE)*((ULONG NKT_UNALIGNED*)(aTempBuf));
+          lpPtr = (LPBYTE)(ULONG_PTR)*((ULONG NKT_UNALIGNED*)(aTempBuf));
           break;
 
 #if defined(_M_X64)
@@ -182,6 +182,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
                                         (bOutputDebug != FALSE) ? (sizeof(szBufA)/sizeof(szBufA[0])) : 0);
     if (nSrcInstrLen == 0)
       return ERROR_INVALID_DATA; //invalid opcode
+    nDestInstrLen = nSrcInstrLen;
     //check special opcodes
     s[0] = (LPBYTE)lpOrigProc + nOriginalStubSize;
     s[1] = ((dwFlags & NKTHOOKLIB_DontSkipAnyJumps) != 0) ? s[0] : SkipJumpInstructions(s[0]);
@@ -195,7 +196,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
         case NKTHOOKLIB_ProcessPlatformX86:
           //...convert to PUSH imm32/RET
           lpDest[0] = 0x68;
-          *((ULONG NKT_UNALIGNED*)(lpDest+1)) = (ULONG)(s[1]);
+          *((ULONG NKT_UNALIGNED*)(lpDest+1)) = (ULONG)(ULONG_PTR)(s[1]);
           lpDest[5] = 0xC3; //ret
           nDestInstrLen = 6;
           break;
@@ -278,7 +279,7 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
             lpDest[9] = 0x68;
             ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+1));
             k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
-            *((ULONG NKT_UNALIGNED*)(lpDest+10)) = (ULONG)k;
+            *((ULONG NKT_UNALIGNED*)(lpDest+10)) = (ULONG)(ULONG_PTR)k;
             lpDest[14] = 0xC3; //ret
             return 15;
 
