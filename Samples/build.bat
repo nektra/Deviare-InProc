@@ -29,19 +29,19 @@ IF /I [%~1] == [/MSVCVERSION] (
         EXIT /B 1
     )
     IF /I [%~2] == [2008] (
-        SET __ComnTools=%VS90COMNTOOLS%
+        SET "__ComnTools=%VS90COMNTOOLS%"
         SET __SolutionDir=vs2008
     ) ELSE IF /I [%~2] == [2010] (
-        SET __ComnTools=%VS100COMNTOOLS%
+        SET "__ComnTools=%VS100COMNTOOLS%"
         SET __SolutionDir=vs2010
     ) ELSE IF /I [%~2] == [2012] (
-        SET __ComnTools=%VS110COMNTOOLS%
+        SET "__ComnTools=%VS110COMNTOOLS%"
         SET __SolutionDir=vs2012
     ) ELSE IF /I [%~2] == [2013] (
-        SET __ComnTools=%VS120COMNTOOLS%
+        SET "__ComnTools=%VS120COMNTOOLS%"
         SET __SolutionDir=vs2013
     ) ELSE IF /I [%~2] == [2015] (
-        SET __ComnTools=%VS140COMNTOOLS%
+        SET "__ComnTools=%VS140COMNTOOLS%"
         SET __SolutionDir=vs2015
     ) ELSE (
         ECHO Error: Unsupported Visual Studio version
@@ -74,7 +74,7 @@ IF "%__ComnTools%" == "" (
 
 SETLOCAL
 CALL "%__ComnTools%\vsvars32.bat" >NUL 2>NUL
-ENDLOCAL & SET __VCINSTALLDIR=%VCINSTALLDIR%
+ENDLOCAL & SET "__VCINSTALLDIR=%VCINSTALLDIR%"
 
 SETLOCAL
 CALL "%__VCINSTALLDIR%\vcvarsall.bat" x86
