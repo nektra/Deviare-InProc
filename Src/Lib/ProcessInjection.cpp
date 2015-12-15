@@ -653,10 +653,10 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
 #endif
           dw[5] -= (DWORD)((ULONG_PTR)(d+k));
           if (NktHookLibHelpers::WriteMem(hSuspendedProc, d, &dw[0], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hSuspendedProc, d+8, &dw[1], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hSuspendedProc, d+16, &dw[2], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hSuspendedProc, d+24, &dw[3], 4) == FALSE ||
-              NktHookLibHelpers::WriteMem(hSuspendedProc, d+32, &dw[4], 4) == FALSE ||
+              NktHookLibHelpers::WriteMem(hSuspendedProc, d+4, &dw[1], 4) == FALSE ||
+              NktHookLibHelpers::WriteMem(hSuspendedProc, d+8, &dw[2], 4) == FALSE ||
+              NktHookLibHelpers::WriteMem(hSuspendedProc, d+12, &dw[3], 4) == FALSE ||
+              NktHookLibHelpers::WriteMem(hSuspendedProc, d+16, &dw[4], 4) == FALSE ||
               NktHookLibHelpers::WriteMem(hSuspendedProc, d+k-4, &dw[5], 4) == FALSE)
             dwOsErr = ERROR_ACCESS_DENIED;
           break;
@@ -688,11 +688,12 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
   //change main thread's entrypoint
   if (dwOsErr == ERROR_SUCCESS)
   {
-    LPBYTE d = lpRemCode + _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8) + 136;
+    LPBYTE d = lpRemCode;
 
     switch (nProcPlatform)
     {
       case NKTHOOKLIB_ProcessPlatformX86:
+        d += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8) + 104;
 #if defined(_M_IX86)
         sCtx.Eip = (DWORD)d;
         nNtStatus = NktNtSetContextThread(hSuspendedMainThread, &sCtx);
@@ -714,6 +715,7 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
 
 #if defined(_M_X64)
       case NKTHOOKLIB_ProcessPlatformX64:
+        d += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8) + 136;
         sCtx.Rip = (DWORD64)d;
         nNtStatus = NktNtSetContextThread(hSuspendedMainThread, &sCtx);
         if (!NT_SUCCESS(nNtStatus))

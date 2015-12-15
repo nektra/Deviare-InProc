@@ -18,6 +18,7 @@ Bin/
 MISC/
 Libs/
 obj/
+Package/
 Src/Com/DeviareLiteCOM_i*.*
 Src/Com/DeviareLiteCOM_p*.*
 Src/Com/dlldata_*.*

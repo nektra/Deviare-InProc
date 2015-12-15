@@ -736,32 +736,32 @@ WAITFOREVENTATSTARTUP_SECTION_START:
 ALIGN 4
 WaitForEventAtStartup PROC
 _GETPROCADDR_3                    EQU 0
-_GETMODBASEADDR_3                 EQU 8
-_READYEVENT_3                     EQU 16
-_CONTINUEEVENT_3                  EQU 24
-_CONTROLLERPROC_3                 EQU 32
-_ADDR_NTCLOSE_3                   EQU 40
-_ADDR_NTSETEVENT_3                EQU 48
-_ADDR_NTWAITFORMULTIPLEOBJECTS_3  EQU 56
-_SZ_NTDLLDLL_3                    EQU 64
-_SZ_NTCLOSE_3                     EQU 88
-_SZ_NTSETEVENT_3                  EQU 96
-_SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 108
+_GETMODBASEADDR_3                 EQU 4
+_READYEVENT_3                     EQU 8
+_CONTINUEEVENT_3                  EQU 12
+_CONTROLLERPROC_3                 EQU 16
+_ADDR_NTCLOSE_3                   EQU 20
+_ADDR_NTSETEVENT_3                EQU 24
+_ADDR_NTWAITFORMULTIPLEOBJECTS_3  EQU 28
+_SZ_NTDLLDLL_3                    EQU 32
+_SZ_NTCLOSE_3                     EQU 56
+_SZ_NTSETEVENT_3                  EQU 64
+_SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 76
 
-    db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
-    db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: ready event handle
-    db   8 DUP (0h)                                                  ;offset 24: continue event handle
-    db   8 DUP (0h)                                                  ;offset 32: controller process handle
-    db   8 DUP (0h)                                                  ;offset 40: address of NtClose
-    db   8 DUP (0h)                                                  ;offset 48: address of NtSetEvent
-    db   8 DUP (0h)                                                  ;offset 56: address of NtWaitForMultipleObjects
-    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 64: L"ntdll.dll"
-    db   'NtClose', 0                                                ;offset 88: "NtClose"
-    db   'NtSetEvent', 0, 0                                          ;offset 96: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0, 0, 0, 0                      ;offset 108: "NtWaitForMultipleObjects"
+    db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
+    db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
+    db   4 DUP (0h)                                                  ;offset 8: ready event handle
+    db   4 DUP (0h)                                                  ;offset 12: continue event handle
+    db   4 DUP (0h)                                                  ;offset 16: controller process handle
+    db   4 DUP (0h)                                                  ;offset 20: address of NtClose
+    db   4 DUP (0h)                                                  ;offset 24: address of NtSetEvent
+    db   4 DUP (0h)                                                  ;offset 28: address of NtWaitForMultipleObjects
+    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 32: L"ntdll.dll"
+    db   'NtClose', 0                                                ;offset 56: "NtClose"
+    db   'NtSetEvent', 0, 0                                          ;offset 64: "NtSetEvent"
+    db   'NtWaitForMultipleObjects', 0, 0, 0, 0                      ;offset 76: "NtWaitForMultipleObjects"
 
-    ;offset 136: code start
+    ;offset 104: code start
     push ebp
     mov  ebp, esp
     push eax
