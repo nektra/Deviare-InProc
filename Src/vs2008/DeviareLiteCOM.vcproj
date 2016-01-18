@@ -101,7 +101,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Updating manifest..."
-				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="MT.EXE -manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -186,7 +186,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Updating manifest..."
-				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="MT.EXE -manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -271,7 +271,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Updating manifest..."
-				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="MT.EXE -manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -356,7 +356,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Updating manifest..."
-				CommandLine="MT.EXE –manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
+				CommandLine="MT.EXE -manifest &quot;$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest&quot; &quot;-outputresource:$(TargetPath);2&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>

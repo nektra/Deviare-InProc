@@ -124,7 +124,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -159,7 +159,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -195,7 +195,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -230,7 +230,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE –manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
