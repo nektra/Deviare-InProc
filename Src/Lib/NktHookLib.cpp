@@ -365,7 +365,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0xE2;  *p++ = 0xF0;                                         //loop  L2
               //----
-              *p++ = 0xEB;  *p++ = 0x18;                                         //jmp   call_hooked
+              *p++ = 0xEB;  *p++ = 0x17;                                         //jmp   call_hooked
               //---- CHG_RETADDR:
               *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   eax, DWORD PTR [esp+10h]
               //----
@@ -487,7 +487,7 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0xE2;  *p++ = 0xEE;                                         //loop  L2
               //----
-              *p++ = 0xEB;  *p++ = 0x18;                                         //jmp   call_hooked
+              *p++ = 0xEB;  *p++ = 0x2A;                                         //jmp   call_hooked
               //---- CHG_RETADDR:
               *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;             //mov   rax, QWORD PTR [rsp+20h]
               *p++ = 0x20;
