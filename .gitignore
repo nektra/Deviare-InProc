@@ -14,6 +14,7 @@
 *.ipch
 *.pch
 *.obj
+*.VC.db
 Bin/
 MISC/
 Libs/
