@@ -30,10 +30,10 @@ To use Deviare In-Proc you must have the following:
 ----------------------
 # INSTALLATION & USAGE
 
-Uncompress the downloaded .zip file in an empty folder.
-
-If the package contains the source code, you can open the `NktHookLib.sln` with
-Visual Studio to rebuild the libraries.
+Clone the repository using `git clone --recursive`.
+If you download the zipped source code package instead, take note that this project depends
+on [UDis86][UDis86 link].
+You can open the `NktHookLib.sln` with Visual Studio to rebuild the libraries.
 
 The *LIBS* subfolder contains precompiled libraries of the product.
 
@@ -95,7 +95,9 @@ the *LICENSE.COMMERCIAL* and *LICENSE.GPL* files.
 For further information please refer to <http://www.nektra.com/licensing/> or
 contact Nektra here <http://www.nektra.com/contact/>.
 
-This library uses a portion of UDis86 project <http://udis86.sourceforge.net/>,
-authored, copyrighted and maintained by Vivek Thampi. UDis86 is licensed under
+This library uses a portion of [UDis86 project][UDis86 link], authored, 
+copyrighted and maintained by Vivek Thampi. UDis86 is licensed under
 the terms of BSD License. For any questions referring to UDis86 contact the
 author at vivek[at]sig9[dot]com.
+
+[UDis86 link]: http://udis86.sourceforge.net/
