@@ -30,7 +30,8 @@ To use Deviare In-Proc you must have the following:
 ----------------------
 # INSTALLATION & USAGE
 
-Clone the repository using `git clone --recursive`.
+Clone the repository using `git clone --recursive`. If you already cloned without the `--recursive`
+option, you can complete the repository initialization with `git submodule update --init`.
 If you download the zipped source code package instead, take note that this project depends
 on [UDis86][UDis86 link].
 You can open the `NktHookLib.sln` with Visual Studio to rebuild the libraries.
