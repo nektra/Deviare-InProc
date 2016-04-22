@@ -11,7 +11,7 @@ and 64 bit applications and it implements the interception verifying different
 situations that can crash the process. If you need to intercept any Win32
 functions or any other code, this library makes it easier than ever.
 
-Unlike the rest of the libraries, Deviare In-Proc provides a safe mecanism to
+Unlike the rest of the libraries, Deviare In-Proc provides a safe mechanism to
 implement multi-threaded application API hooking. When an application is
 running, more than one thread can be executing the code being intercepted.
 Deviare In-Proc provides safe hooking even in this scenario.
@@ -54,20 +54,20 @@ C# samples to see .net method hooking in action.
 -----------------
 # C RUN-TIME LESS
 
-Although the library functionallity remains the same, the code was modified to
+Although the library functionality remains the same, the code was modified to
 make it independent from Visual Studio's CRT libraries.
 
 Deviare In-Proc base library only depends on *NTDLL.DLL*, no *kernel32.dll* nor
-another library is used.
+any other library is used.
 
-It also does a dynamic discovery of needed apis in order to eliminate
-*NTDLL.DLL* static binding when used in an application or dll. This allows
-developers to use the library, for e.g., in custom dll's that will be injected
+It also dynamically discovers needed apis in order to eliminate *NTDLL.DLL*
+static binding when used in an application or dll. This allows developers
+to use the library, for e.g., in custom dll's that will be injected
 in non-initialized processes that were launched in a suspended state.
 
 The C ApiHook sample provided with this package was also modified in order to
-demonstrate how to build an executable with minimal imported api's. Because
-Visual Studio's compiler & linker inserts undesired Microsoft's specific code
+demonstrate how to build an executable with minimal imported api's. Since
+Visual Studio's compiler & linker inserts undesired Microsoft specific code
 and data, the sample contains some hacks and modified compiler switches to
 circumvent this behavior.
 
@@ -76,10 +76,10 @@ circumvent this behavior.
 # BUG REPORTS
 
 If you experience something you think might be a bug in Deviare In-Proc, please
-report it in GitHub repository or write to us in <http://www.nektra.com/contact/>.
+report it in this GitHub repository or write to us in [our contact page][Nektra contact].
 
 Describe what you did, what happened, what kind of computer you have, which
-operating system you're using, and anything else you think might be relevant.
+operating system you're using and anything else you think might be relevant.
 
 
 -----------------------
@@ -92,8 +92,8 @@ Depending on your needs, you must choose one of them and follow its policies.
 A detail of the policies and agreements for each license type are available in
 the *LICENSE.COMMERCIAL* and *LICENSE.GPL* files.
 
-For further information please refer to <http://www.nektra.com/licensing/> or
-contact Nektra here <http://www.nektra.com/contact/>.
+For further information please refer to [our licensing options][Deviare Inproc homepage] or
+contact [Nektra here][Nektra contact].
 
 This library uses a portion of [UDis86 project][UDis86 link], authored, 
 copyrighted and maintained by Vivek Thampi. UDis86 is licensed under
@@ -101,3 +101,5 @@ the terms of BSD License. For any questions referring to UDis86 contact the
 author at vivek[at]sig9[dot]com.
 
 [UDis86 link]: http://udis86.sourceforge.net/
+[Nektra contact]: http://www.nektra.com/contact/
+[Deviare Inproc homepage]: http://www.nektra.com/products/deviare-api-hook-windows/deviare-in-process/
