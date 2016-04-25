@@ -29,6 +29,8 @@
 
 #include "ThreadSuspend.h"
 #include "ProcessEntry.h"
+#include "DynamicNtApi.h"
+#include "AutoPtr.h"
 
 namespace NktHookLib {
 namespace Internals {
@@ -42,6 +44,15 @@ namespace Internals {
 
 #define NEXT_PROCESS(_currProc)                            \
           (LPNKT_HK_SYSTEM_PROCESS_INFORMATION)((LPBYTE)_currProc +(SIZE_T)(_currProc->NextEntryOffset))
+
+//-----------------------------------------------------------
+
+typedef struct{
+  BYTE Revision;
+  BYTE SubAuthorityCount;
+  SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
+  DWORD SubAuthority[SID_MAX_SUB_AUTHORITIES];
+} NKT_SID;
 
 //-----------------------------------------------------------
 
@@ -83,7 +94,7 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
   SIZE_T i, k, nSuspendTries, nCurrIP, nEnumMethod;
   LONG nProcessorArchitecture;
   LARGE_INTEGER sLI;
-  BOOL bGrowCheckProcessThreadsMem;
+  BOOL bGrowCheckProcessThreadsMem, bIsLowIlProcess;
   DWORD dwOsErr;
   int nOrigPriority;
   NTSTATUS nNtStatus;
@@ -98,6 +109,9 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
     if (hProcess == NULL)
       return ERROR_ACCESS_DENIED;
   }
+  dwOsErr = IsCurrentProcessLowIntegrity(&bIsLowIlProcess);
+  if (dwOsErr != ERROR_SUCCESS)
+    return dwOsErr;
   nProcessorArchitecture = NktHookLibHelpers::GetProcessorArchitecture();
   if (nProcessorArchitecture < 0)
     return ERROR_NOT_SUPPORTED;
@@ -119,8 +133,8 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
       bGrowCheckProcessThreadsMem = FALSE;
     }
     //----
-    dwOsErr = EnumProcessThreads(dwPid, hProcess, &nEnumMethod, &dwCurrSessionId);
-    if (dwOsErr != NO_ERROR)
+    dwOsErr = EnumProcessThreads(dwPid, hProcess, bIsLowIlProcess, &nEnumMethod, &dwCurrSessionId);
+    if (dwOsErr != ERROR_SUCCESS)
       break;
     //suspend all threads in the list
     for (i=0; i<sSuspendedTids.nCount; i++)
@@ -185,7 +199,7 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
     //if we are here, we must confirm that no new threads where created in the middle
     //of the process' suspension
     dwOsErr = CheckProcessThreads(dwPid, nEnumMethod, dwCurrSessionId);
-    if (dwOsErr == NO_ERROR)
+    if (dwOsErr == ERROR_SUCCESS)
       break;
     if (dwOsErr == ERROR_ACCESS_DENIED)
     {
@@ -248,8 +262,8 @@ BOOL CNktThreadSuspend::CheckIfThreadIsInRange(__in SIZE_T nStart, __in SIZE_T n
   return FALSE;
 }
 
-DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __out SIZE_T *lpnEnumMethod,
-                                            __out LPDWORD lpdwSessionId)
+DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __in BOOL bCurrentProcessIsLowIL,
+                                            __out SIZE_T *lpnEnumMethod, __out LPDWORD lpdwSessionId)
 {
   SIZE_T nSize, nRealSize;
   LPNKT_HK_SYSTEM_PROCESS_INFORMATION lpSysProcInfo, lpCurrProc;
@@ -332,6 +346,10 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
   {
     nSize = 0;
     NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
+    //if the current process is has a low mandatory integrity level, then it may not be capable of enumerating threads
+    //so assume zero threads although might be unsafe
+    if (bCurrentProcessIsLowIL != FALSE)
+      return ERROR_SUCCESS;
     return ERROR_ACCESS_DENIED;
   }
   if (lpCurrProc->NumberOfThreads > 0)
@@ -367,7 +385,7 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
   }
   nSize = 0;
   NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-  return NO_ERROR;
+  return ERROR_SUCCESS;
 }
 
 BOOL CNktThreadSuspend::GrowCheckProcessThreadsMem()
@@ -467,7 +485,7 @@ DWORD CNktThreadSuspend::CheckProcessThreads(__in DWORD dwPid, __in SIZE_T nEnum
       return ERROR_NOT_READY;
   }
   //done
-  return NO_ERROR;
+  return ERROR_SUCCESS;
 }
 
 BOOL CNktThreadSuspend::GetProcessSessionId(__in HANDLE hProcess, __out LPDWORD lpdwSessionId)
@@ -486,6 +504,51 @@ BOOL CNktThreadSuspend::GetProcessSessionId(__in HANDLE hProcess, __out LPDWORD 
     return TRUE;
   }
   return FALSE;
+}
+
+DWORD CNktThreadSuspend::IsCurrentProcessLowIntegrity(__out BOOL *lpbProcessIsLow)
+{
+  TNktAutoFreePtr<TOKEN_MANDATORY_LABEL> cIntegrityLevel;
+  NKT_SID *lpSid;
+  DWORD dwIntegrityLevel;
+  HANDLE hToken;
+  NTSTATUS nNtStatus;
+
+  *lpbProcessIsLow = FALSE;
+  //open process token
+  nNtStatus = NktNtOpenProcessToken(NKTHOOKLIB_CurrentProcess, TOKEN_QUERY, &hToken);
+  //query for restricted sids
+  if (NT_SUCCESS(nNtStatus))
+  {
+    //query for restricted sids
+
+    ULONG nRetLength;
+    NTSTATUS nNtStatus;
+
+    nNtStatus = NktNtQueryInformationToken(hToken, TokenIntegrityLevel, NULL, 0, &nRetLength);
+    while (nNtStatus == STATUS_BUFFER_TOO_SMALL)
+    {
+      cIntegrityLevel.Attach((TOKEN_MANDATORY_LABEL*)NktHookLibHelpers::MemAlloc((SIZE_T)nRetLength));
+      if (cIntegrityLevel != NULL)
+      {
+        nNtStatus = NktNtQueryInformationToken(hToken, TokenIntegrityLevel, cIntegrityLevel.Get(), nRetLength,
+                                               &nRetLength);
+      }
+      else
+      {
+        nNtStatus = STATUS_NO_MEMORY;
+      }
+    }
+    if (NT_SUCCESS(nNtStatus))
+    {
+      lpSid = (NKT_SID*)(cIntegrityLevel->Label.Sid);
+      dwIntegrityLevel = lpSid->SubAuthority[lpSid->SubAuthorityCount - 1];
+      if (dwIntegrityLevel < SECURITY_MANDATORY_MEDIUM_RID)
+        *lpbProcessIsLow = TRUE;
+    }
+    NktNtClose(hToken);
+  }
+  return (NT_SUCCESS(nNtStatus)) ? ERROR_SUCCESS : NktRtlNtStatusToDosError(nNtStatus);
 }
 
 //-----------------------------------------------------------

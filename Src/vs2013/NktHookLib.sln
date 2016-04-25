@@ -1,7 +1,8 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NktHookLib", "NktHookLib.vcxproj", "{7DE03078-DA93-4D66-8164-76277522D3F6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DeviareLiteCOM", "DeviareLiteCOM.vcxproj", "{0F79BD19-F305-4C06-8EBD-8BD7251ADB22}"

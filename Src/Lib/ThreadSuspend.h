@@ -78,11 +78,13 @@ private:
     SIZE_T nCurrIP;
   } THREAD_ITEM, *LPTHREAD_ITEM;
 
-  DWORD EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __out SIZE_T *lpnEnumMethod,
-                           __out LPDWORD lpdwSessionId);
+  DWORD EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __in BOOL bCurrentProcessIsLowIL,
+                           __out SIZE_T *lpnEnumMethod, __out LPDWORD lpdwSessionId);
   BOOL GrowCheckProcessThreadsMem();
   DWORD CheckProcessThreads(__in DWORD dwPid, __in SIZE_T nEnumMethod, __in DWORD dwSessionId);
   BOOL GetProcessSessionId(__in HANDLE hProcess, __out LPDWORD lpdwSessionId);
+
+  DWORD IsCurrentProcessLowIntegrity(__out BOOL *lpbProcessIsLow);
 
 private:
   struct {

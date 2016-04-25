@@ -104,6 +104,9 @@ public:
 #endif //_MSC_VER >= 1200
 
 private:
+  DWORD HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags);
+
+private:
   LPVOID lpInternals;
 };
 

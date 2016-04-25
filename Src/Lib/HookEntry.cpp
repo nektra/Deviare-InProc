@@ -247,7 +247,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
     nOriginalStubSize += nSrcInstrLen;
     nNewStubSize += nDestInstrLen;
   }
-  return NO_ERROR;
+  return ERROR_SUCCESS;
 }
 
 //-----------------------------------------------------------
