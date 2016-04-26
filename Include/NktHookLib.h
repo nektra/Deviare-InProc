@@ -40,6 +40,7 @@
 #define NKTHOOKLIB_SkipNullProcsToHook                0x0008
 #define NKTHOOKLIB_UseAbsoluteIndirectJumps           0x0010
 #define NKTHOOKLIB_DisallowReentrancy                 0x0020
+#define NKTHOOKLIB_DontEnableHooks                    0x0040
 
 #define NKTHOOKLIB_ProcessPlatformX86                      1
 #define NKTHOOKLIB_ProcessPlatformX64                      2

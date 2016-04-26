@@ -58,9 +58,10 @@ using namespace NktHookLibHelpers;
 //(4096 bytes - 256 bytes of code) / 28 bytes per ministub = 137
 #define RETMINISTUBS_COUNT_X64                           137
 
-#define VALID_FLAGS (NKTHOOKLIB_DontSkipInitialJumps | NKTHOOKLIB_DontRemoveOnUnhook |  \
-                     NKTHOOKLIB_DontSkipAnyJumps | NKTHOOKLIB_SkipNullProcsToHook |     \
-                     NKTHOOKLIB_UseAbsoluteIndirectJumps | NKTHOOKLIB_DisallowReentrancy)
+#define VALID_FLAGS (NKTHOOKLIB_DontSkipInitialJumps | NKTHOOKLIB_DontRemoveOnUnhook |     \
+                     NKTHOOKLIB_DontSkipAnyJumps | NKTHOOKLIB_SkipNullProcsToHook |        \
+                     NKTHOOKLIB_UseAbsoluteIndirectJumps | NKTHOOKLIB_DisallowReentrancy | \
+                     NKTHOOKLIB_DontEnableHooks)
 
 #define INTERNALFLAG_CallToOriginalIsPtr2Ptr      0x80000000
 
@@ -628,6 +629,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
 {
   DWORD dwOsErr;
   SIZE_T nHookIdx;
+  BOOL bIsRemoteProcess;
 
   if (aHookInfo == NULL || nCount == 0 || dwPid == 0)
     return ERROR_INVALID_PARAMETER;
@@ -657,6 +659,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         return ERROR_INVALID_PARAMETER;
     }
   }
+  bIsRemoteProcess = (dwPid != NktHookLibHelpers::GetCurrentProcessId()) ? TRUE : FALSE;
   if (lpInternals != NULL)
   {
     CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
@@ -748,6 +751,11 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         p = aCodeBlock;
         //flags
         MemSet(p, 0, nSizeOfSizeT);
+        if (bIsRemoteProcess == FALSE || FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontEnableHooks))
+        {
+          //if current process, hooks are initially disabled to avoid issues when hooking api's used by this routine
+          *(p+1) = 0x01; //disable flag
+        }
         p += nSizeOfSizeT;
         //if we use indirect jumps, store the pointer to our code start here
         if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_UseAbsoluteIndirectJumps))
@@ -1300,6 +1308,11 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
   else
   {
     dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
+  }
+  //enable hooks if installed locally
+  if (dwOsErr == ERROR_SUCCESS && bIsRemoteProcess == FALSE && (!FlagOn(dwFlags, NKTHOOKLIB_DontEnableHooks)))
+  {
+    EnableHook(aHookInfo, nCount, TRUE); //this will always succeed
   }
   return dwOsErr;
 }
