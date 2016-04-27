@@ -650,7 +650,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
   {
     if (aHookInfo[nHookIdx].lpProcToHook == NULL)
     {
-      if (FlagOn(dwFlags, NKTHOOKLIB_SkipNullProcsToHook))
+      if (!FlagOn(dwFlags, NKTHOOKLIB_SkipNullProcsToHook))
         return ERROR_INVALID_PARAMETER;
     }
     else
@@ -1147,12 +1147,12 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         aHookInfo[nHookIdx+k].nHookId = lpHookEntry->nId;
         if (FlagOn(dwFlags, INTERNALFLAG_CallToOriginalIsPtr2Ptr))
         {
-          if (aHookInfo[nHookIdx].lpCallOriginal != NULL)
-            *((LPVOID*)aHookInfo[nHookIdx].lpCallOriginal) = lpHookEntry->lpCall2Orig;
+          if (aHookInfo[nHookIdx+k].lpCallOriginal != NULL)
+            *((LPVOID*)aHookInfo[nHookIdx+k].lpCallOriginal) = lpHookEntry->lpCall2Orig;
         }
         else
         {
-          aHookInfo[nHookIdx].lpCallOriginal = lpHookEntry->lpCall2Orig;
+          aHookInfo[nHookIdx+k].lpCallOriginal = lpHookEntry->lpCall2Orig;
         }
       }
       //do actual hooking
