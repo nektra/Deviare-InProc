@@ -229,7 +229,7 @@ LONG CProcessesHandles::CEntry::GetCurrPlatform()
   return nPlatform;
 }
 
-LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize)
+LPBYTE CProcessesHandles::CEntry::AllocateMem(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize, __in BOOL bIsData)
 {
   CNktSimpleLockNonReentrant cLock(&nStubAllocMutex);
   TNktLnkLst<CMemBlock>::Iterator it;
@@ -238,9 +238,22 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_
 #if defined(_M_X64)
   ULONGLONG nMin, nMax;
 #endif //_M_X64
+  TNktLnkLst<CMemBlock> *lpBlocksList;
 
+  NKT_ASSERT(nSlotSize > 0 && nSlotSize <= 65536);
+  //round slot size to next power of two
+  nSlotSize--;
+  nSlotSize |= nSlotSize >> 1;
+  nSlotSize |= nSlotSize >> 2;
+  nSlotSize |= nSlotSize >> 4;
+  nSlotSize |= nSlotSize >> 8;
+  nSlotSize |= nSlotSize >> 16;
 #if defined(_M_X64)
+  nSlotSize |= nSlotSize >> 32;
+#endif //_M_X64
+  nSlotSize++;
   //calculate min/max address
+#if defined(_M_X64)
   nMin = nMax = ((ULONGLONG)(SIZE_T)lpRefAddr) & (~65535ui64);
   if (nMin > 0x40000000ui64)
     nMin -= 0x40000000ui64;
@@ -252,7 +265,8 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_
     nMax = 0xFFFFFFFFFFFFFFFFui64;
 #endif //_M_X64
   //find a previously allocated block
-  for (lpBlock=it.Begin(cMemBlocksList); lpBlock!=NULL; lpBlock=it.Next())
+  lpBlocksList = (bIsData == FALSE) ? &cCodeBlocksList : &cDataBlocksList;
+  for (lpBlock=it.Begin(*lpBlocksList); lpBlock!=NULL; lpBlock=it.Next())
   {
 #if defined(_M_X64)
     if ((ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) >= nMin &&
@@ -267,7 +281,7 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_
     }
 #endif //_M_X64
   }
-  lpBlock = new CMemBlock(GetHandle(), nSlotSize);
+  lpBlock = new CMemBlock(GetHandle(), nSlotSize, bIsData);
   if (lpBlock == NULL)
     return NULL;
   if (lpBlock->Initialize(
@@ -279,17 +293,19 @@ LPBYTE CProcessesHandles::CEntry::AllocateStub(__in LPVOID lpRefAddr, __in SIZE_
     delete lpBlock;
     return NULL;
   }
-  cMemBlocksList.PushHead(lpBlock);
+  lpBlocksList->PushHead(lpBlock);
   return lpBlock->GetFreeSlot();
 }
 
-VOID CProcessesHandles::CEntry::FreeStub(__in LPVOID lpAddr)
+VOID CProcessesHandles::CEntry::FreeMem(__in LPVOID lpAddr, __in BOOL bIsData)
 {
   CNktSimpleLockNonReentrant cLock(&nStubAllocMutex);
   TNktLnkLst<CMemBlock>::Iterator it;
+  TNktLnkLst<CMemBlock> *lpBlocksList;
   CMemBlock *lpBlock;
 
-  for (lpBlock=it.Begin(cMemBlocksList); lpBlock!=NULL; lpBlock=it.Next())
+  lpBlocksList = (bIsData == FALSE) ? &cCodeBlocksList : &cDataBlocksList;
+  for (lpBlock=it.Begin(*lpBlocksList); lpBlock!=NULL; lpBlock=it.Next())
   {
     if (lpBlock->IsAddressInBlock(lpAddr) != FALSE)
     {
@@ -303,9 +319,8 @@ VOID CProcessesHandles::CEntry::FreeStub(__in LPVOID lpAddr)
 
 //-----------------------------------------------------------
 
-CProcessesHandles::CEntry::CMemBlock::CMemBlock(__in HANDLE _hProc,
-                                                __in SIZE_T _nSlotSize) : TNktLnkLstNode<CMemBlock>(),
-                                                                          CNktNtHeapBaseObj()
+CProcessesHandles::CEntry::CMemBlock::CMemBlock(__in HANDLE _hProc, __in SIZE_T _nSlotSize, __in BOOL _bIsData) :
+                                      TNktLnkLstNode<CMemBlock>(), CNktNtHeapBaseObj()
 {
   SIZE_T nFreeEntriesSize;
 
@@ -313,6 +328,7 @@ CProcessesHandles::CEntry::CMemBlock::CMemBlock(__in HANDLE _hProc,
   NKT_ASSERT((_nSlotSize && !(_nSlotSize & (_nSlotSize - 1))) != false); //_nSlotSize must be a power of 2
   hProc = _hProc;
   nSlotSize = _nSlotSize;
+  bIsData = _bIsData;
   nFreeEntriesSize = ((65536 / nSlotSize) + 7) >> 3;
   lpFreeEntries = (LPBYTE)NktHookLibHelpers::MemAlloc(nFreeEntriesSize);
   if (lpFreeEntries != NULL)
@@ -347,7 +363,7 @@ BOOL CProcessesHandles::CEntry::CMemBlock::Initialize()
   lpBaseAddress = NULL;
   nSize = 65536;
   nNtStatus = NktNtAllocateVirtualMemory(hProc, (PVOID*)&lpBaseAddress, 0, &nSize, MEM_RESERVE|MEM_COMMIT,
-                                         PAGE_EXECUTE_READWRITE);
+                                         (bIsData == FALSE) ? PAGE_EXECUTE_READ : PAGE_READWRITE);
   if (!NT_SUCCESS(nNtStatus))
     lpBaseAddress = NULL;
   return (lpBaseAddress != NULL) ? TRUE : FALSE;
@@ -374,7 +390,7 @@ BOOL CProcessesHandles::CEntry::CMemBlock::Initialize(__in ULONGLONG nMin, __in 
       lpBaseAddress = (LPBYTE)nMin;
       nSize = 65536;
       nNtStatus = NktNtAllocateVirtualMemory(hProc, (PVOID*)&lpBaseAddress, 0, &nSize, MEM_RESERVE|MEM_COMMIT,
-                                             PAGE_EXECUTE_READWRITE);
+                                             (bIsData == FALSE) ? PAGE_EXECUTE_READ : PAGE_READWRITE);
 
       if (NT_SUCCESS(nNtStatus))
         return TRUE;

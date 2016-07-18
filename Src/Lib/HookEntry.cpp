@@ -70,8 +70,10 @@ CHookEntry::CHookEntry(__in CProcessesHandles::CEntry *lpProcEntry, __in DWORD _
 
 CHookEntry::~CHookEntry()
 {
-  if (lpInjCodeAndData != NULL)
-    cProcEntry->FreeStub(lpInjCodeAndData);
+  if (lpInjCode != NULL)
+    cProcEntry->FreeMem(lpInjCode, FALSE);
+  if (lpInjData != NULL)
+    cProcEntry->FreeMem(lpInjData, TRUE);
   return;
 }
 
@@ -81,7 +83,7 @@ VOID CHookEntry::ZeroFields()
   lpOrigProc = NULL;
   lpNewProc = NULL;
   lpCall2Orig = NULL;
-  lpInjCodeAndData = NULL;
+  lpInjCode = lpInjData = NULL;
   nInjCodeAndDataSize = 0;
   nOriginalStubSize = nNewStubSize = 0;
   nInstalledCode = 0;

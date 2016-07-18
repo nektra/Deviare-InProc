@@ -151,7 +151,7 @@ static void NktHookLib_memset(__out void *lpDest, __in int nVal, __in size_t nCo
 
 #ifdef _M_IX86
 
-__declspec(naked) void _allshl_X()
+__declspec(naked) void _allshl_default_nkthooklib()
 {
   __asm
   {
@@ -181,7 +181,7 @@ ReturnZero:
   }
 }
 
-__declspec(naked) void _aullshr_X()
+__declspec(naked) void _aullshr_default_nkthooklib()
 {
   __asm
   {
@@ -210,7 +210,7 @@ ReturnZero:
 
 #pragma comment(linker, "/alternatename:__allshl=__allshl_default_nkthooklib")
 #pragma comment(linker, "/alternatename:__aullshr=__aullshr_default_nkthooklib")
-const void* _allshl_default_nkthooklib = (void*)&_allshl_X;
-const void* _aullshr_default_nkthooklib = (void*)&_aullshr_X;
+const void* _dummy__allshl_default_nkthooklib = (void*)&_allshl_default_nkthooklib;
+const void* _dummy__aullshr_default_nkthooklib = (void*)&_aullshr_default_nkthooklib;
 
 #endif // _M_IX86

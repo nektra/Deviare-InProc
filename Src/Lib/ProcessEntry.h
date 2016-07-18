@@ -69,8 +69,8 @@ public:
       return nPlatform;
       };
 
-    LPBYTE AllocateStub(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize);
-    VOID FreeStub(__in LPVOID lpAddr);
+    LPBYTE AllocateMem(__in LPVOID lpRefAddr, __in SIZE_T nSlotSize, __in BOOL bIsData);
+    VOID FreeMem(__in LPVOID lpAddr, __in BOOL bIsData);
 
   private:
     friend class CProcessesHandles;
@@ -78,7 +78,7 @@ public:
     class CMemBlock : public TNktLnkLstNode<CMemBlock>, public CNktNtHeapBaseObj
     {
     public:
-      CMemBlock(__in HANDLE hProc, __in SIZE_T nSlotSize);
+      CMemBlock(__in HANDLE hProc, __in SIZE_T nSlotSize, __in BOOL bIsData);
       ~CMemBlock();
 
 #if defined(_M_IX86)
@@ -107,6 +107,7 @@ public:
     private:
       HANDLE hProc;
       SIZE_T nSlotSize;
+      BOOL bIsData;
       LPBYTE lpBaseAddress;
       LPBYTE lpFreeEntries;
       SIZE_T nFreeCount;
@@ -119,7 +120,8 @@ public:
     LONG nPlatform;
     LONG volatile nRefCount;
     LONG volatile nStubAllocMutex;
-    TNktLnkLst<CMemBlock> cMemBlocksList;
+    TNktLnkLst<CMemBlock> cCodeBlocksList;
+    TNktLnkLst<CMemBlock> cDataBlocksList;
   };
 
 public:

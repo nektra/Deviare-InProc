@@ -71,7 +71,8 @@ private:
   LPBYTE lpOrigProc;
   LPBYTE lpNewProc;
   LPBYTE lpCall2Orig;
-  LPBYTE lpInjCodeAndData;
+  LPBYTE lpInjCode;
+  LPBYTE lpInjData;
   SIZE_T nInjCodeAndDataSize;
   BYTE aOriginalStub[HOOKENG_MAX_ORIGINAL_STUB_SIZE], aNewStub[HOOKENG_MAX_STUB_SIZE];
   BYTE aJumpStub[8];

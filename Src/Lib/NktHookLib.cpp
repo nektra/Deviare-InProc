@@ -52,11 +52,8 @@ using namespace NktHookLibHelpers;
   #define NKT_UNALIGNED
 #endif
 
-//(4096 bytes - 256 bytes of code) / 20 bytes per ministub = 160
 #define RETMINISTUBS_COUNT_X86                           160
-
-//(4096 bytes - 256 bytes of code) / 28 bytes per ministub = 137
-#define RETMINISTUBS_COUNT_X64                           137
+#define RETMINISTUBS_COUNT_X64                           120
 
 #define VALID_FLAGS (NKTHOOKLIB_DontSkipInitialJumps | NKTHOOKLIB_DontRemoveOnUnhook |     \
                      NKTHOOKLIB_DontSkipAnyJumps | NKTHOOKLIB_SkipNullProcsToHook |        \
@@ -276,11 +273,11 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
         if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
         {
           BYTE nVal = 1;
-          WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData, &nVal, 1);
+          WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData, &nVal, 1);
         }
         else
         {
-          _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000001);
+          _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000001);
         }
         if (lpHookEntry->nInstalledCode != 3)
           lpHookEntry->nInstalledCode = 2;
@@ -291,7 +288,7 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
           //set-up ranges
           sIpRange[0].nStart = (SIZE_T)(lpHookEntry->lpOrigProc);
           sIpRange[0].nEnd = sIpRange[0].nStart + 5;
-          sIpRange[1].nStart = (SIZE_T)(lpHookEntry->lpInjCodeAndData);
+          sIpRange[1].nStart = (SIZE_T)(lpHookEntry->lpInjCode);
           sIpRange[1].nEnd = sIpRange[1].nStart + lpHookEntry->nInjCodeAndDataSize;
           if (nIpRangesCount > 0)
           {
@@ -314,6 +311,7 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
         bOk = FALSE;
         if (dwOsErr == ERROR_SUCCESS)
         {
+          //modify page protection
           p = lpHookEntry->lpOrigProc;
           nSize = lpHookEntry->nOriginalStubSize;
           dw = 0;
@@ -336,9 +334,11 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
               bOk = WriteMem(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
                              lpHookEntry->aOriginalStub, lpHookEntry->nOriginalStubSize);
             }
+            //restore page protection
             p = lpHookEntry->lpOrigProc;
             nSize = lpHookEntry->nOriginalStubSize;
             NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
+            //flush cache
             NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
           }
         }
@@ -347,7 +347,8 @@ DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
       if (bOk == FALSE)
       {
         //if cannot release original blocks, mark them as uninstalled
-        lpHookEntry->lpInjCodeAndData = NULL;
+        lpHookEntry->lpInjCode = NULL;
+        lpHookEntry->lpInjData = NULL;
       }
       //delete entry
       int_data->cHooksList.Remove(lpHookEntry);
@@ -408,11 +409,11 @@ VOID CNktHookLib::UnhookAll()
       if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
       {
         BYTE nVal = 1;
-        NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData, &nVal, 1);
+        NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData, &nVal, 1);
       }
       else
       {
-        _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000001);
+        _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000001);
       }
       lpHookEntry->nInstalledCode = 3;
     }
@@ -467,15 +468,16 @@ DWORD CNktHookLib::RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, BO
             if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
             {
               BYTE nVal = 1;
-              NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData+1, &nVal, 1);
+              NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData+1, &nVal, 1);
             }
             else
             {
-              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000100);
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
             }
           }
           //mark entry as uninstalled
-          lpHookEntry->lpInjCodeAndData = NULL;
+          lpHookEntry->lpInjData = NULL;
+          lpHookEntry->lpInjCode = NULL;
           //delete entry
           int_data->cHooksList.Remove(lpHookEntry);
           cToDeleteList.PushTail(lpHookEntry);
@@ -524,14 +526,14 @@ DWORD CNktHookLib::EnableHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __
           if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
           {
             BYTE nVal = (bEnable != FALSE) ? 0 : 1;
-            NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjCodeAndData+1, &nVal, 1);
+            NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData+1, &nVal, 1);
           }
           else
           {
             if (bEnable != FALSE)
-              _InterlockedAnd((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0xFFFF00FF);
+              _InterlockedAnd((LONG volatile *)(lpHookEntry->lpInjData), 0xFFFF00FF);
             else
-              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjCodeAndData), 0x00000100);
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
           }
           break;
         }
@@ -666,8 +668,9 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     CProcessesHandles::CEntryPtr cProcEntry;
     TNktLnkLst<CHookEntry> cNewHooksList;
     CHookEntry *lpHookEntry, *lpFirstHookEntryInRound;
-    SIZE_T i, k, nSize, nThisRound, nSizeOfSizeT;
-    BYTE aCodeBlock[256], *p, *lpRetStubs[2], *lpCallOrigOfs[2];
+    SIZE_T i, k, nSizeOfSizeT, nSize, nThisRound;
+    LPBYTE p, lpRetStubs[3], lpCallOrigOfs[2], lpTempLoc;
+    BYTE aCodeBlock[4096];
     DWORD dw;
     NTSTATUS nNtStatus;
 
@@ -675,6 +678,19 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     cProcEntry.Attach(int_data->cProcHdrMgr.Get(dwPid));
     if (cProcEntry == NULL)
       return ERROR_ACCESS_DENIED;
+    //calculate the size of a SIZE_T value
+    nSizeOfSizeT = 0;
+    switch (cProcEntry->GetPlatform())
+    {
+      case NKTHOOKLIB_ProcessPlatformX86:
+        nSizeOfSizeT = 4;
+        break;
+#if defined(_M_X64)
+      case NKTHOOKLIB_ProcessPlatformX64:
+        nSizeOfSizeT = 8;
+        break;
+#endif //_M_X64
+    }
     //process items
     nHookIdx = 0;
     dwOsErr = ERROR_SUCCESS;
@@ -692,7 +708,9 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       while (nHookIdx+nThisRound < nCount &&
              aHookInfo[nHookIdx+nThisRound].lpProcToHook != aHookInfo[nHookIdx].lpProcToHook &&
              aHookInfo[nHookIdx+nThisRound].lpProcToHook != NULL)
-             nThisRound++;
+      {
+        nThisRound++;
+      }
       //process
       lpFirstHookEntryInRound = NULL;
       for (k=0; k<nThisRound; k++)
@@ -725,61 +743,47 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         if (dwOsErr != ERROR_SUCCESS)
           break;
         //allocate memory for inject code in target process
-        lpHookEntry->lpInjCodeAndData =
-          cProcEntry->AllocateStub(lpHookEntry->lpOrigProc, FlagOn(lpHookEntry->dwFlags,
-                                                                   NKTHOOKLIB_DisallowReentrancy) ? 4096 : 256);
-        if (lpHookEntry->lpInjCodeAndData == NULL)
+        i = FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy) ? 4096 : 256;
+        lpHookEntry->lpInjCode = cProcEntry->AllocateMem(lpHookEntry->lpOrigProc, i, FALSE);
+        if (lpHookEntry->lpInjCode == NULL)
         {
           dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
           break;
         }
-        lpRetStubs[0] = lpRetStubs[1] = NULL;
-        //calculate the size of a size_t value
-        nSizeOfSizeT = 0;
+        //allocate memory for inject data in target process
         switch (cProcEntry->GetPlatform())
         {
-          case NKTHOOKLIB_ProcessPlatformX86:
-            nSizeOfSizeT = 4;
-            break;
+        case NKTHOOKLIB_ProcessPlatformX86:
+          i = nSizeOfSizeT + 2 * nSizeOfSizeT * RETMINISTUBS_COUNT_X86;
+          break;
 #if defined(_M_X64)
-          case NKTHOOKLIB_ProcessPlatformX64:
-            nSizeOfSizeT = 8;
-            break;
+        case NKTHOOKLIB_ProcessPlatformX64:
+          i = nSizeOfSizeT + 2 * nSizeOfSizeT * RETMINISTUBS_COUNT_X64;
+          break;
 #endif //_M_X64
         }
-        //build new code and begin with flags location
+        lpHookEntry->lpInjData = cProcEntry->AllocateMem(lpHookEntry->lpOrigProc, i, TRUE);
+        if (lpHookEntry->lpInjData == NULL)
+        {
+          dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
+          break;
+        }
+        //write flags. if current process, hooks are initially disabled to avoid issues when hooking api's used by this routine
+        dw = (bIsRemoteProcess == FALSE || FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontEnableHooks)) ? 0x00000100 : 0;
+        if (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjData, &dw, sizeof(DWORD)) == FALSE)
+        {
+          dwOsErr = ERROR_ACCESS_DENIED;
+          break;
+        }
+        //build new code
         p = aCodeBlock;
-        //flags
-        MemSet(p, 0, nSizeOfSizeT);
-        if (bIsRemoteProcess == FALSE || FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontEnableHooks))
-        {
-          //if current process, hooks are initially disabled to avoid issues when hooking api's used by this routine
-          *(p+1) = 0x01; //disable flag
-        }
-        p += nSizeOfSizeT;
-        //if we use indirect jumps, store the pointer to our code start here
-        if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_UseAbsoluteIndirectJumps))
-        {
-          //calculate code start
-          switch (cProcEntry->GetPlatform())
-          {
-            case NKTHOOKLIB_ProcessPlatformX86:
-              *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData + 2 * nSizeOfSizeT);
-              p += sizeof(ULONG);
-              break;
-#if defined(_M_X64)
-            case NKTHOOKLIB_ProcessPlatformX64:
-              *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpInjCodeAndData + 2 * nSizeOfSizeT);
-              p += sizeof(ULONGLONG);
-              break;
-#endif //_M_X64
-          }
-        }
-        //write some NOPs for hot-patching double hooks
-        MemSet(p, 0x90, 8);
+        MemSet(aCodeBlock, 0x90, sizeof(aCodeBlock));
+        //skip first eight NOP bytes for hot-patching double hooks
         p += 8;
         //bridge
+        lpTempLoc = NULL;
         lpCallOrigOfs[0] = lpCallOrigOfs[1] = NULL;
+        lpRetStubs[0] = lpRetStubs[1] = lpRetStubs[2] = NULL;
         switch (cProcEntry->GetPlatform())
         {
           case NKTHOOKLIB_ProcessPlatformX86:
@@ -792,7 +796,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             }
             //----
             *p++ = 0xBA;                                                         //mov   edx, OFFSET lpInjCode
-            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData);
+            *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjData);
             p += sizeof(ULONG);
             //----
             *p++ = 0xF7;  *p++ = 0x02;                                           //test  DWORD PTR [edx], 00000101h
@@ -808,7 +812,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *((ULONG NKT_UNALIGNED*)p) = 0x18;
               p += sizeof(ULONG);
               //----
-              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x24;                           //mov   eax, DWORD PTR [eax+24h]
+              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x24;                           //mov   eax, DWORD PTR [eax+24h] ;get thread ID
               //----
               *p++ = 0xBA;                                                       //mov   edx, OFFSET lpReturn
               lpRetStubs[0] = p;
@@ -823,8 +827,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
               lpCallOrigOfs[1] = p++;
               //----
-              *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 14h
-              *((ULONG NKT_UNALIGNED*)p) = 0x0014;
+              *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 8h
+              *((ULONG NKT_UNALIGNED*)p) = 8;
               p += sizeof(ULONG);
               //----
               *p++ = 0xE2;  *p++ = 0xF4;                                         //loop  L1
@@ -845,22 +849,34 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0x74;  *p++ = 0x0A;                                         //jz    CHG_RETADDR
               //----
-              *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 14h
-              *((ULONG NKT_UNALIGNED*)p) = 0x0014;
+              *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 8h
+              *((ULONG NKT_UNALIGNED*)p) = 8;
               p += sizeof(ULONG);
               //----
               *p++ = 0xE2;  *p++ = 0xF0;                                         //loop  L2
               //----
-              *p++ = 0xEB;  *p++ = 0x17;                                         //jmp   call_hooked
+              *p++ = 0xEB;                                                       //jmp   call_hooked
+              lpTempLoc = p++;
               //---- CHG_RETADDR:
-              *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   eax, DWORD PTR [esp+10h]
+              *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   eax, DWORD PTR [esp+10h] ;original return address
               //----
-              *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x05;                           //mov   DWORD PTR [edx+5], eax
+              *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x04;                           //mov   DWORD PTR [edx+4], eax
               //----
-              *p++ = 0x8D;  *p++ = 0x42;  *p++ = 0x04;                           //lea   eax, DWORD PTR [edx+4]
+              *p++ = 0xB8;                                                       //mov   eax, RETMINISTUBS_COUNT_X86
+              *((ULONG NKT_UNALIGNED*)p) = RETMINISTUBS_COUNT_X86;
+              p += sizeof(ULONG);
+              //----
+              *p++ = 0x29;  *p++ = 0xC8;                                         //sub   eax, ecx
+              //----
+              *p++ = 0xC1;  *p++ = 0xE0;  *p++ = 0x04;                           //shl   eax, 4
+              //----
+              *p++ = 0x05;                                                       //add   eax, OFFSET ministub return
+              lpRetStubs[2] = p;
+              p += sizeof(ULONG);
               //----
               *p++ = 0x89;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   DWORD PTR [esp+10h], eax
               //----
+              *lpTempLoc = (BYTE)(p - lpTempLoc - 1);
               *p++ = 0x59;                                                       //pop   ecx
               *p++ = 0x5B;                                                       //pop   ebx
               *p++ = 0x58;                                                       //pop   eax
@@ -869,13 +885,13 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             //----
             *p++ = 0xE9;                                                         //jmp   hooked proc
             *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpNewProc) -
-              ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData) +
-              (ULONG)(ULONG_PTR)(p+4-aCodeBlock));
+                                         ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCode) +
+                                         (ULONG)(ULONG_PTR)(p + 4 - aCodeBlock));
             p += sizeof(ULONG);
             //---- CALL_ORIGINAL:
-            *lpCallOrigOfs[0] = (BYTE)(p - (lpCallOrigOfs[0]+1));
+            *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
             if (lpCallOrigOfs[1] != NULL)
-              *lpCallOrigOfs[1] = (BYTE)(p - (lpCallOrigOfs[1]+1));
+              *lpCallOrigOfs[1] = (BYTE)(p - lpCallOrigOfs[1] - 1);
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
               *p++ = 0x59;                                                       //pop   ecx
@@ -883,22 +899,22 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x58;                                                       //pop   eax
             }
             *p++ = 0x5A;                                                         //pop   edx
-            lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock);
+            lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCode + (SIZE_T)(p-aCodeBlock);
             MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
             p += lpHookEntry->nNewStubSize;
             //----
             *p++ = 0xE9;                                                         //jmp original proc after stub
             *((ULONG NKT_UNALIGNED*)p) = ((ULONG)(ULONG_PTR)(lpHookEntry->lpOrigProc) +
                                           (ULONG)(ULONG_PTR)(lpHookEntry->nOriginalStubSize)) -
-                                          ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCodeAndData) +
-                                          (ULONG)(ULONG_PTR)(p+4-aCodeBlock));
+                                          ((ULONG)(ULONG_PTR)(lpHookEntry->lpInjCode) +
+                                          (ULONG)(ULONG_PTR)(p+ 4 - aCodeBlock));
             p += sizeof(ULONG);
             //----
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
               p = (LPBYTE)(((SIZE_T)p + 3) & (~3)); //align 4
               *((ULONG NKT_UNALIGNED*)lpRetStubs[0]) = *((ULONG NKT_UNALIGNED*)lpRetStubs[1]) =
-                (ULONG)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock)));
+                  (ULONG)((ULONG_PTR)(lpHookEntry->lpInjData + 4));
             }
             break;
 
@@ -912,8 +928,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x51;                                                       //push  rcx
             }
             //----
-            *p++ = 0x48;  *p++ = 0xBA;                                           //mov   rdx, OFFSET lpInjCode
-            *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpInjCodeAndData);
+            *p++ = 0x48;  *p++ = 0xBA;                                           //mov   rdx, OFFSET lpInjData
+            *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpInjData);
             p += sizeof(ULONGLONG);
             //----
             *p++ = 0x48;  *p++ = 0xF7;  *p++ = 0x02;                             //test  QWORD PTR [rdx], 00000101h
@@ -930,7 +946,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *((ULONG NKT_UNALIGNED*)p) = 0x30;
               p += sizeof(ULONG);
               //----
-              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x48;                           //mov   eax, DWORD PTR [rax+48h]
+              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x48;                           //mov   eax, DWORD PTR [rax+48h] ;get thread ID
               //----
               *p++ = 0x48;  *p++ = 0xBA;                                         //mov   rdx, OFFSET lpReturn
               lpRetStubs[0] = p;
@@ -945,8 +961,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
               lpCallOrigOfs[1] = p++;
               //----
-              *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 1Ch
-              *((ULONG NKT_UNALIGNED*)p) = 0x001C;
+              *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 10h
+              *((ULONG NKT_UNALIGNED*)p) = 16;
               p += sizeof(ULONG);
               //----
               *p++ = 0xE2;  *p++ = 0xF3;                                         //loop  L1
@@ -967,28 +983,38 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0x74;  *p++ = 0x0B;                                         //jz    CHG_RETADDR
               //----
-              *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 1Ch
-              *((ULONG NKT_UNALIGNED*)p) = 0x001C;
+              *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 10h
+              *((ULONG NKT_UNALIGNED*)p) = 16;
               p += sizeof(ULONG);
               //----
               *p++ = 0xE2;  *p++ = 0xEE;                                         //loop  L2
               //----
-              *p++ = 0xEB;  *p++ = 0x2A;                                         //jmp   call_hooked
+              *p++ = 0xEB;                                                       //jmp   call_hooked
+              lpTempLoc = p++;
               //---- CHG_RETADDR:
-              *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;             //mov   rax, QWORD PTR [rsp+20h]
+              *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;             //mov   rax, QWORD PTR [rsp+20h] ;original return address
               *p++ = 0x20;
               //----
-              *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x05;                           //mov   DWORD PTR [rdx+5], eax
+              *p++ = 0x48;  *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x08;             //mov   QWORD PTR [rdx+8], rax
               //----
-              *p++ = 0x48;  *p++ = 0xC1;  *p++ = 0xE8;  *p++ = 0x20;             //shr   rax, 20h
+              *p++ = 0x48;  *p++ = 0xB8;                                         //mov   rax, RETMINISTUBS_COUNT_X64
+              *((ULONGLONG NKT_UNALIGNED*)p) = RETMINISTUBS_COUNT_X64;
+              p += sizeof(ULONGLONG);
               //----
-              *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x0D;                           //mov   DWORD PTR [rdx+13], eax
+              *p++ = 0x48;  *p++ = 0x29;  *p++ = 0xC8;                           //sub   rax, rcx
+                                                                                 //----
+              *p++ = 0x48;  *p++ = 0xC1;  *p++ = 0xE0;  *p++ = 0x05;             //shl   rax, 5
               //----
-              *p++ = 0x48;  *p++ = 0x8D;  *p++ = 0x42;  *p++ = 0x04;             //lea   rax, QWORD PTR [rdx+4]
+              *p++ = 0x48;  *p++ = 0xB9;                                         //mov   rcx, OFFSET ministub return
+              lpRetStubs[2] = p;
+              p += sizeof(ULONGLONG);
+              //----
+              *p++ = 0x48;  *p++ = 0x01;  *p++ = 0xC8;                           //add   rax, rcx
               //----
               *p++ = 0x48;  *p++ = 0x89;  *p++ = 0x44;  *p++ = 0x24;             //mov   QWORD PTR [rsp+20h], rax
               *p++ = 0x20;
               //----
+              *lpTempLoc = (BYTE)(p - lpTempLoc - 1);
               *p++ = 0x59;                                                       //pop   rcx
               *p++ = 0x5B;                                                       //pop   rbx
               *p++ = 0x58;                                                       //pop   rax
@@ -1001,9 +1027,9 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpNewProc);
             p += sizeof(ULONGLONG);
             //---- CALL_ORIGINAL:
-            *lpCallOrigOfs[0] = (BYTE)(p - (lpCallOrigOfs[0]+1));
+            *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
             if (lpCallOrigOfs[1] != NULL)
-              *lpCallOrigOfs[1] = (BYTE)(p - (lpCallOrigOfs[1]+1));
+              *lpCallOrigOfs[1] = (BYTE)(p - lpCallOrigOfs[1] - 1);
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
               *p++ = 0x59;                                                       //pop   rcx
@@ -1011,7 +1037,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x58;                                                       //pop   rax
             }
             *p++ = 0x5A;                                                         //pop   rdx
-            lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCodeAndData + (SIZE_T)(p-aCodeBlock);
+            lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCode + (SIZE_T)(p - aCodeBlock);
             MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
             p += lpHookEntry->nNewStubSize;
             //----
@@ -1025,90 +1051,128 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             {
               p = (LPBYTE)(((SIZE_T)p + 3) & (~3)); //align 4
               *((ULONGLONG NKT_UNALIGNED*)lpRetStubs[0]) = *((ULONGLONG NKT_UNALIGNED*)lpRetStubs[1]) =
-                ((ULONGLONG)(lpHookEntry->lpInjCodeAndData) + (ULONGLONG)(p-aCodeBlock));
+                  ((ULONGLONG)(lpHookEntry->lpInjData) + 8);
             }
             break;
 #endif //_M_X64
         }
-        //calculate injected code size
-        lpHookEntry->nInjCodeAndDataSize = (SIZE_T)(p - aCodeBlock);
-        NKT_ASSERT(lpHookEntry->nInjCodeAndDataSize < sizeof(aCodeBlock));
-        //write inject code
-        if (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData, aCodeBlock,
-          lpHookEntry->nInjCodeAndDataSize) == FALSE)
-        {
-          dwOsErr = ERROR_ACCESS_DENIED;
-          break;
-        }
-        NktNtFlushInstructionCache(cProcEntry->GetHandle(), lpHookEntry->lpInjCodeAndData,
-                                   (ULONG)(lpHookEntry->nInjCodeAndDataSize));
         //write return mini stubs
         if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
         {
-          p = lpHookEntry->lpInjCodeAndData + lpHookEntry->nInjCodeAndDataSize;
+          SIZE_T nOfs;
+
+          p = (LPBYTE)(((SIZE_T)p + 3) & (~3)); //align 4
+          nOfs = (SIZE_T)(lpHookEntry->lpInjData) + nSizeOfSizeT;
           switch (cProcEntry->GetPlatform())
           {
             case NKTHOOKLIB_ProcessPlatformX86:
-              for (i=0; i<RETMINISTUBS_COUNT_X86; i++)
+              *((ULONG NKT_UNALIGNED*)lpRetStubs[2]) =
+                  (ULONG)((ULONG_PTR)(lpHookEntry->lpInjCode + (ULONG_PTR)(p - aCodeBlock)));
+              for (i=0; i<RETMINISTUBS_COUNT_X86; i++,nOfs+=8)
               {
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[0]) = 0;                          //DD    0h
+                *p++ = 0xFF;  *p++ = 0x35;                                          //push DWORD PTR [original return]
+                *((ULONG NKT_UNALIGNED*)p) = (ULONG)(nOfs + 4);
+                p += sizeof(ULONG);
                 //----
-                aCodeBlock[4] = 0x68;                                                 //push  0h
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[5]) = 0;
+                *p++ = 0xF0;  *p++ = 0x83;  *p++ = 0x25;                            //lock and DWORD PTR [thread], 0
+                *((ULONG NKT_UNALIGNED*)p) = (ULONG)nOfs;
+                p += sizeof(ULONG);
+                *p++ = 0x00;
                 //----
-                aCodeBlock[9] = 0xF0;  aCodeBlock[10] = 0x83;  aCodeBlock[11] = 0x25; //lock and DWORD PTR [ministub], 0
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[12]) = (ULONG)((ULONG_PTR)p);
-                aCodeBlock[16] = 0x00;
+                *p++ = 0xC3;                                                        //ret
                 //----
-                aCodeBlock[17] = 0xC3;                                                //ret
-                //fill with NOPs
-                aCodeBlock[18] = aCodeBlock[19] = 0x90;
-                //write
-                if (WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 20) == FALSE)
-                {
-                  dwOsErr = ERROR_ACCESS_DENIED;
-                  break;
-                }
-                p += 20;
+                *p++ = 0x90;                                                        //one nop to complete 16 bytes
               }
-              lpHookEntry->nInjCodeAndDataSize += RETMINISTUBS_COUNT_X86 * 20;
               break;
 
 #if defined(_M_X64)
             case NKTHOOKLIB_ProcessPlatformX64:
-              for (i=0; i<RETMINISTUBS_COUNT_X64; i++)
+              *((ULONGLONG NKT_UNALIGNED*)lpRetStubs[2]) =
+                  (ULONGLONG)((ULONG_PTR)(lpHookEntry->lpInjCode + (ULONG_PTR)(p - aCodeBlock)));
+              for (i=0; i<RETMINISTUBS_COUNT_X64; i++,nOfs+=16)
               {
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[0]) = 0;                          //DD    0h
+                *p++ = 0x50;                                                        //push rax
                 //----
-                aCodeBlock[4] = 0x68;                                                 //push  0h
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[5]) = 0;
+                *p++ = 0x50;                                                        //push rax
                 //----
-                aCodeBlock[9] = 0xC7;  aCodeBlock[10] = 0x44;  aCodeBlock[11] = 0x24; //mov   dword ptr [rsp+4], 0h
-                aCodeBlock[12] = 0x04;
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[13]) = 0;
+                *p++ = 0x51;                                                        //push rcx
                 //----
-                aCodeBlock[17] = 0xF0;  aCodeBlock[18] = 0x83;  aCodeBlock[19] = 0x25; //lock and [ministub], 0
-                *((ULONG NKT_UNALIGNED*)&aCodeBlock[20]) = 0xFFFFFFE7;
-                aCodeBlock[24] = 0x00;
+                *p++ = 0x48;  *p++ = 0xB9;                                          //mov rcx, OFFSET [thread/original return]
+                *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)nOfs;
+                p += sizeof(ULONGLONG);
                 //----
-                aCodeBlock[25] = 0xC3;                                                //ret
-                //fill with NOPs
-                aCodeBlock[26] = aCodeBlock[27] = 0x90;
-                //write
-                if (WriteMem(cProcEntry->GetHandle(), p, aCodeBlock, 28) == FALSE)
-                {
-                  dwOsErr = ERROR_ACCESS_DENIED;
-                  break;
-                }
-                p += 28;
+                *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x41;  *p++ = 0x08;              //mov rax, QWORD PTR [rcx+8] ;orig ret
+                //----
+                *p++ = 0x48;  *p++ = 0x89;  *p++ = 0x44;  *p++ = 0x24;              //mov QWORD PTR [rsp+0x10], rax
+                *p++ = 0x10;
+                //----
+                *p++ = 0xF0;  *p++ = 0x48;  *p++ = 0x83;  *p++ = 0x21;              //lock and QWORD PTR [rcxsp+], 0
+                *p++ = 0x00;
+                //----
+                *p++ = 0x59;                                                        //pop rcx
+                //----
+                *p++ = 0x58;                                                        //pop rax
+                //----
+                *p++ = 0xC3;                                                        //ret
+                //----
+                *p++ = 0x90;  *p++ = 0x90;                                          //two nop to complete 32 bytes
               }
-              lpHookEntry->nInjCodeAndDataSize += RETMINISTUBS_COUNT_X64 * 28;
               break;
 #endif //_M_X64
           }
-          if (dwOsErr != ERROR_SUCCESS)
-            break;
         }
+        //if we use indirect jumps, store the pointer to our code start here
+        if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_UseAbsoluteIndirectJumps))
+        {
+          lpTempLoc = lpHookEntry->lpInjCode + (p - aCodeBlock);
+          //calculate code start
+          switch (cProcEntry->GetPlatform())
+          {
+            case NKTHOOKLIB_ProcessPlatformX86:
+              *((ULONG NKT_UNALIGNED*)p) = (ULONG)(ULONG_PTR)(lpHookEntry->lpInjCode);
+              p += sizeof(ULONG);
+              break;
+#if defined(_M_X64)
+            case NKTHOOKLIB_ProcessPlatformX64:
+              *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpInjCode);
+              p += sizeof(ULONGLONG);
+              break;
+#endif //_M_X64
+          }
+        }
+        //calculate injected code size
+        lpHookEntry->nInjCodeAndDataSize = (SIZE_T)(p - aCodeBlock);
+        NKT_ASSERT(lpHookEntry->nInjCodeAndDataSize < sizeof(aCodeBlock));
+        //modify page protection
+        p = lpHookEntry->lpInjCode;
+        nSize = lpHookEntry->nInjCodeAndDataSize;
+        dw = 0;
+        nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, PAGE_EXECUTE_READWRITE, &dw);
+        if (!NT_SUCCESS(nNtStatus))
+        {
+          p = lpHookEntry->lpInjCode;
+          nSize = lpHookEntry->nInjCodeAndDataSize;
+          dw = 0;
+          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, PAGE_EXECUTE_WRITECOPY, &dw);
+        }
+        if (!NT_SUCCESS(nNtStatus))
+        {
+          dwOsErr = ERROR_ACCESS_DENIED;
+          break;
+        }
+        //write inject code
+        dwOsErr = (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjCode, aCodeBlock,
+                            lpHookEntry->nInjCodeAndDataSize) != FALSE) ? ERROR_SUCCESS : ERROR_ACCESS_DENIED;
+        //restore page protection
+        p = lpHookEntry->lpInjCode;
+        nSize = lpHookEntry->nInjCodeAndDataSize;
+        NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
+        //error?
+        if (dwOsErr != ERROR_SUCCESS)
+          break;
+        //flush cache
+        NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpInjCode,
+                                   (ULONG)(lpHookEntry->nInjCodeAndDataSize));
         //create "jump" stub to insert in the original proc
         if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_UseAbsoluteIndirectJumps))
         {
@@ -1117,13 +1181,12 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           {
             case NKTHOOKLIB_ProcessPlatformX86:
               //32-bit jumps are absolute
-              dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData + nSizeOfSizeT));
+              dw = (DWORD)((ULONG_PTR)lpTempLoc);
               break;
 #if defined(_M_X64)
             case NKTHOOKLIB_ProcessPlatformX64:
               //64-bit jumps are relative
-              dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT)) -
-                (DWORD)((ULONG_PTR)(lpHookEntry->lpOrigProc+6));
+              dw = (DWORD)((ULONG_PTR)lpTempLoc - (ULONG_PTR)(lpHookEntry->lpOrigProc+6));
               break;
 #endif //_M_X64
           }
@@ -1133,8 +1196,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         {
           //32-bit & 64-bit jumps are relative
           lpHookEntry->aJumpStub[0] = 0xE9; //JMP
-          dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCodeAndData+nSizeOfSizeT)) -
-            (DWORD)((ULONG_PTR)(lpHookEntry->lpOrigProc+5));
+          dw = (DWORD)((ULONG_PTR)(lpHookEntry->lpInjCode) - (ULONG_PTR)(lpHookEntry->lpOrigProc+5));
           *((DWORD NKT_UNALIGNED*)(lpHookEntry->aJumpStub+1)) = dw;
         }
         //set id
@@ -1272,7 +1334,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         {
           DebugPrint("NktHookLib: Hook installed. Proc @ 0x%IX -> 0x%IX (Stub @ 0x%IX) \r\n",
                      (SIZE_T)(lpHookEntry->lpOrigProc), (SIZE_T)(lpHookEntry->lpNewProc),
-                     (SIZE_T)(lpHookEntry->lpInjCodeAndData));
+                     (SIZE_T)(lpHookEntry->lpInjCode));
         }
         int_data->cHooksList.PushTail(lpHookEntry);
       }
