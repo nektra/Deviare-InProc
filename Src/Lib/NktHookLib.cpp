@@ -61,6 +61,7 @@ using namespace NktHookLibHelpers;
                      NKTHOOKLIB_DontEnableHooks)
 
 #define INTERNALFLAG_CallToOriginalIsPtr2Ptr      0x80000000
+#define INTERNALFLAG_HookInfoArrayIsPtr           0x40000000
 
 #define FlagOn(x, _flag) ((x) & (_flag))
 
@@ -154,6 +155,12 @@ DWORD CNktHookLib::Hook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in 
   return HookCommon(aHookInfo, nCount, NktHookLibHelpers::GetCurrentProcessId(), dwFlags & VALID_FLAGS);
 }
 
+DWORD CNktHookLib::Hook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwFlags)
+{
+  return HookCommon(aHookInfo, nCount, NktHookLibHelpers::GetCurrentProcessId(),
+                    (dwFlags & VALID_FLAGS) | INTERNALFLAG_HookInfoArrayIsPtr);
+}
+
 DWORD CNktHookLib::RemoteHook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOriginal, __in DWORD dwPid,
                               __in LPVOID lpProcToHook, __in LPVOID lpNewProcAddr, __in DWORD dwFlags)
 {
@@ -178,6 +185,11 @@ DWORD CNktHookLib::RemoteHook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOri
 DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags)
 {
   return HookCommon(aHookInfo, nCount, dwPid, dwFlags & VALID_FLAGS);
+}
+
+DWORD CNktHookLib::RemoteHook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags)
+{
+  return HookCommon(aHookInfo, nCount, dwPid, (dwFlags & VALID_FLAGS) | INTERNALFLAG_CallToOriginalIsPtr2Ptr);
 }
 
 DWORD CNktHookLib::RemoteHook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOriginal, __in HANDLE hProcess,
@@ -224,6 +236,26 @@ DWORD CNktHookLib::RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
   return HookCommon(aHookInfo, nCount, dwPid, dwFlags & VALID_FLAGS);
 }
 
+DWORD CNktHookLib::RemoteHook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in HANDLE hProcess,
+                              __in DWORD dwFlags)
+{
+  DWORD dwPid;
+  SIZE_T nHookIdx;
+
+  dwPid = GetProcessIdFromHandle(hProcess);
+  if (dwPid == 0)
+  {
+    for (nHookIdx = 0; nHookIdx<nCount; nHookIdx++)
+    {
+      aHookInfo[nHookIdx]->nHookId = 0;
+      if (aHookInfo[nHookIdx]->lpCallOriginal != NULL)
+        aHookInfo[nHookIdx]->lpCallOriginal = NULL;
+    }
+    return ERROR_INVALID_PARAMETER;
+  }
+  return HookCommon(aHookInfo, nCount, dwPid, (dwFlags & VALID_FLAGS) | INTERNALFLAG_CallToOriginalIsPtr2Ptr);
+}
+
 DWORD CNktHookLib::Unhook(__in SIZE_T nHookId)
 {
   HOOK_INFO sHook;
@@ -234,131 +266,12 @@ DWORD CNktHookLib::Unhook(__in SIZE_T nHookId)
 
 DWORD CNktHookLib::Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount)
 {
-  TNktLnkLst<CHookEntry> cToDeleteList;
-  CHookEntry *lpHookEntry;
+  return UnhookCommon(aHookInfo, nCount, 0);
+}
 
-  if (aHookInfo == NULL || nCount == 0)
-    return ERROR_INVALID_PARAMETER;
-  if (lpInternals != NULL)
-  {
-    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
-    CNktThreadSuspend::IP_RANGE sIpRange[2];
-    TNktLnkLst<CHookEntry>::Iterator it;
-    BYTE aTempBuf[8], *p;
-    SIZE_T nSize, nHookIdx, nIpRangesCount;
-    DWORD dw, dwOsErr, dwCurrPid;
-    BOOL bOk;
-    NTSTATUS nNtStatus;
-
-    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
-    for (nHookIdx=nIpRangesCount=0; nHookIdx<nCount; nHookIdx++)
-    {
-      if (aHookInfo[nHookIdx].nHookId == 0)
-        continue; //avoid transversing hook entry list
-      for (lpHookEntry=it.Begin(int_data->cHooksList); lpHookEntry!=NULL; lpHookEntry=it.Next())
-      {
-        if (lpHookEntry->nId == aHookInfo[nHookIdx].nHookId)
-          break;
-      }
-      if (lpHookEntry == NULL)
-        continue; //hook not found
-      //mark the hook as uninstalled
-      if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontRemoveOnUnhook))
-      {
-        bOk = FALSE;
-      }
-      else
-      {
-        if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
-        {
-          BYTE nVal = 1;
-          WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData, &nVal, 1);
-        }
-        else
-        {
-          _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000001);
-        }
-        if (lpHookEntry->nInstalledCode != 3)
-          lpHookEntry->nInstalledCode = 2;
-        //suspend threads if needed
-        dwOsErr = ERROR_SUCCESS;
-        if (int_data->sOptions.bSuspendThreads != FALSE)
-        {
-          //set-up ranges
-          sIpRange[0].nStart = (SIZE_T)(lpHookEntry->lpOrigProc);
-          sIpRange[0].nEnd = sIpRange[0].nStart + 5;
-          sIpRange[1].nStart = (SIZE_T)(lpHookEntry->lpInjCode);
-          sIpRange[1].nEnd = sIpRange[1].nStart + lpHookEntry->nInjCodeAndDataSize;
-          if (nIpRangesCount > 0)
-          {
-            //check if a previous thread suspension can be used for the current unhook item
-            if (int_data->cThreadSuspender.CheckIfThreadIsInRange(sIpRange[0].nStart, sIpRange[0].nEnd) != FALSE ||
-                int_data->cThreadSuspender.CheckIfThreadIsInRange(sIpRange[1].nStart, sIpRange[1].nEnd) != FALSE)
-            {
-              nIpRangesCount = 0;
-              int_data->cThreadSuspender.ResumeAll(); //resume last
-            }
-          }
-          //suspend threads
-          if (nIpRangesCount == 0)
-          {
-            nIpRangesCount = X_ARRAYLEN(sIpRange);
-            dwOsErr = int_data->cThreadSuspender.SuspendAll(lpHookEntry->cProcEntry->GetPid(), sIpRange, nIpRangesCount);
-          }
-        }
-        //do unhook
-        bOk = FALSE;
-        if (dwOsErr == ERROR_SUCCESS)
-        {
-          //modify page protection
-          p = lpHookEntry->lpOrigProc;
-          nSize = lpHookEntry->nOriginalStubSize;
-          dw = 0;
-          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
-                                                PAGE_EXECUTE_READWRITE, &dw);
-          if (!NT_SUCCESS(nNtStatus))
-          {
-            p = lpHookEntry->lpOrigProc;
-            nSize = lpHookEntry->nOriginalStubSize;
-            dw = 0;
-            nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
-                                                  PAGE_EXECUTE_WRITECOPY, &dw);
-          }
-          if (NT_SUCCESS(nNtStatus))
-          {
-            if (ReadMem(lpHookEntry->cProcEntry->GetHandle(), aTempBuf, lpHookEntry->lpOrigProc,
-                        lpHookEntry->GetJumpToHookBytes()) == lpHookEntry->GetJumpToHookBytes() &&
-                MemCompare(aTempBuf, lpHookEntry->aJumpStub, lpHookEntry->GetJumpToHookBytes()) == 0)
-            {
-              bOk = WriteMem(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
-                             lpHookEntry->aOriginalStub, lpHookEntry->nOriginalStubSize);
-            }
-            //restore page protection
-            p = lpHookEntry->lpOrigProc;
-            nSize = lpHookEntry->nOriginalStubSize;
-            NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
-            //flush cache
-            NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
-          }
-        }
-      }
-      //check result
-      if (bOk == FALSE)
-      {
-        //if cannot release original blocks, mark them as uninstalled
-        lpHookEntry->lpInjCode = NULL;
-        lpHookEntry->lpInjData = NULL;
-      }
-      //delete entry
-      int_data->cHooksList.Remove(lpHookEntry);
-      cToDeleteList.PushTail(lpHookEntry);
-    }
-  }
-  //delete when no threads are suspended to avoid deadlocks
-  while ((lpHookEntry = cToDeleteList.PopHead()) != NULL)
-    delete lpHookEntry;
-  return ERROR_SUCCESS;
+DWORD CNktHookLib::Unhook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount)
+{
+  return UnhookCommon(aHookInfo, nCount, INTERNALFLAG_CallToOriginalIsPtr2Ptr);
 }
 
 VOID CNktHookLib::UnhookProcess(__in DWORD dwPid)
@@ -440,56 +353,12 @@ DWORD CNktHookLib::RemoveHook(__in SIZE_T nHookId, BOOL bDisable)
 
 DWORD CNktHookLib::RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, BOOL bDisable)
 {
-  TNktLnkLst<CHookEntry> cToDeleteList;
-  CHookEntry *lpHookEntry;
+  return RemoveHookCommon(aHookInfo, nCount, bDisable, 0);
+}
 
-  if (aHookInfo == NULL || nCount == 0)
-    return ERROR_INVALID_PARAMETER;
-  if (lpInternals == NULL)
-    return ERROR_NOT_ENOUGH_MEMORY;
-  {
-    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    TNktLnkLst<CHookEntry>::Iterator it;
-    DWORD dwCurrPid;
-    SIZE_T nHookIdx;
-
-    //write flags
-    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
-    for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
-    {
-      if (aHookInfo[nHookIdx].nHookId == 0)
-        continue; //avoid transversing hook entry list
-      for (lpHookEntry=it.Begin(int_data->cHooksList); lpHookEntry!=NULL; lpHookEntry=it.Next())
-      {
-        if (lpHookEntry->nId == aHookInfo[nHookIdx].nHookId)
-        {
-          if (bDisable != FALSE)
-          {
-            if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
-            {
-              BYTE nVal = 1;
-              NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData+1, &nVal, 1);
-            }
-            else
-            {
-              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
-            }
-          }
-          //mark entry as uninstalled
-          lpHookEntry->lpInjData = NULL;
-          lpHookEntry->lpInjCode = NULL;
-          //delete entry
-          int_data->cHooksList.Remove(lpHookEntry);
-          cToDeleteList.PushTail(lpHookEntry);
-          break;
-        }
-      }
-    }
-  }
-  //delete when no threads are suspended to avoid deadlocks
-  while ((lpHookEntry = cToDeleteList.PopHead()) != NULL)
-    delete lpHookEntry;
-  return ERROR_SUCCESS;
+DWORD CNktHookLib::RemoveHook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, BOOL bDisable)
+{
+  return RemoveHookCommon(aHookInfo, nCount, bDisable, INTERNALFLAG_CallToOriginalIsPtr2Ptr);
 }
 
 DWORD CNktHookLib::EnableHook(__in SIZE_T nHookId, __in BOOL bEnable)
@@ -502,45 +371,12 @@ DWORD CNktHookLib::EnableHook(__in SIZE_T nHookId, __in BOOL bEnable)
 
 DWORD CNktHookLib::EnableHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bEnable)
 {
-  if (aHookInfo == NULL || nCount == 0)
-    return ERROR_INVALID_PARAMETER;
-  if (lpInternals == NULL)
-    return ERROR_NOT_ENOUGH_MEMORY;
-  {
-    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
-    TNktLnkLst<CHookEntry>::Iterator it;
-    CHookEntry *lpHookEntry;
-    DWORD dwCurrPid;
-    SIZE_T nHookIdx;
+  return EnableHookCommon(aHookInfo, nCount, bEnable, 0);
+}
 
-    //write flags
-    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
-    for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
-    {
-      if (aHookInfo[nHookIdx].nHookId == 0)
-        continue; //avoid transversing hook entry list
-      for (lpHookEntry=it.Begin(int_data->cHooksList); lpHookEntry!=NULL; lpHookEntry=it.Next())
-      {
-        if (lpHookEntry->nId == aHookInfo[nHookIdx].nHookId)
-        {
-          if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
-          {
-            BYTE nVal = (bEnable != FALSE) ? 0 : 1;
-            NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData+1, &nVal, 1);
-          }
-          else
-          {
-            if (bEnable != FALSE)
-              _InterlockedAnd((LONG volatile *)(lpHookEntry->lpInjData), 0xFFFF00FF);
-            else
-              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
-          }
-          break;
-        }
-      }
-    }
-  }
-  return ERROR_SUCCESS;
+DWORD CNktHookLib::EnableHook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bEnable)
+{
+  return EnableHookCommon(aHookInfo, nCount, bEnable, INTERNALFLAG_CallToOriginalIsPtr2Ptr);
 }
 
 DWORD CNktHookLib::SetSuspendThreadsWhileHooking(__in BOOL bEnable)
@@ -627,37 +463,47 @@ void __cdecl CNktHookLib::operator delete(__inout void* p, __inout void* lpPlace
 };
 #endif //_MSC_VER >= 1200
 
-DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags)
+DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags)
 {
+  union {
+    LPHOOK_INFO lpHookInfo;
+    LPHOOK_INFO *lplpHookInfo;
+  };
+  LPHOOK_INFO lpHookInfoItem;
   DWORD dwOsErr;
   SIZE_T nHookIdx;
   BOOL bIsRemoteProcess;
 
-  if (aHookInfo == NULL || nCount == 0 || dwPid == 0)
+  if (_lpInfo == NULL || nCount == 0 || dwPid == 0)
     return ERROR_INVALID_PARAMETER;
+  lpHookInfo = (LPHOOK_INFO)_lpInfo;
   for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
   {
-    aHookInfo[nHookIdx].nHookId = 0;
+    lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                          (lpHookInfo + nHookIdx);
+    lpHookInfoItem->nHookId = 0;
     if (FlagOn(dwFlags, INTERNALFLAG_CallToOriginalIsPtr2Ptr))
     {
-      if (aHookInfo[nHookIdx].lpCallOriginal != NULL)
-        *((LPVOID*)aHookInfo[nHookIdx].lpCallOriginal) = NULL;
+      if (lpHookInfoItem->lpCallOriginal != NULL)
+        *((LPVOID*)(lpHookInfoItem->lpCallOriginal)) = NULL;
     }
     else
     {
-      aHookInfo[nHookIdx].lpCallOriginal = NULL;
+      lpHookInfoItem->lpCallOriginal = NULL;
     }
   }
   for (nHookIdx=0; nHookIdx<nCount; nHookIdx++)
   {
-    if (aHookInfo[nHookIdx].lpProcToHook == NULL)
+    lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                          (lpHookInfo + nHookIdx);
+    if (lpHookInfoItem->lpProcToHook == NULL)
     {
       if (!FlagOn(dwFlags, NKTHOOKLIB_SkipNullProcsToHook))
         return ERROR_INVALID_PARAMETER;
     }
     else
     {
-      if (aHookInfo[nHookIdx].lpNewProcAddr == NULL)
+      if (lpHookInfoItem->lpNewProcAddr == NULL)
         return ERROR_INVALID_PARAMETER;
     }
   }
@@ -696,8 +542,10 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
     dwOsErr = ERROR_SUCCESS;
     while (nHookIdx < nCount && dwOsErr == ERROR_SUCCESS)
     {
+      lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                            (lpHookInfo + nHookIdx);
       //skip items with lpProcToHook == NULL
-      if (aHookInfo[nHookIdx].lpProcToHook == NULL)
+      if (lpHookInfoItem->lpProcToHook == NULL)
       {
         nHookIdx++;
         continue;
@@ -705,16 +553,25 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
       //count items for this round stopping when we find a proc to hook in conflict (two or more hooks on the
       //same address)
       nThisRound = 1;
-      while (nHookIdx+nThisRound < nCount &&
-             aHookInfo[nHookIdx+nThisRound].lpProcToHook != aHookInfo[nHookIdx].lpProcToHook &&
-             aHookInfo[nHookIdx+nThisRound].lpProcToHook != NULL)
+      while (nHookIdx+nThisRound < nCount)
       {
+        LPHOOK_INFO lpThisRoundHookInfoItem;
+
+        lpThisRoundHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ?
+                                  lplpHookInfo[nHookIdx + nThisRound] : (lpHookInfo + nHookIdx + nThisRound);
+        if (lpThisRoundHookInfoItem->lpProcToHook == lpHookInfoItem->lpProcToHook ||
+            lpThisRoundHookInfoItem->lpProcToHook == NULL)
+        {
+          break;
+        }
         nThisRound++;
       }
       //process
       lpFirstHookEntryInRound = NULL;
       for (k=0; k<nThisRound; k++)
       {
+        lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx + k] :
+                                                                              (lpHookInfo + nHookIdx + k);
         //create new entries
         lpHookEntry = new CHookEntry(cProcEntry, dwFlags);
         if (lpHookEntry == NULL)
@@ -727,7 +584,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         //add to the new hooks list
         cNewHooksList.PushTail(lpHookEntry);
         //calculate real proc to hook
-        lpHookEntry->lpOrigProc = (LPBYTE)(aHookInfo[nHookIdx+k].lpProcToHook);
+        lpHookEntry->lpOrigProc = (LPBYTE)(lpHookInfoItem->lpProcToHook);
         if (!FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontSkipInitialJumps))
         {
           lpHookEntry->lpOrigProc = lpHookEntry->SkipJumpInstructions(lpHookEntry->lpOrigProc);
@@ -737,7 +594,7 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
             break;
           }
         }
-        lpHookEntry->lpNewProc = (LPBYTE)(aHookInfo[nHookIdx+k].lpNewProcAddr);
+        lpHookEntry->lpNewProc = (LPBYTE)(lpHookInfoItem->lpNewProcAddr);
         //read original stub and create new one
         dwOsErr = lpHookEntry->CreateStub(int_data->sOptions.bOutputDebug);
         if (dwOsErr != ERROR_SUCCESS)
@@ -768,7 +625,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
           dwOsErr = ERROR_NOT_ENOUGH_MEMORY;
           break;
         }
-        //write flags. if current process, hooks are initially disabled to avoid issues when hooking api's used by this routine
+        //write flags. if current process, hooks are initially disabled to avoid issues when hooking api's
+        //used by this routine
         dw = (bIsRemoteProcess == FALSE || FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontEnableHooks)) ? 0x00000100 : 0;
         if (WriteMem(cProcEntry->GetHandle(), lpHookEntry->lpInjData, &dw, sizeof(DWORD)) == FALSE)
         {
@@ -811,8 +669,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x64;  *p++ = 0xA1;                                         //mov   eax, fs:[18h]
               *((ULONG NKT_UNALIGNED*)p) = 0x18;
               p += sizeof(ULONG);
-              //----
-              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x24;                           //mov   eax, DWORD PTR [eax+24h] ;get thread ID
+              //get thread ID
+              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x24;                           //mov   eax, DWORD PTR [eax+24h]
               //----
               *p++ = 0xBA;                                                       //mov   edx, OFFSET lpReturn
               lpRetStubs[0] = p;
@@ -857,8 +715,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0xEB;                                                       //jmp   call_hooked
               lpTempLoc = p++;
-              //---- CHG_RETADDR:
-              *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   eax, DWORD PTR [esp+10h] ;original return address
+              //---- CHG_RETADDR: original return address
+              *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;  *p++ = 0x10;             //mov   eax, DWORD PTR [esp+10h]
               //----
               *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x04;                           //mov   DWORD PTR [edx+4], eax
               //----
@@ -945,8 +803,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               *p++ = 0x25;
               *((ULONG NKT_UNALIGNED*)p) = 0x30;
               p += sizeof(ULONG);
-              //----
-              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x48;                           //mov   eax, DWORD PTR [rax+48h] ;get thread ID
+              //get thread ID
+              *p++ = 0x8B;  *p++ = 0x40;  *p++ = 0x48;                           //mov   eax, DWORD PTR [rax+48h]
               //----
               *p++ = 0x48;  *p++ = 0xBA;                                         //mov   rdx, OFFSET lpReturn
               lpRetStubs[0] = p;
@@ -991,8 +849,8 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
               //----
               *p++ = 0xEB;                                                       //jmp   call_hooked
               lpTempLoc = p++;
-              //---- CHG_RETADDR:
-              *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;             //mov   rax, QWORD PTR [rsp+20h] ;original return address
+              //---- CHG_RETADDR: original return address
+              *p++ = 0x48;  *p++ = 0x8B;  *p++ = 0x44;  *p++ = 0x24;             //mov   rax, QWORD PTR [rsp+20h]
               *p++ = 0x20;
               //----
               *p++ = 0x48;  *p++ = 0x89;  *p++ = 0x42;  *p++ = 0x08;             //mov   QWORD PTR [rdx+8], rax
@@ -1147,13 +1005,15 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         p = lpHookEntry->lpInjCode;
         nSize = lpHookEntry->nInjCodeAndDataSize;
         dw = 0;
-        nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, PAGE_EXECUTE_READWRITE, &dw);
+        nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                              PAGE_EXECUTE_READWRITE, &dw);
         if (!NT_SUCCESS(nNtStatus))
         {
           p = lpHookEntry->lpInjCode;
           nSize = lpHookEntry->nInjCodeAndDataSize;
           dw = 0;
-          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, PAGE_EXECUTE_WRITECOPY, &dw);
+          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                                PAGE_EXECUTE_WRITECOPY, &dw);
         }
         if (!NT_SUCCESS(nNtStatus))
         {
@@ -1206,15 +1066,15 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
         lpHookEntry->nId = (SIZE_T)lpHookEntry ^ 0x34B68364A3CE19F3ui64; //odd number to avoid result of zero
 #endif
         //done
-        aHookInfo[nHookIdx+k].nHookId = lpHookEntry->nId;
+        lpHookInfoItem->nHookId = lpHookEntry->nId;
         if (FlagOn(dwFlags, INTERNALFLAG_CallToOriginalIsPtr2Ptr))
         {
-          if (aHookInfo[nHookIdx+k].lpCallOriginal != NULL)
-            *((LPVOID*)aHookInfo[nHookIdx+k].lpCallOriginal) = lpHookEntry->lpCall2Orig;
+          if (lpHookInfoItem->lpCallOriginal != NULL)
+            *((LPVOID*)(lpHookInfoItem->lpCallOriginal)) = lpHookEntry->lpCall2Orig;
         }
         else
         {
-          aHookInfo[nHookIdx+k].lpCallOriginal = lpHookEntry->lpCall2Orig;
+          lpHookInfoItem->lpCallOriginal = lpHookEntry->lpCall2Orig;
         }
       }
       //do actual hooking
@@ -1374,9 +1234,264 @@ DWORD CNktHookLib::HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount,
   //enable hooks if installed locally
   if (dwOsErr == ERROR_SUCCESS && bIsRemoteProcess == FALSE && (!FlagOn(dwFlags, NKTHOOKLIB_DontEnableHooks)))
   {
-    EnableHook(aHookInfo, nCount, TRUE); //this will always succeed
+    //this will always succeed
+    if (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr))
+      EnableHook(lplpHookInfo, nCount, TRUE);
+    else
+      EnableHook(lpHookInfo, nCount, TRUE);
   }
   return dwOsErr;
+}
+
+DWORD CNktHookLib::UnhookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWORD dwFlags)
+{
+  TNktLnkLst<CHookEntry> cToDeleteList;
+  CHookEntry *lpHookEntry;
+  union {
+    LPHOOK_INFO lpHookInfo;
+    LPHOOK_INFO *lplpHookInfo;
+  };
+  LPHOOK_INFO lpHookInfoItem;
+
+  if (_lpInfo == NULL || nCount == 0)
+    return ERROR_INVALID_PARAMETER;
+  lpHookInfo = (LPHOOK_INFO)_lpInfo;
+  if (lpInternals != NULL)
+  {
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    CNktThreadSuspend::CAutoResume cAutoResume(&(int_data->cThreadSuspender));
+    CNktThreadSuspend::IP_RANGE sIpRange[2];
+    TNktLnkLst<CHookEntry>::Iterator it;
+    BYTE aTempBuf[8], *p;
+    SIZE_T nSize, nHookIdx, nIpRangesCount;
+    DWORD dw, dwOsErr, dwCurrPid;
+    BOOL bOk;
+    NTSTATUS nNtStatus;
+
+    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
+    for (nHookIdx = nIpRangesCount = 0; nHookIdx<nCount; nHookIdx++)
+    {
+      lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                            (lpHookInfo + nHookIdx);
+      if (lpHookInfoItem->nHookId == 0)
+        continue; //avoid transversing hook entry list
+      for (lpHookEntry = it.Begin(int_data->cHooksList); lpHookEntry != NULL; lpHookEntry = it.Next())
+      {
+        if (lpHookEntry->nId == lpHookInfoItem->nHookId)
+          break;
+      }
+      if (lpHookEntry == NULL)
+        continue; //hook not found
+      //mark the hook as uninstalled
+      if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DontRemoveOnUnhook))
+      {
+        bOk = FALSE;
+      }
+      else
+      {
+        if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
+        {
+          BYTE nVal = 1;
+          WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData, &nVal, 1);
+        }
+        else
+        {
+          _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000001);
+        }
+        if (lpHookEntry->nInstalledCode != 3)
+          lpHookEntry->nInstalledCode = 2;
+        //suspend threads if needed
+        dwOsErr = ERROR_SUCCESS;
+        if (int_data->sOptions.bSuspendThreads != FALSE)
+        {
+          //set-up ranges
+          sIpRange[0].nStart = (SIZE_T)(lpHookEntry->lpOrigProc);
+          sIpRange[0].nEnd = sIpRange[0].nStart + 5;
+          sIpRange[1].nStart = (SIZE_T)(lpHookEntry->lpInjCode);
+          sIpRange[1].nEnd = sIpRange[1].nStart + lpHookEntry->nInjCodeAndDataSize;
+          if (nIpRangesCount > 0)
+          {
+            //check if a previous thread suspension can be used for the current unhook item
+            if (int_data->cThreadSuspender.CheckIfThreadIsInRange(sIpRange[0].nStart, sIpRange[0].nEnd) != FALSE ||
+                int_data->cThreadSuspender.CheckIfThreadIsInRange(sIpRange[1].nStart, sIpRange[1].nEnd) != FALSE)
+            {
+              nIpRangesCount = 0;
+              int_data->cThreadSuspender.ResumeAll(); //resume last
+            }
+          }
+          //suspend threads
+          if (nIpRangesCount == 0)
+          {
+            nIpRangesCount = X_ARRAYLEN(sIpRange);
+            dwOsErr = int_data->cThreadSuspender.SuspendAll(lpHookEntry->cProcEntry->GetPid(), sIpRange, nIpRangesCount);
+          }
+        }
+        //do unhook
+        bOk = FALSE;
+        if (dwOsErr == ERROR_SUCCESS)
+        {
+          //modify page protection
+          p = lpHookEntry->lpOrigProc;
+          nSize = lpHookEntry->nOriginalStubSize;
+          dw = 0;
+          nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                                PAGE_EXECUTE_READWRITE, &dw);
+          if (!NT_SUCCESS(nNtStatus))
+          {
+            p = lpHookEntry->lpOrigProc;
+            nSize = lpHookEntry->nOriginalStubSize;
+            dw = 0;
+            nNtStatus = NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize,
+                                                  PAGE_EXECUTE_WRITECOPY, &dw);
+          }
+          if (NT_SUCCESS(nNtStatus))
+          {
+            if (ReadMem(lpHookEntry->cProcEntry->GetHandle(), aTempBuf, lpHookEntry->lpOrigProc,
+                        lpHookEntry->GetJumpToHookBytes()) == lpHookEntry->GetJumpToHookBytes() &&
+                MemCompare(aTempBuf, lpHookEntry->aJumpStub, lpHookEntry->GetJumpToHookBytes()) == 0)
+            {
+              bOk = WriteMem(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc,
+                             lpHookEntry->aOriginalStub, lpHookEntry->nOriginalStubSize);
+            }
+            //restore page protection
+            p = lpHookEntry->lpOrigProc;
+            nSize = lpHookEntry->nOriginalStubSize;
+            NktNtProtectVirtualMemory(lpHookEntry->cProcEntry->GetHandle(), (PVOID*)&p, &nSize, dw, &dw);
+            //flush cache
+            NktNtFlushInstructionCache(lpHookEntry->cProcEntry->GetHandle(), lpHookEntry->lpOrigProc, 32);
+          }
+        }
+      }
+      //check result
+      if (bOk == FALSE)
+      {
+        //if cannot release original blocks, mark them as uninstalled
+        lpHookEntry->lpInjCode = NULL;
+        lpHookEntry->lpInjData = NULL;
+      }
+      //delete entry
+      int_data->cHooksList.Remove(lpHookEntry);
+      cToDeleteList.PushTail(lpHookEntry);
+    }
+  }
+  //delete when no threads are suspended to avoid deadlocks
+  while ((lpHookEntry = cToDeleteList.PopHead()) != NULL)
+    delete lpHookEntry;
+  return ERROR_SUCCESS;
+}
+
+DWORD CNktHookLib::RemoveHookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in BOOL bDisable, __in DWORD dwFlags)
+{
+  TNktLnkLst<CHookEntry> cToDeleteList;
+  CHookEntry *lpHookEntry;
+  union {
+    LPHOOK_INFO lpHookInfo;
+    LPHOOK_INFO *lplpHookInfo;
+  };
+  LPHOOK_INFO lpHookInfoItem;
+
+  if (_lpInfo == NULL || nCount == 0)
+    return ERROR_INVALID_PARAMETER;
+  if (lpInternals == NULL)
+    return ERROR_NOT_ENOUGH_MEMORY;
+  lpHookInfo = (LPHOOK_INFO)_lpInfo;
+  {
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
+    DWORD dwCurrPid;
+    SIZE_T nHookIdx;
+
+    //write flags
+    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
+    for (nHookIdx = 0; nHookIdx<nCount; nHookIdx++)
+    {
+      lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                            (lpHookInfo + nHookIdx);
+      if (lpHookInfoItem->nHookId == 0)
+        continue; //avoid transversing hook entry list
+      for (lpHookEntry = it.Begin(int_data->cHooksList); lpHookEntry != NULL; lpHookEntry = it.Next())
+      {
+        if (lpHookEntry->nId == lpHookInfoItem->nHookId)
+        {
+          if (bDisable != FALSE)
+          {
+            if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
+            {
+              BYTE nVal = 1;
+              NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData + 1, &nVal, 1);
+            }
+            else
+            {
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
+            }
+          }
+          //mark entry as uninstalled
+          lpHookEntry->lpInjData = NULL;
+          lpHookEntry->lpInjCode = NULL;
+          //delete entry
+          int_data->cHooksList.Remove(lpHookEntry);
+          cToDeleteList.PushTail(lpHookEntry);
+          break;
+        }
+      }
+    }
+  }
+  //delete when no threads are suspended to avoid deadlocks
+  while ((lpHookEntry = cToDeleteList.PopHead()) != NULL)
+    delete lpHookEntry;
+  return ERROR_SUCCESS;
+}
+
+DWORD CNktHookLib::EnableHookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in BOOL bEnable, __in DWORD dwFlags)
+{
+  union {
+    LPHOOK_INFO lpHookInfo;
+    LPHOOK_INFO *lplpHookInfo;
+  };
+  LPHOOK_INFO lpHookInfoItem;
+
+  if (_lpInfo == NULL || nCount == 0)
+    return ERROR_INVALID_PARAMETER;
+  if (lpInternals == NULL)
+    return ERROR_NOT_ENOUGH_MEMORY;
+  lpHookInfo = (LPHOOK_INFO)_lpInfo;
+  {
+    CNktAutoFastMutex cAutoLock(&(int_data->cMtx));
+    TNktLnkLst<CHookEntry>::Iterator it;
+    CHookEntry *lpHookEntry;
+    DWORD dwCurrPid;
+    SIZE_T nHookIdx;
+
+    //write flags
+    dwCurrPid = NktHookLibHelpers::GetCurrentProcessId();
+    for (nHookIdx = 0; nHookIdx<nCount; nHookIdx++)
+    {
+      lpHookInfoItem = (FlagOn(dwFlags, INTERNALFLAG_HookInfoArrayIsPtr)) ? lplpHookInfo[nHookIdx] :
+                                                                            (lpHookInfo + nHookIdx);
+      if (lpHookInfoItem->nHookId == 0)
+        continue; //avoid transversing hook entry list
+      for (lpHookEntry = it.Begin(int_data->cHooksList); lpHookEntry != NULL; lpHookEntry = it.Next())
+      {
+        if (lpHookEntry->nId == lpHookInfoItem->nHookId)
+        {
+          if (lpHookEntry->cProcEntry->GetPid() != dwCurrPid)
+          {
+            BYTE nVal = (bEnable != FALSE) ? 0 : 1;
+            NktHookLibHelpers::WriteMem(lpHookEntry->cProcEntry, lpHookEntry->lpInjData + 1, &nVal, 1);
+          }
+          else
+          {
+            if (bEnable != FALSE)
+              _InterlockedAnd((LONG volatile *)(lpHookEntry->lpInjData), 0xFFFF00FF);
+            else
+              _InterlockedOr((LONG volatile *)(lpHookEntry->lpInjData), 0x00000100);
+          }
+          break;
+        }
+      }
+    }
+  }
+  return ERROR_SUCCESS;
 }
 
 //-----------------------------------------------------------

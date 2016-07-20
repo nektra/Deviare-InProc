@@ -59,7 +59,7 @@ public:
     LPVOID lpNewProcAddr;
     //----
     LPVOID lpCallOriginal;
-  } HOOK_INFO;
+  } HOOK_INFO, *LPHOOK_INFO;
 
   CNktHookLib();
   ~CNktHookLib();
@@ -67,27 +67,33 @@ public:
   DWORD Hook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOriginal, __in LPVOID lpProcToHook,
              __in LPVOID lpNewProcAddr, __in DWORD dwFlags=0);
   DWORD Hook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwFlags=0);
+  DWORD Hook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwFlags = 0);
 
   DWORD RemoteHook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOriginal, __in DWORD dwPid,
                    __in LPVOID lpProcToHook, __in LPVOID lpNewProcAddr, __in DWORD dwFlags);
   DWORD RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags);
+  DWORD RemoteHook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags);
 
   DWORD RemoteHook(__out SIZE_T *lpnHookId, __out LPVOID *lplpCallOriginal, __in HANDLE hProcess,
                    __in LPVOID lpProcToHook, __in LPVOID lpNewProcAddr, __in DWORD dwFlags);
   DWORD RemoteHook(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in HANDLE hProcess, __in DWORD dwFlags);
+  DWORD RemoteHook(__inout LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in HANDLE hProcess, __in DWORD dwFlags);
 
   DWORD Unhook(__in SIZE_T nHookId);
   DWORD Unhook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount);
+  DWORD Unhook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount);
   VOID UnhookProcess(__in DWORD dwPid);
   VOID UnhookAll();
 
   //NOTE: The following 2 (two) methods will remove the hooks from the internal list of hooks but the original
   //      hook(s) will remain active.
   DWORD RemoveHook(__in SIZE_T nHookId, BOOL bDisable);
-  DWORD RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, BOOL bDisable);
+  DWORD RemoveHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bDisable);
+  DWORD RemoveHook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bDisable);
 
   DWORD EnableHook(__in SIZE_T nHookId, __in BOOL bEnable);
   DWORD EnableHook(__in HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bEnable);
+  DWORD EnableHook(__in LPHOOK_INFO aHookInfo[], __in SIZE_T nCount, __in BOOL bEnable);
 
   DWORD SetSuspendThreadsWhileHooking(__in BOOL bEnable);
   BOOL GetSuspendThreadsWhileHooking();
@@ -105,7 +111,10 @@ public:
 #endif //_MSC_VER >= 1200
 
 private:
-  DWORD HookCommon(__inout HOOK_INFO aHookInfo[], __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags);
+  DWORD HookCommon(__in LPVOID lpInfo, __in SIZE_T nCount, __in DWORD dwPid, __in DWORD dwFlags);
+  DWORD UnhookCommon(__in LPVOID lpInfo, __in SIZE_T nCount, __in DWORD dwFlags);
+  DWORD RemoveHookCommon(__in LPVOID lpInfo, __in SIZE_T nCount, __in BOOL bDisable, __in DWORD dwFlags);
+  DWORD EnableHookCommon(__in LPVOID lpInfo, __in SIZE_T nCount, __in BOOL bEnable, __in DWORD dwFlags);
 
 private:
   LPVOID lpInternals;
