@@ -268,27 +268,27 @@ LPBYTE CProcessesHandles::CEntry::AllocateMem(__in LPVOID lpRefAddr, __in SIZE_T
   lpBlocksList = (bIsData == FALSE) ? &cCodeBlocksList : &cDataBlocksList;
   for (lpBlock=it.Begin(*lpBlocksList); lpBlock!=NULL; lpBlock=it.Next())
   {
+    if (
 #if defined(_M_X64)
-    if ((ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) >= nMin &&
+        (ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) >= nMin &&
         (ULONGLONG)(SIZE_T)(lpBlock->GetBaseAddress()) < nMax &&
-        lpBlock->GetSlotSize() == nSlotSize)
-    {
 #endif //_M_X64
+        lpBlock->GetSlotSize() == nSlotSize
+       )
+    {
       lpPtr = lpBlock->GetFreeSlot();
       if (lpPtr != NULL)
         return lpPtr;
-#if defined(_M_X64)
     }
-#endif //_M_X64
   }
   lpBlock = new CMemBlock(GetHandle(), nSlotSize, bIsData);
   if (lpBlock == NULL)
     return NULL;
   if (lpBlock->Initialize(
 #if defined(_M_X64)
-    nMin, nMax
+                          nMin, nMax
 #endif //_M_X64
-    ) == FALSE)
+     ) == FALSE)
   {
     delete lpBlock;
     return NULL;
