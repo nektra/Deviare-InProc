@@ -411,12 +411,12 @@ VOID MemSet(__out void *lpDest, __in int nVal, __in SIZE_T nCount)
       nCount -= sizeof(SIZE_T);
     }
   }
-  //the following code is not fully optimized but avoid VC compiler to insert undesired "_memset" calls
+  //the following code is not fully optimized on purpose just but avoid VC compiler to insert undesired "_memset" calls
   if (nCount > 0)
   {
     do
     {
-      *d = (BYTE)nVal;
+      *d++ = (BYTE)nVal;
     }
     while (--nCount > 0);
   }
