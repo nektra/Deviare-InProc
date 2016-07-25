@@ -37,8 +37,11 @@ _TEXT SEGMENT
 
 IMAGE_DOS_SIGNATURE            EQU    5A4Dh     ;MZ
 IMAGE_NT_SIGNATURE             EQU    00004550h ;PE00
-IMAGE_FILE_MACHINE_I386        EQU    14ch
+IMAGE_FILE_MACHINE_I386        EQU    14Ch
 IMAGE_NT_OPTIONAL_HDR32_MAGIC  EQU    10Bh
+
+ERROR_MOD_NOT_FOUND            EQU    126
+ERROR_PROC_NOT_FOUND           EQU    127
 
 UNICODE_STRING32 STRUCT 8
     _Length       WORD  ?
@@ -174,6 +177,9 @@ GETMODULEANDPROCADDR_SECTION_START:
 ALIGN 4
 ;BOOL __stdcall SimpleStrNICmpW(LPCWSTR string1, LPCWSTR string2, SIZE_T len)
 SimpleStrNICmpW PROC
+_string1$ = 8
+_string2$ = 12
+_len$ = 16
     push ebp
     mov  ebp, esp
     push ebx
@@ -181,15 +187,15 @@ SimpleStrNICmpW PROC
     push esi
     push edi
     ;get string1 and check for null
-    mov  esi, DWORD PTR [ebp+08h]
+    mov  esi, DWORD PTR _string1$[ebp]
     test esi, esi
     je   @@mismatch
     ;get string2 and check for null
-    mov  edi, DWORD PTR [ebp+0Ch] 
+    mov  edi, DWORD PTR _string2$[ebp]
     test edi, edi
     je   @@mismatch
     ;get length and check for zero
-    mov  ecx, DWORD PTR [ebp+10h] ;length
+    mov  ecx, DWORD PTR _len$[ebp]
     test ecx, ecx
     je   @@afterloop
 @@loop:
@@ -220,8 +226,8 @@ SimpleStrNICmpW PROC
     dec  ecx
     jne  @@loop
 @@afterloop:
-    cmp WORD PTR [edi], 0
-    jne @@mismatch
+    cmp  WORD PTR [edi], 0
+    jne  @@mismatch
     xor  eax, eax
     inc  eax
     jmp  @@end
@@ -240,16 +246,18 @@ SimpleStrNICmpW ENDP
 ALIGN 4
 ;BOOL __stdcall SimpleStrCmpA(LPCSTR string1, LPCSTR string2)
 SimpleStrCmpA PROC
+_string1$ = 8
+_string2$ = 12
     push ebp
     mov  ebp, esp
     push esi
     push edi
     ;get string1 and check for null
-    mov  esi, DWORD PTR [ebp+08h]
+    mov  esi, DWORD PTR _string1$[ebp]
     test esi, esi
     je   @@mismatch
     ;get string2 and check for null
-    mov  edi, DWORD PTR [ebp+0Ch] 
+    mov  edi, DWORD PTR _string2$[ebp]
     test edi, edi
     je   @@mismatch
 @@loop:
@@ -271,38 +279,23 @@ SimpleStrCmpA PROC
 @@end:
     pop  edi
     pop  esi
-    mov  esp, ebp 
+    mov  esp, ebp
     pop  ebp
     ret  8h ;pop parameters
 SimpleStrCmpA ENDP
 
 ALIGN 4
-;LPVOID __stcall GetPEB()
-GetPEB PROC
-ASSUME FS:NOTHING
-    mov  eax, DWORD PTR [fs:30h]
-ASSUME FS:ERROR
-    ret
-GetPEB ENDP
-
-ALIGN 4
-;LPVOID __stdcall GetLoaderLockAddr()
-GetLoaderLockAddr PROC
-    call GetPEB
-    mov  eax, DWORD PTR [eax+0A0h]
-    ret
-GetLoaderLockAddr ENDP
-
-ALIGN 4
 ;BOOL __stdcall CheckImageType(LPVOID lpBase, LPVOID *lplpNtHdr)
 CheckImageType PROC
+_lpBase$ = 8
+_lplpNtHdr$ = 12
     push ebp
     mov  ebp, esp
     push ecx
     push edx
     ;get lpBase and check for null
     xor  eax, eax
-    mov  ecx, DWORD PTR [ebp+8h]
+    mov  ecx, DWORD PTR _lpBase$[ebp]
     test ecx, ecx
     je   @@end
     ;check dos header magic
@@ -312,7 +305,7 @@ CheckImageType PROC
     mov  edx, DWORD PTR [ecx].IMAGE_DOS_HEADER.e_lfanew
     add  ecx, edx ;ecx now points to NtHeader address
     ;check if we are asked to store NtHeader address 
-    mov  edx, DWORD PTR [ebp+0Ch]
+    mov  edx, DWORD PTR _lplpNtHdr$[ebp]
     test edx, edx 
     je   @F
     mov  DWORD PTR [edx], ecx ;save it
@@ -326,7 +319,7 @@ CheckImageType PROC
 @@end:
     pop  edx
     pop  ecx
-    mov  esp, ebp 
+    mov  esp, ebp
     pop  ebp
     ret  8h ;pop parameters
 CheckImageType ENDP
@@ -334,12 +327,15 @@ CheckImageType ENDP
 ALIGN 4
 ;LPVOID __stdcall GetModuleBaseAddress(LPCWSTR szDllNameW)
 GetModuleBaseAddress PROC
+_szDllNameW$ = 8
     push ebp
     mov  ebp, esp
     push ebx
     push ecx
     push esi
-    call  GetPEB
+ASSUME FS:NOTHING
+    mov  eax, DWORD PTR fs:[30h]
+ASSUME FS:ERROR
     mov  eax, DWORD PTR [eax+0Ch] ;peb32+12 => pointer to PEB_LDR_DATA32
     test eax, eax
     je   @@not_found
@@ -359,9 +355,9 @@ GetModuleBaseAddress PROC
     mov  eax, DWORD PTR [ebx].MODULE_ENTRY32.BaseDllName.Buffer
     test eax, eax
     je   @@next
-    push ecx                 ;push 3rd param (length)
-    push DWORD PTR [ebp+08h] ;push 2nd param (dll name to find)
-    push eax                 ;push 1st param (string)
+    push ecx                         ;push 3rd param (length)
+    push DWORD PTR _szDllNameW$[ebp] ;push 2nd param (dll name to find)
+    push eax                         ;push 1st param (string)
     CALL SimpleStrNICmpW
     test eax, eax
     je   @@next
@@ -390,6 +386,8 @@ GetModuleBaseAddress ENDP
 ALIGN 4
 ;LPVOID __stdcall GetProcedureAddress(LPVOID lpDllBase, LPCSTR szFuncNameA)
 GetProcedureAddress PROC
+_lpDllBase$ = 8
+_szFuncNameA$ = 12
 _lpNtHdr$ = -8
 _nNamesCount$ = -12
 _lpAddrOfNames$ = -16
@@ -401,10 +399,10 @@ _lpAddrOfNames$ = -16
     push ecx
     push esi
     ;check szFuncNameA for null
-    cmp  DWORD PTR [ebp+0Ch], 0
+    cmp  DWORD PTR _szFuncNameA$[ebp], 0
     je   @@not_found
     ;get module base address and check for null
-    mov  ecx, DWORD PTR [ebp+8h]
+    mov  ecx, DWORD PTR _lpDllBase$[ebp]
     test ecx, ecx
     je   @@not_found
     ;get nt header
@@ -484,23 +482,48 @@ INJECTDLLINSUSPENDEDPROCESS_SECTION_START:
 
 ALIGN 4
 InjectDllInSuspendedProcess PROC
-_GETPROCADDR_1      EQU 0
-_GETMODBASEADDR_1   EQU 4
-_HINST_1            EQU 8
-_DLLNAME_1          EQU 12
-_SZ_KERNEL32DLL_1   EQU 16
-_SZ_LOADLIBRARYW_1  EQU 48
+_GETPROCADDR_1                    EQU 0
+_GETMODBASEADDR_1                 EQU 4
+_DLLNAME_1                        EQU 8
+_INITFUNCTION_1                   EQU 12
+_ORIGINAL_ENTRYPOINT_1            EQU 16
+_CHECKPOINTEVENT_1                EQU 20
+
+_ntdll_hinst$ = -4
+_ntcloseAddr$ = -8
+_ntseteventAddr$ = -12
+_kernel32_hinst$ = -16
+_loadlibrarywAddr$ = -20
+_freelibraryAddr$ = -24
+_injectdll_hinst$ = -28
+_initfunctionAddr$ = -32
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
-    db   4 DUP (0h)                                                  ;offset 8: will hold the dll instance
-    db   4 DUP (0h)                                                  ;offset 12: pointer to dll name
-    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 16: L"kernel32.dll"
-    db   'LoadLibraryW', 0, 0, 0, 0                                  ;offset 48: "LoadLibraryW"
+    db   4 DUP (0h)                                                  ;offset 8: pointer to dll name
+    db   4 DUP (0h)                                                  ;offset 12: pointer to initialize function
+    db   4 DUP (0h)                                                  ;offset 16: original entrypoint
+    db   4 DUP (0h)                                                  ;offset 20: checkpoint event
+    jmp @@start
 
-    ;offset 64: code start
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@kernel32_dll:
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
+@@loadlibraryw:
+    db   'LoadLibraryW', 0
+@@freelibrary:
+    db   'FreeLibrary', 0
+
+@@start:
     push ebp
     mov  ebp, esp
+    sub  esp, 32
+
     push eax
     push ebx
     push ecx
@@ -509,42 +532,164 @@ _SZ_LOADLIBRARYW_1  EQU 48
     push edi
     pushfd
 
-    ;get kernel32.dll base address
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_KERNEL32DLL_1
+    ;get ntdll.dll base address
+    GetPtr eax, @@ntdll_dll, 0
     push eax
     GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
     call DWORD PTR [eax]
+    mov  DWORD PTR _ntdll_hinst$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get kernel32.dll base address
+    GetPtr eax, @@kernel32_dll, 0
+    push eax
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    call DWORD PTR [eax]
+    mov  DWORD PTR _kernel32_hinst$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@fail
+
+@@: GetPtr ebx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+
+    ;get address of NtClose
+    GetPtr eax, @@ntclose, 0
+    push eax
+    push DWORD PTR _ntdll_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _ntcloseAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of NtSetEvent
+    GetPtr eax, @@ntsetevent, 0
+    push eax
+    push DWORD PTR _ntdll_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _ntseteventAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of LoadLibraryW
+    GetPtr eax, @@loadlibraryw, 0
+    push eax
+    push DWORD PTR _kernel32_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _loadlibrarywAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of FreeLibrary
+    GetPtr eax, @@freelibrary, 0
+    push eax
+    push DWORD PTR _kernel32_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _freelibraryAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;load library
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
+    push DWORD PTR [eax]
+    call DWORD PTR _loadlibrarywAddr$[ebp]
+    mov  DWORD PTR _injectdll_hinst$[ebp], eax
+    test eax, eax
+    jne  @F
+    ;get last error
+ASSUME FS:NOTHING
+    mov  eax, DWORD PTR fs:[18h]
+ASSUME FS:ERROR
+    mov  eax, DWORD PTR [eax+34h]
+    jmp  @@fail
+
+@@: ;call init function if provided
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _INITFUNCTION_1
+    mov  eax, DWORD PTR [eax]
     test eax, eax
     je   @@done
 
-    ;get address of LoadLibraryW
-    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_LOADLIBRARYW_1
-    push ecx
-    push eax ;hinstance
+    ;get init function address
+    push eax
+    push DWORD PTR _injectdll_hinst$[ebp]
     GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
     call DWORD PTR [eax]
     test eax, eax
-    je   @@done
+    jne  @F
 
-    ;load library
-    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
-    push DWORD PTR [ecx]
-    call eax
-    ;save hInstance
-    GetPtr ecx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _HINST_1
-    mov DWORD PTR [ecx], eax
+    ;free library if init function was not found
+    push DWORD PTR _injectdll_hinst$[ebp]
+    call DWORD PTR _freelibraryAddr$[ebp]
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;call init function
+    CALL eax
+    test eax, eax
+    je   @@done
+    ;if init function returns an error, first free library
+    push eax ;save error code
+    push DWORD PTR _injectdll_hinst$[ebp]
+    call DWORD PTR _freelibraryAddr$[ebp]
+    pop  eax ;restore error code
+    jmp  @@fail
 
 @@done:
-    popfd
+    ;set checkpoint event
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _CHECKPOINTEVENT_1
+    mov  ebx, DWORD PTR [eax]
+    test ebx, ebx
+    je   @F
+    push 0
+    push ebx
+    call DWORD PTR _ntseteventAddr$[ebp]
+    ;close continue event
+    push ebx
+    call DWORD PTR _ntcloseAddr$[ebp]
+
+@@: popfd
     pop  edi
     pop  esi
     pop  edx
     pop  ecx
     pop  ebx
     pop  eax
+    add  esp, 32
     pop  ebp
+
     ;jmp to original address
-    db   0E9h, 0h, 0h, 0h, 0h
+    push eax
+    push eax
+    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    mov  eax, DWORD PTR [eax]
+    mov  DWORD PTR [esp+4], eax
+    pop  eax
+    ret
+
+@@fail:
+    ;on error, quit
+    popfd
+    pop  edi
+    pop  esi
+    pop  edx
+    pop  ecx
+    pop  ebx
+    add  esp, 32+4 ;skip popping eax
+    pop  ebp
+
+    ;return and exit process
+    ret  4h
 InjectDllInSuspendedProcess ENDP
 
 INJECTDLLINSUSPENDEDPROCESS_SECTION_END:
@@ -561,42 +706,49 @@ ALIGN 4
 InjectDllInRunningProcess PROC
 _GETPROCADDR_2                    EQU 0
 _GETMODBASEADDR_2                 EQU 4
-_HINST_2                          EQU 8
-_DLLNAME_2                        EQU 12
+_DLLNAME_2                        EQU 8
+_INITFUNCTION_2                   EQU 12
 _READYEVENT_2                     EQU 16
 _CONTINUEEVENT_2                  EQU 20
-_ADDR_LOADLIBRARYW_2              EQU 24
-_ADDR_NTCLOSE_2                   EQU 28
-_ADDR_NTSETEVENT_2                EQU 32
-_ADDR_NTWAITFORMULTIPLEOBJECTS_2  EQU 36
-_SZ_KERNEL32DLL_2                 EQU 40
-_SZ_LOADLIBRARYW_2                EQU 72
-_SZ_NTDLLDLL_2                    EQU 88
-_SZ_NTCLOSE_2                     EQU 120
-_SZ_NTSETEVENT_2                  EQU 128
-_SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 144
+
+_ntdll_hinst$ = -4
+_ntcloseAddr$ = -8
+_ntseteventAddr$ = -16
+_ntwaitformultipleobjectsAddr$ = -24
+_kernel32_hinst$ = -28
+_loadlibrarywAddr$ = -32
+_freelibraryAddr$ = -16
+_injectdll_hinst$ = -36
+_initfunctionAddr$ = -40
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
-    db   4 DUP (0h)                                                  ;offset 8: will hold the dll instance
-    db   4 DUP (0h)                                                  ;offset 12: pointer to dll name
+    db   4 DUP (0h)                                                  ;offset 8: pointer to dll name
+    db   4 DUP (0h)                                                  ;offset 12: pointer to initialize function
     db   4 DUP (0h)                                                  ;offset 16: ready event handle
     db   4 DUP (0h)                                                  ;offset 20: continue event handle
-    db   4 DUP (0h)                                                  ;offset 24: address of LoadLibraryW
-    db   4 DUP (0h)                                                  ;offset 28: address of NtClose
-    db   4 DUP (0h)                                                  ;offset 32: address of NtSetEvent
-    db   4 DUP (0h)                                                  ;offset 36: address of NtWaitForMultipleObjects
-    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 40: L"kernel32.dll"
-    db   'LoadLibraryW', 0, 0, 0, 0                                  ;offset 72: "LoadLibraryW"
-    dw   'n','t','d','l','l','.','d','l','l', 0,0,0,0,0,0,0          ;offset 88: L"ntdll.dll"
-    db   'NtClose', 0                                                ;offset 120: "NtClose"
-    db   'NtSetEvent', 0,0,0,0,0,0                                   ;offset 128: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0,0,0,0,0,0,0,0                 ;offset 144: "NtWaitForMultipleObjects"
+    jmp @@start
 
-    ;offset 176: code start
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@ntwaitformultipleobjects:
+    db   'NtWaitForMultipleObjects', 0
+@@kernel32_dll:
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
+@@loadlibraryw:
+    db   'LoadLibraryW', 0
+@@freelibrary:
+    db   'FreeLibrary', 0
+
+@@start:
     push ebp
     mov  ebp, esp
-    push eax
+    sub  esp, 44
+
     push ebx
     push ecx
     push edx
@@ -604,69 +756,86 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 144
     push edi
     pushfd
 
-    ;get kernel32.dll base address
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_KERNEL32DLL_2
-    push eax
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
-    call DWORD PTR [eax]
-    test eax, eax
-    je   @@done
-
-    mov edx, eax ;save hinstance
-    GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
-
-    ;get address of LoadLibraryW
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_LOADLIBRARYW_2
-    push eax
-    push edx ;hinstance
-    call DWORD PTR [ebx]
-    test eax, eax
-    je   @@done
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
-    mov  DWORD PTR [ecx], eax
-
     ;get ntdll.dll base address
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTDLLDLL_2
+    GetPtr eax, @@ntdll_dll, 0
     push eax
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
     call DWORD PTR [eax]
+    mov  DWORD PTR _ntdll_hinst$[ebp], eax
     test eax, eax
-    je   @@done
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@exit
 
-    mov edx, eax ;save hinstance
-    GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
+@@: ;get kernel32.dll base address
+    GetPtr eax, @@kernel32_dll, 0
+    push eax
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
+    call DWORD PTR [eax]
+    mov  DWORD PTR _kernel32_hinst$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@exit
+
+@@: GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
 
     ;get address of NtClose
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTCLOSE_2
+    GetPtr eax, @@ntclose, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
+    mov  DWORD PTR _ntcloseAddr$[ebp], eax
     test eax, eax
-    je   @@done
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
-    mov  DWORD PTR [ecx], eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;get address of NtSetEvent
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTSETEVENT_2
+@@: ;get address of NtSetEvent
+    GetPtr eax, @@ntsetevent, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
+    mov  DWORD PTR _ntseteventAddr$[ebp], eax
     test eax, eax
-    je   @@done
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTSETEVENT_2
-    mov  DWORD PTR [ecx], eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;get address of NtWaitForMultipleObjects
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTWAITFORMULTIPLEOBJECTS_2
+@@: ;get address of NtWaitForMultipleObjects
+    GetPtr eax, @@ntwaitformultipleobjects, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
+    mov  DWORD PTR _ntwaitformultipleobjectsAddr$[ebp], eax
     test eax, eax
-    je   @@done
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_2
-    mov  DWORD PTR [ecx], eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;wait for ready event ?
+@@: ;get address of LoadLibraryW
+    GetPtr eax, @@loadlibraryw, 0
+    push eax
+    push DWORD PTR _kernel32_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _loadlibrarywAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;get address of FreeLibrary
+    GetPtr eax, @@freelibrary, 0
+    push eax
+    push DWORD PTR _kernel32_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _freelibraryAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;wait for ready event ?
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
     cmp  DWORD PTR [eax], 0
     je   @F
@@ -675,51 +844,86 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 144
     push 1 ;WaitAnyObject
     push eax
     push 1
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_2
-    call DWORD PTR [eax]
+    call DWORD PTR _ntwaitformultipleobjectsAddr$[ebp]
 
     ;close ready event
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
     push DWORD PTR [eax]
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
-    call DWORD PTR [eax]
-@@:
+    call DWORD PTR _ntcloseAddr$[ebp]
 
-    ;load library
+@@: ;load library
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
     push DWORD PTR [eax]
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
-    call DWORD PTR [eax]
-    ;save hInstance
-    GetPtr ecx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _HINST_2
-    mov DWORD PTR [ecx], eax
+    call DWORD PTR _loadlibrarywAddr$[ebp]
+    mov  DWORD PTR _injectdll_hinst$[ebp], eax
+    test eax, eax
+    jne  @F
+    ;get last error
+ASSUME FS:NOTHING
+    mov  eax, DWORD PTR fs:[18h]
+ASSUME FS:ERROR
+    mov  eax, DWORD PTR [eax+34h]
+    jmp  @@exit
 
-    ;set continue event
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
-    cmp  DWORD PTR [eax], 0
-    je   @F
-    push 0 ;NULL
-    push DWORD PTR [eax] ;READY EVENT HANDLE
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTSETEVENT_2
-    call DWORD PTR [eax]
+@@: ;call init function if provided
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTION_2
+    mov  eax, DWORD PTR [eax]
+    test eax, eax
+    je   @@done
 
-    ;close continue event
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
-    push DWORD PTR [eax]
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
+    ;get init function address
+    push eax
+    push DWORD PTR _injectdll_hinst$[ebp]
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
     call DWORD PTR [eax]
-@@:
+    test eax, eax
+    jne  @F
+
+    ;free library if init function was not found
+    push DWORD PTR _injectdll_hinst$[ebp]
+    call DWORD PTR _freelibraryAddr$[ebp]
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;call init function
+    CALL eax
+    test eax, eax
+    je   @@done
+    ;if init function returns an error, first free library
+    push eax ;save error code
+    push DWORD PTR _injectdll_hinst$[ebp]
+    call DWORD PTR _freelibraryAddr$[ebp]
+    pop eax  ;restore error code
+    jmp  @@exit
 
 @@done:
+    ;set continue event
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
+    mov  ebx, DWORD PTR [eax]
+    test ebx, ebx
+    je   @F
+    push 0
+    push ebx
+    call DWORD PTR _ntseteventAddr$[ebp]
+
+    ;close continue event
+    push ebx
+    call DWORD PTR _ntcloseAddr$[ebp]
+
+@@: ;no error
+    xor  eax, eax
+
+@@exit:
     popfd
     pop  edi
     pop  esi
     pop  edx
     pop  ecx
     pop  ebx
-    pop  eax
+
+    add  esp, 44
     pop  ebp
-    xor  eax, eax
+    ;return and exit thread
     ret  4h
 InjectDllInRunningProcess ENDP
 
@@ -740,30 +944,35 @@ _GETMODBASEADDR_3                 EQU 4
 _READYEVENT_3                     EQU 8
 _CONTINUEEVENT_3                  EQU 12
 _CONTROLLERPROC_3                 EQU 16
-_ADDR_NTCLOSE_3                   EQU 20
-_ADDR_NTSETEVENT_3                EQU 24
-_ADDR_NTWAITFORMULTIPLEOBJECTS_3  EQU 28
-_SZ_NTDLLDLL_3                    EQU 32
-_SZ_NTCLOSE_3                     EQU 56
-_SZ_NTSETEVENT_3                  EQU 64
-_SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 76
+_ORIGINAL_ENTRYPOINT_3            EQU 20
+
+_ntdll_hinst$ = -4
+_ntcloseAddr$ = -8
+_ntseteventAddr$ = -12
+_ntwaitformultipleobjectsAddr$ = -16
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
     db   4 DUP (0h)                                                  ;offset 8: ready event handle
     db   4 DUP (0h)                                                  ;offset 12: continue event handle
     db   4 DUP (0h)                                                  ;offset 16: controller process handle
-    db   4 DUP (0h)                                                  ;offset 20: address of NtClose
-    db   4 DUP (0h)                                                  ;offset 24: address of NtSetEvent
-    db   4 DUP (0h)                                                  ;offset 28: address of NtWaitForMultipleObjects
-    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 32: L"ntdll.dll"
-    db   'NtClose', 0                                                ;offset 56: "NtClose"
-    db   'NtSetEvent', 0, 0                                          ;offset 64: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0, 0, 0, 0                      ;offset 76: "NtWaitForMultipleObjects"
+    db   4 DUP (0h)                                                  ;offset 20: original entrypoint
+    jmp  @@start
 
-    ;offset 104: code start
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@ntwaitformultipleobjects:
+    db   'NtWaitForMultipleObjects', 0
+
+@@start:
     push ebp
     mov  ebp, esp
+    sub  esp, 20
+
     push eax
     push ebx
     push ecx
@@ -773,80 +982,72 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 76
     pushfd
 
     ;get ntdll.dll base address
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTDLLDLL_3
+    GetPtr eax, @@ntdll_dll, 0
     push eax
     GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _GETMODBASEADDR_3
     call DWORD PTR [eax]
     test eax, eax
     je   @@done
+    mov  DWORD PTR _ntdll_hinst$[ebp], eax
 
-    mov edx, eax ;save hinstance
     GetPtr ebx, WAITFOREVENTATSTARTUP_SECTION_START, _GETPROCADDR_3
 
     ;get address of NtClose
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTCLOSE_3
+    GetPtr eax, @@ntclose, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
     test eax, eax
     je   @@done
-    GetPtr ecx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    mov  DWORD PTR [ecx], eax
+    mov  DWORD PTR _ntcloseAddr$[ebp], eax
 
     ;get address of NtSetEvent
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTSETEVENT_3
+    GetPtr eax, @@ntsetevent, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
     test eax, eax
     je   @@done
-    GetPtr ecx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTSETEVENT_3
-    mov  DWORD PTR [ecx], eax
+    mov  DWORD PTR _ntseteventAddr$[ebp], eax
 
     ;get address of NtWaitForMultipleObjects
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTWAITFORMULTIPLEOBJECTS_3
+    GetPtr eax, @@ntwaitformultipleobjects, 0
     push eax
-    push edx ;hinstance
+    push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
     test eax, eax
     je   @@done
-    GetPtr ecx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_3
-    mov  DWORD PTR [ecx], eax
+    mov  DWORD PTR _ntwaitformultipleobjectsAddr$[ebp], eax
 
     ;set ready event
-    push 0 ;NULL
     GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
-    push DWORD PTR [eax] ;READY EVENT HANDLE
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTSETEVENT_3
-    call DWORD PTR [eax]
+    mov  ebx, DWORD PTR [eax]
+    push 0
+    push ebx
+    call DWORD PTR _ntseteventAddr$[ebp]
 
     ;close ready event
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
-    push DWORD PTR [eax]
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call DWORD PTR [eax]
+    push ebx
+    call DWORD PTR _ntcloseAddr$[ebp]
 
     ;wait for continue event or controller process termination
+    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     push 0 ;NULL
     push 0 ;FALSE
     push 1 ;WaitAnyObject
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     push eax
     push 2
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_3
-    call DWORD PTR [eax]
+    call DWORD PTR _ntwaitformultipleobjectsAddr$[ebp]
 
     ;close continue event
     GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     push DWORD PTR [eax]
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call DWORD PTR [eax]
+    call DWORD PTR _ntcloseAddr$[ebp]
 
     ;close controller process
     GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTROLLERPROC_3
     push DWORD PTR [eax]
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call DWORD PTR [eax]
+    call DWORD PTR _ntcloseAddr$[ebp]
 
 @@done:
     popfd
@@ -857,8 +1058,15 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 76
     pop  ebx
     pop  eax
     pop  ebp
+
     ;jmp to original address
-    db   0E9h, 0h, 0h, 0h, 0h
+    push eax
+    push eax
+    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ORIGINAL_ENTRYPOINT_3
+    mov  eax, DWORD PTR [eax]
+    mov  DWORD PTR [esp+4], eax
+    pop  eax
+    ret
 WaitForEventAtStartup ENDP
 
 WAITFOREVENTATSTARTUP_SECTION_END:

@@ -258,9 +258,11 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithDll(__in BSTR applicationName, __
                                                    __in VARIANT_BOOL inheritHandles, __in LONG creationFlags,
                                                    __in BSTR environment, __in BSTR currentDirectory,
                                                    __in my_ssize_t startupInfo, __in BSTR dllName,
+                                                   __in my_ssize_t signalCompletedEvent, __in BSTR initFunctionName,
                                                    __deref_out INktHookProcessInfo **ppProcInfo)
 {
   CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  LPSTR szInitFunctionA = NULL;
   HRESULT hRes;
 
   if (ppProcInfo == NULL)
@@ -269,27 +271,37 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithDll(__in BSTR applicationName, __
   if (dllName == NULL)
     return E_POINTER;
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes) && initFunctionName != NULL && initFunctionName[0] != 0)
+  {
+    szInitFunctionA = Wide2Ansi(initFunctionName);
+    if (szInitFunctionA == NULL)
+      hRes = E_OUTOFMEMORY;
+  }
   if (SUCCEEDED(hRes))
   {
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithDllW(applicationName, commandLine,
                        (LPSECURITY_ATTRIBUTES)processAttributes, (LPSECURITY_ATTRIBUTES)threadAttributes,
-                       (inheritHandles != VARIANT_FALSE) ? TRUE : FALSE, (DWORD)creationFlags,
-                       environment, currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+                       (inheritHandles != VARIANT_FALSE) ? TRUE : FALSE, (DWORD)creationFlags, environment,
+                       currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName,
+                       (HANDLE)signalCompletedEvent, szInitFunctionA));
     if (SUCCEEDED(hRes))
       pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
     else
       pProcInfo->Release();
   }
+  if (szInitFunctionA != NULL)
+    free(szInitFunctionA);
   return hRes;
 }
 
 STDMETHODIMP CNktHookLibImpl::CreateProcessWithLogonAndDll(__in BSTR userName, __in BSTR domain, __in BSTR password,
-                                           __in LONG logonFlags, __in BSTR applicationName, __in BSTR commandLine,
-                                           __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
-                                           __in my_ssize_t startupInfo, __in BSTR dllName,
-                                           __deref_out INktHookProcessInfo **ppProcInfo)
+                              __in LONG logonFlags, __in BSTR applicationName, __in BSTR commandLine,
+                              __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
+                              __in my_ssize_t startupInfo, __in BSTR dllName, __in my_ssize_t signalCompletedEvent,
+                              __in BSTR initFunctionName, __deref_out INktHookProcessInfo **ppProcInfo)
 {
   CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  LPSTR szInitFunctionA = NULL;
   HRESULT hRes;
 
   if (ppProcInfo == NULL)
@@ -298,26 +310,36 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithLogonAndDll(__in BSTR userName, _
   if (dllName == NULL)
     return E_POINTER;
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes) && initFunctionName != NULL && initFunctionName[0] != 0)
+  {
+    szInitFunctionA = Wide2Ansi(initFunctionName);
+    if (szInitFunctionA == NULL)
+      hRes = E_OUTOFMEMORY;
+  }
   if (SUCCEEDED(hRes))
   {
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithLogonAndDllW(userName, domain, password,
-                      (DWORD)logonFlags, applicationName, commandLine, (DWORD)creationFlags, environment,
-                      currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+                       (DWORD)logonFlags, applicationName, commandLine, (DWORD)creationFlags, environment,
+                       currentDirectory, (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName,
+                       (HANDLE)signalCompletedEvent, szInitFunctionA));
     if (SUCCEEDED(hRes))
       pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
     else
       pProcInfo->Release();
   }
+  if (szInitFunctionA != NULL)
+    free(szInitFunctionA);
   return hRes;
 }
 
 STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token, __in LONG logonFlags,
-                                           __in BSTR applicationName, __in BSTR commandLine, __in LONG creationFlags,
-                                           __in BSTR environment, __in BSTR currentDirectory,
-                                           __in my_ssize_t startupInfo, __in BSTR dllName,
-                                           __deref_out INktHookProcessInfo **ppProcInfo)
+                              __in BSTR applicationName, __in BSTR commandLine, __in LONG creationFlags,
+                              __in BSTR environment, __in BSTR currentDirectory, __in my_ssize_t startupInfo,
+                              __in BSTR dllName, __in my_ssize_t signalCompletedEvent, __in BSTR initFunctionName,
+                              __deref_out INktHookProcessInfo **ppProcInfo)
 {
   CComObject<CNktHookProcessInfoImpl>* pProcInfo = NULL;
+  LPSTR szInitFunctionA = NULL;
   HRESULT hRes;
 
   if (ppProcInfo == NULL)
@@ -326,35 +348,72 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token
   if (dllName == NULL)
     return E_POINTER;
   hRes = CComObject<CNktHookProcessInfoImpl>::CreateInstance(&pProcInfo);
+  if (SUCCEEDED(hRes) && initFunctionName != NULL && initFunctionName[0] != 0)
+  {
+    szInitFunctionA = Wide2Ansi(initFunctionName);
+    if (szInitFunctionA == NULL)
+      hRes = E_OUTOFMEMORY;
+  }
   if (SUCCEEDED(hRes))
   {
     hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::CreateProcessWithTokenAndDllW((HANDLE)token, (DWORD)logonFlags,
-                      applicationName, commandLine, (DWORD)creationFlags, environment, currentDirectory,
-                      (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName));
+                       applicationName, commandLine, (DWORD)creationFlags, environment, currentDirectory,
+                       (LPSTARTUPINFOW)startupInfo, &(pProcInfo->sProcInfo), dllName,
+                       (HANDLE)signalCompletedEvent, szInitFunctionA));
     if (SUCCEEDED(hRes))
       pProcInfo->QueryInterface<INktHookProcessInfo>(ppProcInfo);
     else
       pProcInfo->Release();
   }
+  if (szInitFunctionA != NULL)
+    free(szInitFunctionA);
   return hRes;
 }
 
-STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG pid, __in BSTR dllName)
+STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG processId, __in BSTR dllName, __in_opt BSTR initFunctionName,
+                                        __out_opt my_ssize_t *injectorThreadHandle)
 {
+  LPSTR szInitFunctionA = NULL;
+  HRESULT hRes;
+
   if (dllName == NULL)
     return E_POINTER;
-  if (dllName[0] == NULL || pid == 0)
+  if (dllName[0] == NULL || processId == 0)
     return E_INVALIDARG;
-  return NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByPidW((DWORD)pid, dllName));
+  if (initFunctionName != NULL && initFunctionName[0] != 0)
+  {
+    szInitFunctionA = Wide2Ansi(initFunctionName);
+    if (szInitFunctionA == NULL)
+      return E_OUTOFMEMORY;
+  }
+  hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByPidW((DWORD)processId, dllName, szInitFunctionA,
+                                                                   (LPHANDLE)injectorThreadHandle));
+  if (szInitFunctionA != NULL)
+    free(szInitFunctionA);
+  return hRes;
 }
 
-STDMETHODIMP CNktHookLibImpl::InjectDllH(__in my_ssize_t proc, __in BSTR dllName)
+STDMETHODIMP CNktHookLibImpl::InjectDllH(__in my_ssize_t processHandle, __in BSTR dllName,
+                                         __in_opt BSTR initFunctionName, __out_opt my_ssize_t *injectorThreadHandle)
 {
+  LPSTR szInitFunctionA = NULL;
+  HRESULT hRes;
+
   if (dllName == NULL)
     return E_POINTER;
-  if (dllName[0] == NULL || proc == 0)
+  if (dllName[0] == NULL || processHandle == 0)
     return E_INVALIDARG;
-  return NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByHandleW((HANDLE)proc, dllName));
+  if (initFunctionName != NULL && initFunctionName[0] != 0)
+  {
+    szInitFunctionA = Wide2Ansi(initFunctionName);
+    if (szInitFunctionA == NULL)
+      return E_OUTOFMEMORY;
+  }
+  hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByHandleW((HANDLE)processHandle, dllName, szInitFunctionA,
+                                                                      (LPHANDLE)injectorThreadHandle));
+  if (szInitFunctionA != NULL)
+    free(szInitFunctionA);
+  return hRes;
 }
 
 //-----------------------------------------------------------

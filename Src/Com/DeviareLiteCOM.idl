@@ -146,29 +146,37 @@ interface INktHookLib : IDispatch
                                [in] my_ssize_t threadAttributes, [in] VARIANT_BOOL inheritHandles,
                                [in] LONG creationFlags, [in] BSTR environment, [in] BSTR currentDirectory,
                                [in] my_ssize_t startupInfo, [in] BSTR dllName,
-                               [out,retval] INktHookProcessInfo **ppProcInfo);
+                               [in, defaultvalue(0)] my_ssize_t signalCompletedEvent,
+                               [in, defaultvalue(NULL)] BSTR initFunctionName,
+                               [out, retval] INktHookProcessInfo **ppProcInfo);
 
   [id(dispidNktHookLibCreateProcessWithLogonAndDll),
    helpstring("Create a process with a dll injected at startup")]
   HRESULT CreateProcessWithLogonAndDll([in] BSTR userName, [in] BSTR domain, [in] BSTR password, [in] LONG logonFlags,
                                        [in] BSTR applicationName, [in] BSTR commandLine, [in] LONG creationFlags,
                                        [in] BSTR environment, [in] BSTR currentDirectory, [in] my_ssize_t startupInfo,
-                                       [in] BSTR dllName, [out,retval] INktHookProcessInfo **ppProcInfo);
+                                       [in] BSTR dllName, [in, defaultvalue(0)] my_ssize_t signalCompletedEvent,
+                                       [in, defaultvalue(NULL)] BSTR initFunctionName,
+                                       [out, retval] INktHookProcessInfo **ppProcInfo);
 
   [id(dispidNktHookLibCreateProcessWithTokenAndDll),
    helpstring("Create a process with a dll injected at startup")]
   HRESULT CreateProcessWithTokenAndDll([in] my_ssize_t token, [in] LONG logonFlags, [in] BSTR applicationName,
                                        [in] BSTR commandLine, [in] LONG creationFlags, [in] BSTR environment,
                                        [in] BSTR currentDirectory, [in] my_ssize_t startupInfo, [in] BSTR dllName,
+                                       [in, defaultvalue(0)] my_ssize_t signalCompletedEvent,
+                                       [in, defaultvalue(NULL)] BSTR initFunctionName,
                                        [out,retval] INktHookProcessInfo **ppProcInfo);
 
   [id(dispidNktHookLibInjectDll),
    helpstring("Inject a dll in a running process")]
-  HRESULT InjectDll([in] LONG pid, [in] BSTR dllName);
+  HRESULT InjectDll([in] LONG processId, [in] BSTR dllName, [in, defaultvalue(NULL)] BSTR initFunctionName,
+                    [out, defaultvalue(NULL)] my_ssize_t *injectorThreadHandle);
 
   [id(dispidNktHookLibInjectDllH),
    helpstring("Inject a dll in a running process")]
-  HRESULT InjectDllH([in] my_ssize_t proc, [in] BSTR dllName);
+  HRESULT InjectDllH([in] my_ssize_t processHandle, [in] BSTR dllName, [in, defaultvalue(NULL)] BSTR initFunctionName,
+                     [out, defaultvalue(NULL)] my_ssize_t *injectorThreadHandle);
 };
 
 //-----------------------------------------------------------

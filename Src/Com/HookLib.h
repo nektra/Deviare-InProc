@@ -116,23 +116,27 @@ public:
   STDMETHOD(CreateProcessWithDll)(__in BSTR applicationName, __in BSTR commandLine, __in my_ssize_t processAttributes,
                                   __in my_ssize_t threadAttributes, __in VARIANT_BOOL inheritHandles,
                                   __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
-                                  __in my_ssize_t startupInfo, __in BSTR dllName,
-                                  __deref_out INktHookProcessInfo **ppProcInfo);
+                                  __in my_ssize_t startupInfo, __in BSTR dllName, __in my_ssize_t signalCompletedEvent,
+                                  __in BSTR initFunctionName, __deref_out INktHookProcessInfo **ppProcInfo);
 
   STDMETHOD(CreateProcessWithLogonAndDll)(__in BSTR userName, __in BSTR domain, __in BSTR password,
                                           __in LONG logonFlags, __in BSTR applicationName, __in BSTR commandLine,
                                           __in LONG creationFlags, __in BSTR environment, __in BSTR currentDirectory,
                                           __in my_ssize_t startupInfo, __in BSTR dllName,
+                                          __in my_ssize_t signalCompletedEvent, __in BSTR initFunctionName,
                                           __deref_out INktHookProcessInfo **ppProcInfo);
 
   STDMETHOD(CreateProcessWithTokenAndDll)(__in my_ssize_t token, __in LONG logonFlags, __in BSTR applicationName,
                                           __in BSTR commandLine, __in LONG creationFlags, __in BSTR environment,
                                           __in BSTR currentDirectory, __in my_ssize_t startupInfo, __in BSTR dllName,
+                                          __in my_ssize_t signalCompletedEvent, __in BSTR initFunctionName,
                                           __deref_out INktHookProcessInfo **ppProcInfo);
 
-  STDMETHOD(InjectDll)(__in LONG pid, __in BSTR dllName);
+  STDMETHOD(InjectDll)(__in LONG processId, __in BSTR dllName, __in_opt BSTR initFunctionName=NULL,
+                       __out_opt my_ssize_t *injectorThreadHandle=NULL);
 
-  STDMETHOD(InjectDllH)(__in my_ssize_t proc, __in BSTR dllName);
+  STDMETHOD(InjectDllH)(__in my_ssize_t processHandle, __in BSTR dllName, __in_opt BSTR initFunctionName=NULL,
+                        __out_opt my_ssize_t *injectorThreadHandle=NULL);
 
 private:
   friend class CNktHookInfoImpl;

@@ -23,4 +23,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\TestDll.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

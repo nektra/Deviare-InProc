@@ -46,7 +46,8 @@ namespace DeviareLiteInterop
             DontSkipAnyJumps         = 0x04,
             SkipNullProcsToHook      = 0x08,
             UseAbsoluteIndirectJumps = 0x10,
-            AllowReentrancy          = 0x20
+            AllowReentrancy          = 0x20,
+            DontEnableHooks          = 0x40
         }
 
         [Flags]
@@ -179,7 +180,7 @@ namespace DeviareLiteInterop
 
         public void UnhookAll()
         {
-            this.Invoke(this.hookLib, "UnhookAll", null);
+            this.Invoke(this.hookLib, "UnhookAll");
         }
 
         public void EnableHook(object o, bool enable)
@@ -231,25 +232,31 @@ namespace DeviareLiteInterop
         public IntPtr GetRemoteModuleBaseAddress(int pid, string moduleName, bool scanMappedImages)
         {
             int scanMI = (scanMappedImages) ? -1 : 0;
-            object o = this.Invoke(this.hookLib, "GetRemoteModuleBaseAddress", new object[] { pid, moduleName, scanMI });
+            object o = this.Invoke(this.hookLib, "GetRemoteModuleBaseAddress",
+                                   new object[] { pid, moduleName, scanMI });
             return Obj2IntPtr(o);
         }
 
         public IntPtr GetProcedureAddress(IntPtr moduleBaseAddress, string procName)
         {
-            object o = this.Invoke(this.hookLib, "GetProcedureAddress", new object[] { IntPtr2Obj(moduleBaseAddress), procName });
+            object o = this.Invoke(this.hookLib, "GetProcedureAddress",
+                                   new object[] { IntPtr2Obj(moduleBaseAddress), procName });
             return Obj2IntPtr(o);
         }
 
         public IntPtr GetRemoteProcedureAddress(int pid, IntPtr moduleBaseAddress, string procName)
         {
-            object o = this.Invoke(this.hookLib, "GetRemoteProcedureAddress", new object[] { pid, IntPtr2Obj(moduleBaseAddress), procName });
+            object o = this.Invoke(this.hookLib, "GetRemoteProcedureAddress",
+                                   new object[] { pid, IntPtr2Obj(moduleBaseAddress), procName });
             return Obj2IntPtr(o);
         }
 
-        public ProcessInfo CreateProcess(string applicationName, string commandLine, Nullable<SECURITY_ATTRIBUTES> processAttributes,
-                                         Nullable<SECURITY_ATTRIBUTES> threadAttributes, bool inheritHandles, ProcessCreationFlags creationFlags,
-                                         string environment, string currentDirectory, Nullable<STARTUPINFO> startupInfo)
+        public ProcessInfo CreateProcess(string applicationName, string commandLine,
+                                         Nullable<SECURITY_ATTRIBUTES> processAttributes,
+                                         Nullable<SECURITY_ATTRIBUTES> threadAttributes,
+                                         bool inheritHandles, ProcessCreationFlags creationFlags,
+                                         string environment, string currentDirectory,
+                                         Nullable<STARTUPINFO> startupInfo)
         {
             PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
             IntPtr procAttr = IntPtr.Zero;
@@ -271,7 +278,8 @@ namespace DeviareLiteInterop
                 stInfo = Marshal.AllocHGlobal(Marshal.SizeOf(startupInfo.Value));
                 Marshal.StructureToPtr(startupInfo.Value, stInfo, false);
             }
-            if (NativeCreateProcess(applicationName, commandLine, procAttr, threadAttr, inheritHandles, (uint)creationFlags, environment, currentDirectory, stInfo, out pi) == false)
+            if (NativeCreateProcess(applicationName, commandLine, procAttr, threadAttr, inheritHandles,
+                                    (uint)creationFlags, environment, currentDirectory, stInfo, out pi) == false)
             {
                 Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
             }
@@ -294,9 +302,13 @@ namespace DeviareLiteInterop
             NativeResumeThread(threadHandle);
         }
 
-        public ProcessInfo CreateProcessWithDll(string applicationName, string commandLine, Nullable<SECURITY_ATTRIBUTES> processAttributes,
-                                                Nullable<SECURITY_ATTRIBUTES> threadAttributes, bool inheritHandles, ProcessCreationFlags creationFlags,
-                                                string environment, string currentDirectory, Nullable<STARTUPINFO> startupInfo, string dllName)
+        public ProcessInfo CreateProcessWithDll(string applicationName, string commandLine,
+                                                Nullable<SECURITY_ATTRIBUTES> processAttributes,
+                                                Nullable<SECURITY_ATTRIBUTES> threadAttributes,
+                                                bool inheritHandles, ProcessCreationFlags creationFlags,
+                                                string environment, string currentDirectory,
+                                                Nullable<STARTUPINFO> startupInfo, string dllName,
+                                                IntPtr signalCompletedEvent, string initFunctionName)
         {
             ProcessInfo pi = new ProcessInfo();
             IntPtr procAttr = IntPtr.Zero;
@@ -329,9 +341,11 @@ namespace DeviareLiteInterop
                 currentDirectory = "";
             try
             {
-                object o = this.Invoke(this.hookLib, "CreateProcessWithDll", new object[] { applicationName, commandLine,
-                                       IntPtr2Obj(procAttr), IntPtr2Obj(threadAttr), ih, creationFlags, environment,
-                                       currentDirectory, IntPtr2Obj(stInfo), dllName });
+                object o = this.Invoke(this.hookLib, "CreateProcessWithDll",
+                                       new object[] { applicationName, commandLine, IntPtr2Obj(procAttr),
+                                                      IntPtr2Obj(threadAttr), ih, creationFlags, environment,
+                                                      currentDirectory, IntPtr2Obj(stInfo), dllName,
+                                                      IntPtr2Obj(signalCompletedEvent), initFunctionName });
                 pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
                 pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
@@ -354,9 +368,11 @@ namespace DeviareLiteInterop
         }
 
         public ProcessInfo CreateProcessWithLogonAndDll(string userName, string domain, string password, int logonFlags,
-                                                        string applicationName, string commandLine, ProcessCreationFlags creationFlags,
-                                                        string environment, string currentDirectory,
-                                                        Nullable<STARTUPINFO> startupInfo, string dllName)
+                                                        string applicationName, string commandLine,
+                                                        ProcessCreationFlags creationFlags, string environment,
+                                                        string currentDirectory, Nullable<STARTUPINFO> startupInfo,
+                                                        string dllName, IntPtr signalCompletedEvent,
+                                                        string initFunctionName)
         {
             ProcessInfo pi = new ProcessInfo();
             IntPtr stInfo = IntPtr.Zero;
@@ -382,9 +398,11 @@ namespace DeviareLiteInterop
                 currentDirectory = "";
             try
             {
-                object o = this.Invoke(this.hookLib, "CreateProcessWithLogonAndDll", new object[] { userName, domain, password,
-                                       logonFlags, applicationName, commandLine, creationFlags, environment,
-                                       currentDirectory, IntPtr2Obj(stInfo), dllName });
+                object o = this.Invoke(this.hookLib, "CreateProcessWithLogonAndDll",
+                                       new object[] { userName, domain, password, logonFlags, applicationName,
+                                                      commandLine, creationFlags, environment, currentDirectory,
+                                                      IntPtr2Obj(stInfo), dllName, IntPtr2Obj(signalCompletedEvent),
+                                                      initFunctionName });
                 pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
                 pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
@@ -402,9 +420,11 @@ namespace DeviareLiteInterop
             return pi;
         }
 
-        public ProcessInfo CreateProcessWithTokenAndDll(IntPtr token, int logonFlags, string applicationName, string commandLine,
-                                                        ProcessCreationFlags creationFlags, string environment, string currentDirectory,
-                                                        Nullable<STARTUPINFO> startupInfo, string dllName)
+        public ProcessInfo CreateProcessWithTokenAndDll(IntPtr token, int logonFlags, string applicationName,
+                                                        string commandLine, ProcessCreationFlags creationFlags,
+                                                        string environment, string currentDirectory,
+                                                        Nullable<STARTUPINFO> startupInfo, string dllName,
+                                                        IntPtr signalCompletedEvent, string initFunctionName)
         {
             ProcessInfo pi = new ProcessInfo();
             IntPtr stInfo = IntPtr.Zero;
@@ -424,9 +444,10 @@ namespace DeviareLiteInterop
                 currentDirectory = "";
             try
             {
-                object o = this.Invoke(this.hookLib, "CreateProcessWithTokenAndDll", new object[] { IntPtr2Obj(token),
-                                       logonFlags, applicationName, commandLine, creationFlags, environment,
-                                       currentDirectory, IntPtr2Obj(stInfo), dllName });
+                object o = this.Invoke(this.hookLib, "CreateProcessWithTokenAndDll",
+                                       new object[] { IntPtr2Obj(token), logonFlags, applicationName, commandLine,
+                                                      creationFlags, environment, currentDirectory, IntPtr2Obj(stInfo),
+                                                      dllName, IntPtr2Obj(signalCompletedEvent), initFunctionName });
                 pi.procHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ProcessHandle")));
                 pi.threadHandle = DuplicateAndConvertToSafeWaitHandle(Obj2IntPtr(this.GetProperty(o, "ThreadHandle")));
                 pi.procId = (int)(this.GetProperty(o, "ProcessId"));
@@ -444,14 +465,62 @@ namespace DeviareLiteInterop
             return pi;
         }
 
-        public void InjectDll(int pid, string dllName)
+        public void InjectDll(int procId, string dllName, string initFunctionName)
         {
-            this.Invoke(this.hookLib, "InjectDll", new object[] { pid, dllName });
+            IntPtr injectorThreadHandle;
+
+            InjectDll(procId, dllName, initFunctionName, out injectorThreadHandle);
+            if (injectorThreadHandle != IntPtr.Zero)
+                NativeCloseHandle(injectorThreadHandle);
         }
 
-        public void InjectDllH(IntPtr procHandle, string dllName)
+        public void InjectDll(int procId, string dllName, string initFunctionName, out IntPtr injectorThreadHandle)
         {
-            this.Invoke(this.hookLib, "InjectDll", new object[] { IntPtr2Obj(procHandle), dllName });
+            ParameterModifier argsMod = new ParameterModifier(4);
+            argsMod[3] = true;
+            object[] args = new object[] { procId, dllName, initFunctionName, IntPtr2Obj(new IntPtr()) };
+            this.Invoke(this.hookLib, "InjectDll", args, argsMod);
+            injectorThreadHandle = Obj2IntPtr(args[3]);
+        }
+
+        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName)
+        {
+            IntPtr injectorThreadHandle;
+
+            InjectDllH(procHandle, dllName, initFunctionName, out injectorThreadHandle);
+            if (injectorThreadHandle != IntPtr.Zero)
+                NativeCloseHandle(injectorThreadHandle);
+        }
+
+        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName,
+                               out IntPtr injectorThreadHandle)
+        {
+            ParameterModifier argsMod = new ParameterModifier(4);
+            argsMod[3] = true;
+            object[] args = new object[] { IntPtr2Obj(procHandle), dllName, initFunctionName,
+                                           IntPtr2Obj(new IntPtr()) };
+            this.Invoke(this.hookLib, "InjectDllH", args, argsMod);
+            injectorThreadHandle = Obj2IntPtr(args[3]);
+        }
+
+        public uint WaitForInjectorThread(IntPtr injectorThreadHandle, uint timeoutMs)
+        {
+            uint exitCode = uint.MaxValue;
+
+            if (injectorThreadHandle != IntPtr.Zero)
+            {
+                switch (NativeWaitForSingleObject(injectorThreadHandle, timeoutMs))
+                {
+                    case 0:
+                        NativeGetExitCodeThread(injectorThreadHandle, out exitCode);
+                        break;
+                    case 0x00000102: //timeout
+                        exitCode = 1460; //ERROR_TIMEOUT
+                        break;
+                }
+                NativeCloseHandle(injectorThreadHandle);
+            }
+            return exitCode;
         }
 
         #region Private Vars
@@ -474,28 +543,43 @@ namespace DeviareLiteInterop
         #region Internal Helpers
         private Object GetProperty(Object obj, string propName)
         {
-            return obj.GetType().InvokeMember(propName, BindingFlags.GetProperty | BindingFlags.Instance | BindingFlags.Public,
-                                              null, obj, new object[] { });
+            return obj.GetType().InvokeMember(propName, BindingFlags.GetProperty | BindingFlags.Instance |
+                                                        BindingFlags.Public, null, obj, new object[] { });
         }
 
         private void SetProperty(Object obj, string propName, object propValue)
         {
 
-            obj.GetType().InvokeMember(propName, BindingFlags.SetProperty | BindingFlags.Instance | BindingFlags.Public,
+            obj.GetType().InvokeMember(propName, BindingFlags.SetProperty | BindingFlags.Instance |
+                                                 BindingFlags.Public,
                                        null, obj, new object[] { propValue });
+        }
+
+        private Object Invoke(Object obj, string methodName)
+        {
+            return this.Invoke(obj, methodName, new object[] { });
         }
 
         private Object Invoke(Object obj, string methodName, object[] parameters)
         {
-            if (parameters == null)
-                parameters = new object[] { };
-            return obj.GetType().InvokeMember(methodName, BindingFlags.InvokeMethod | BindingFlags.Instance | BindingFlags.Public,
+            return obj.GetType().InvokeMember(methodName, BindingFlags.InvokeMethod | BindingFlags.Instance |
+                                                          BindingFlags.Public,
                                               null, obj, parameters);
+        }
+
+        private Object Invoke(Object obj, string methodName, object[] parameters, ParameterModifier modifiers)
+        {
+            return obj.GetType().InvokeMember(methodName, BindingFlags.InvokeMethod | BindingFlags.Instance |
+                                                          BindingFlags.Public,
+                                              null, obj, parameters, new ParameterModifier[] { modifiers },
+                                              null, null);
         }
 
         private IntPtr GetMethodAddress(Type classType, string methodName, Type[] parameters)
         {
-            MethodInfo mi = classType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static, null, CallingConventions.Any, parameters, null);
+            MethodInfo mi = classType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic |
+                                                            BindingFlags.Instance | BindingFlags.Static, null,
+                                                CallingConventions.Any, parameters, null);
             if (mi == null)
                 return IntPtr.Zero;
             System.Runtime.CompilerServices.RuntimeHelpers.PrepareMethod(mi.MethodHandle);
@@ -505,7 +589,8 @@ namespace DeviareLiteInterop
         [MethodImpl(MethodImplOptions.NoOptimization)]
         private void DotNetInit()
         {
-            //NOTE: This will enforce a call to compileMethod in JIT compiler so DeviareLite.dll internal data can be initialized
+            //NOTE: This will enforce a call to compileMethod in JIT compiler so DeviareLite.dll internal
+            //      data can be initialized
             IntPtr mod = GetModuleBaseAddress("kernel32.dll");
             dummy = GetProcedureAddress(mod, "WaitForSingleObject");
             return;
@@ -531,30 +616,46 @@ namespace DeviareLiteInterop
         {
             IntPtr hDup;
 
-            if (NativeDuplicateHandle(NativeGetCurrentProcess(), h, NativeGetCurrentProcess(), out hDup, 0, false, 2) == false)
+            if (NativeDuplicateHandle(NativeGetCurrentProcess(), h, NativeGetCurrentProcess(), out hDup, 0,
+                                      false, 2) == false)
+            {
                 Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+            }
             return new SafeWaitHandle(hDup, true);
         }
         #endregion
 
         #region P/Invoke
         [DllImport("kernel32.dll", EntryPoint = "CreateProcess", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern bool NativeCreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes,
-                                                       IntPtr lpThreadAttributes, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
-                                                       uint dwCreationFlags, string lpEnvironment, string lpCurrentDirectory,
-                                                       IntPtr lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+        private static extern bool NativeCreateProcess(string lpApplicationName, string lpCommandLine,
+                                                       IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
+                                                       [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
+                                                       uint dwCreationFlags, string lpEnvironment,
+                                                       string lpCurrentDirectory, IntPtr lpStartupInfo,
+                                                       out PROCESS_INFORMATION lpProcessInformation);
 
         [DllImport("kernel32.dll", EntryPoint = "ResumeThread")]
         private static extern uint NativeResumeThread(IntPtr hThread);
 
+        [DllImport("kernel32.dll", EntryPoint = "CloseHandle")]
+        private static extern uint NativeCloseHandle(IntPtr hThread);
+
         [DllImport("kernel32.dll", EntryPoint = "DuplicateHandle", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool NativeDuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle, IntPtr hTargetProcessHandle,
-                                                         out IntPtr lpTargetHandle, uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle,
+        private static extern bool NativeDuplicateHandle(IntPtr hSourceProcessHandle, IntPtr hSourceHandle,
+                                                         IntPtr hTargetProcessHandle, out IntPtr lpTargetHandle,
+                                                         uint dwDesiredAccess,
+                                                         [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle,
                                                          uint dwOptions);
 
         [DllImport("kernel32.dll", EntryPoint = "GetCurrentProcess")]
         static extern IntPtr NativeGetCurrentProcess();
+
+        [DllImport("kernel32.dll", EntryPoint = "GetExitCodeThread")]
+        static extern bool NativeGetExitCodeThread(IntPtr hThread, out uint lpExitCode);
+
+        [DllImport("kernel32.dll", EntryPoint = "WaitForSingleObject", SetLastError = true)]
+        static extern UInt32 NativeWaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
         #endregion
     }
 }

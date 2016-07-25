@@ -145,6 +145,12 @@ NKT_PARSE_NTAPI_NTSTATUS(NtQueryInformationThread, (__in HANDLE ThreadHandle, __
 NKT_PARSE_NTAPI_NTSTATUS(NtWaitForSingleObject, (__in HANDLE Handle, __in BOOLEAN Alertable,
                                                  __in_opt PLARGE_INTEGER Timeout),
                          (Handle, Alertable, Timeout))
+NKT_PARSE_NTAPI_NTSTATUS(NtWaitForMultipleObjects, (__in ULONG Count, __in HANDLE Object[], __in LONG WaitType,
+                                                    __in BOOLEAN Alertable, __in PLARGE_INTEGER Timeout),
+                         (Count, Object, WaitType, Alertable, Timeout))
+
+//--------
+
 NKT_PARSE_NTAPI_NTSTATUS(NtAllocateVirtualMemory, (__in HANDLE ProcessHandle, __inout PVOID *BaseAddress,
                                                    __in ULONG_PTR ZeroBits, __inout PSIZE_T RegionSize,
                                                    __in ULONG AllocationType, __in ULONG Protect),

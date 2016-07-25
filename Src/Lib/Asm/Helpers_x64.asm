@@ -114,18 +114,18 @@ NktHookLib_TryMemCopy_SEH PROTO
 ALIGN 16
 ;SIZE_T __stdcall NktHookLib_TryMemCopy(__in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nCount);
 NktHookLib_TryMemCopy PROC FRAME :NktHookLib_TryMemCopy_SEH
-    sub  rsp, 28h+20h
-.allocstack 28h+20h
+    sub  rsp, 28h
+.allocstack 28h
 .endprolog
 
     mov  r9, r8 ;copy original count
 NktHookLib_TryMemCopy_GuardTop::
     test rcx, 7 ;destination aligned?
-    jne  slowPath
+    jne  @slowPath
     test rdx, 7 ;source aligned?
-    jne  slowPath
+    jne  @slowPath
     cmp  r8, 8
-    jbe  slowPath
+    jbe  @slowPath
 @@:
     mov  rax, QWORD PTR [rdx]
     add  rdx, 8
@@ -134,7 +134,7 @@ NktHookLib_TryMemCopy_GuardTop::
     sub  r8, 8
     cmp  r8, 8
     jae  @B
-slowPath:
+@slowPath:
     test r8, r8
     je   NktHookLib_TryMemCopy_AfterCopy
     mov  al, BYTE PTR [rdx]
@@ -142,12 +142,12 @@ slowPath:
     mov  BYTE PTR [rcx], al
     inc  rcx
     dec  r8
-    jmp  slowPath
+    jmp  @slowPath
 NktHookLib_TryMemCopy_GuardBottom::
 NktHookLib_TryMemCopy_AfterCopy::
     mov  rax, r9
     sub  rax, r8
-    add  rsp, 28h+20h
+    add  rsp, 28h
     ret
 NktHookLib_TryMemCopy ENDP
 

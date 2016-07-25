@@ -193,7 +193,7 @@ typedef struct {
 } NKT_HK_PROCESS_SESSION_INFORMATION, *LPNKT_HK_PROCESS_SESSION_INFORMATION;
 
 typedef struct {
-  NTSTATUS ExitStatus;
+  DWORD ExitStatus;
   PTEB TebBaseAddress;
   NKT_HK_CLIENT_ID ClientId;
   ULONG_PTR AffinityMask;

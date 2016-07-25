@@ -37,7 +37,7 @@ namespace CreateProcessWithDllTest
 {
     class Program
     {
-        //static DeviareLiteInterop.HookLib cHook = new DeviareLiteInterop.HookLib(); //<<<---- DON'T USE THIS WAY. SEE BELOW
+        //static DeviareLiteInterop.HookLib cHook = new DeviareLiteInterop.HookLib(); //<<<DON'T USE THIS. SEE BELOW.
         static DeviareLiteInterop.HookLib cHook;
 
         //--------
@@ -55,14 +55,14 @@ namespace CreateProcessWithDllTest
         {
             string cmdLine, dllName;
 
-            cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\calc.exe";
+            cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\notepad.exe";
             //cmdLine = @"c:\Archivos de programa (x86)\Java\jre1.8.0_40\bin\jp2launcher.exe";
             dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
             dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
-            TestCreateProcessWithDll(cmdLine, dllName);
+            //TestCreateProcessWithDll(cmdLine, dllName);
             TestCreateProcessAndInjectDll(cmdLine, dllName);
-            TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
+            //TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
         }
 
         static void TestCreateProcessWithDll(string cmdLine, string dllName)
@@ -70,16 +70,19 @@ namespace CreateProcessWithDllTest
             DeviareLiteInterop.HookLib.STARTUPINFO si;
             DeviareLiteInterop.HookLib.ProcessInfo pi;
 
-            MessageBox.Show("Launching CALC with a DLL injected\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            MessageBox.Show("Launching NOTEPAD with a DLL injected\r\r(close Notepad to next test)",
+                            "Dll Inject Test", MessageBoxButtons.OK);
             try
             {
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
-                pi = cHook.CreateProcessWithDll(cmdLine, "", null, null, false, 0, null, null, si, dllName);
+                pi = cHook.CreateProcessWithDll(cmdLine, "", null, null, false, 0, null, null, si, dllName,
+                                                IntPtr.Zero, "");
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -87,19 +90,22 @@ namespace CreateProcessWithDllTest
         {
             DeviareLiteInterop.HookLib.STARTUPINFO si;
             DeviareLiteInterop.HookLib.ProcessInfo pi;
+            uint exitCode;
 
-            MessageBox.Show("Launching CALC and injecting DLL after startup\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            MessageBox.Show("Launching NOTEPAD and injecting DLL after startup\r\r(close Notepad to next test)",
+                            "Dll Inject Test", MessageBoxButtons.OK);
             try
             {
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
                 pi = cHook.CreateProcess(cmdLine, "", null, null, false, 0, null, null, si);
-                System.Threading.Thread.Sleep(1000); //sleep for a while in order to let the process initialize properly
-                cHook.InjectDll(pi.procId, dllName);
+                System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
+                cHook.InjectDll(pi.procId, dllName, "");
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -107,14 +113,18 @@ namespace CreateProcessWithDllTest
         {
             DeviareLiteInterop.HookLib.STARTUPINFO si;
             DeviareLiteInterop.HookLib.ProcessInfo pi;
+            uint exitCode;
 
             pi.threadHandle = null;
-            MessageBox.Show("Launching suspended CALC, injecting DLL and resume\r\r(close Calc to next test)", "Dll Inject Test", MessageBoxButtons.OK);
+            MessageBox.Show("Launching suspended NOTEPAD, injecting DLL and resume\r\r(close Notepad to next test)",
+                            "Dll Inject Test", MessageBoxButtons.OK);
             try
             {
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
-                pi = cHook.CreateProcess(cmdLine, "", null, null, false, DeviareLiteInterop.HookLib.ProcessCreationFlags.CREATE_SUSPENDED, null, null, si);
-                cHook.InjectDll(pi.procId, dllName);
+                pi = cHook.CreateProcess(cmdLine, "", null, null, false,
+                                         DeviareLiteInterop.HookLib.ProcessCreationFlags.CREATE_SUSPENDED,
+                                         null, null, si);
+                cHook.InjectDll(pi.procId, dllName, "");
                 cHook.ResumeThread(pi.threadHandle);
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }
@@ -122,7 +132,8 @@ namespace CreateProcessWithDllTest
             {
                 if (pi.threadHandle != null && pi.threadHandle.IsInvalid == false)
                     cHook.ResumeThread(pi.threadHandle);
-                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Couldn't complete operation\r\rError: " + ex.ToString(), "Dll Inject Test",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

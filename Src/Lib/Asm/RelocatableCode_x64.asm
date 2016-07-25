@@ -31,10 +31,138 @@ _TEXT SEGMENT
 
 ;---------------------------------------------------------------------------------
 
+BuildFrame MACRO LocalsSize:REQ,CallerExtra:REQ,
+                 SaveReg1,SaveReg2,SaveReg3,SaveReg4,SaveReg5,SaveReg6,SaveReg7,
+                 SaveReg8,SaveReg9,SaveReg10,SaveReg11,SaveReg12,SaveReg13,SaveReg14
+    push rbp
+    SavedRegsCount=1
+IFNB <SaveReg1>
+    push SaveReg1
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg2>
+    push SaveReg2
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg3>
+    push SaveReg3
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg4>
+    push SaveReg4
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg5>
+    push SaveReg5
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg6>
+    push SaveReg6
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg7>
+    push SaveReg7
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg8>
+    push SaveReg8
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg9>
+    push SaveReg9
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg10>
+    push SaveReg10
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg11>
+    push SaveReg11
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg12>
+    push SaveReg12
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg13>
+    push SaveReg13
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+IFNB <SaveReg14>
+    push SaveReg14
+    SavedRegsCount=SavedRegsCount+1
+ENDIF
+
+    SavedRegsPadding = ((SavedRegsCount AND 1) XOR 1) * 8
+    LocalsPadding = 16 - (LocalsSize AND 15)
+    IF (LocalsPadding GE 16)
+        LocalsPadding = 0
+    ENDIF
+    CallerExtraPadding = (CallerExtra AND 1) * 8
+    StackSize = LocalsSize + LocalsPadding + CallerExtra * 8 + CallerExtraPadding + SavedRegsPadding
+    lea  rbp, [rsp - LocalsSize - LocalsPadding]
+    sub  rsp, StackSize + 32
+    OffsetHome = StackSize + 32 + SavedRegsCount*8 + 8
+    ENDM
+
+RemoveFrame MACRO SaveReg1,SaveReg2,SaveReg3,SaveReg4,SaveReg5,SaveReg6,SaveReg7,
+                  SaveReg8,SaveReg9,SaveReg10,SaveReg11,SaveReg12,SaveReg13,SaveReg14
+
+    add  rsp, StackSize + 32
+IFNB <SaveReg14>
+    pop  SaveReg14
+ENDIF
+IFNB <SaveReg13>
+    pop  SaveReg13
+ENDIF
+IFNB <SaveReg12>
+    pop  SaveReg12
+ENDIF
+IFNB <SaveReg11>
+    pop  SaveReg11
+ENDIF
+IFNB <SaveReg10>
+    pop  SaveReg10
+ENDIF
+IFNB <SaveReg9>
+    pop  SaveReg9
+ENDIF
+IFNB <SaveReg8>
+    pop  SaveReg8
+ENDIF
+IFNB <SaveReg7>
+    pop  SaveReg7
+ENDIF
+IFNB <SaveReg6>
+    pop  SaveReg6
+ENDIF
+IFNB <SaveReg5>
+    pop  SaveReg5
+ENDIF
+IFNB <SaveReg4>
+    pop  SaveReg4
+ENDIF
+IFNB <SaveReg3>
+    pop  SaveReg3
+ENDIF
+IFNB <SaveReg2>
+    pop  SaveReg2
+ENDIF
+IFNB <SaveReg1>
+    pop  SaveReg1
+ENDIF
+    pop  rbp
+    ENDM
+
+;---------------------------------------------------------------------------------
+
 IMAGE_DOS_SIGNATURE            EQU    5A4Dh     ;MZ
 IMAGE_NT_SIGNATURE             EQU    00004550h ;PE00
 IMAGE_NT_OPTIONAL_HDR64_MAGIC  EQU    20Bh
 IMAGE_FILE_MACHINE_AMD64       EQU    8664h
+
+ERROR_MOD_NOT_FOUND            EQU    126
+ERROR_PROC_NOT_FOUND           EQU    127
 
 UNICODE_STRING64 STRUCT 8
     _Length       WORD  ?
@@ -246,22 +374,6 @@ SimpleStrCmpA PROC
 SimpleStrCmpA ENDP
 
 ALIGN 8
-;LPVOID __stcall GetPEB()
-GetPEB PROC
-    mov  rax, QWORD PTR gs:[30h]
-    mov  rax, QWORD PTR [rax+60h]
-    ret
-GetPEB ENDP
-
-ALIGN 8
-;LPVOID __stdcall GetLoaderLockAddr()
-GetLoaderLockAddr PROC
-    call GetPEB
-    mov  rax, QWORD PTR [rax+110h]
-    ret
-GetLoaderLockAddr ENDP
-
-ALIGN 8
 ;BOOL __stdcall CheckImageType(LPVOID lpBase, LPVOID *lplpNtHdr)
 CheckImageType PROC
     xor  rax, rax
@@ -293,11 +405,15 @@ CheckImageType ENDP
 ALIGN 8
 ;LPVOID __stdcall GetModuleBaseAddress(LPCWSTR szDllNameW)
 GetModuleBaseAddress PROC
-szDllNameW$ = 20h+28h + 8h
 
-    mov  QWORD PTR [rsp+8h], rcx ;save 1st parameter for later use
-    sub  rsp, 20h + 28h             ;locals + shadow space + return address. Size should be 0x####8h always to mantain 16-byte alignment
-    call GetPEB
+    BuildFrame 0, 0, rbx, r10
+
+_szDllNameW$ = OffsetHome
+
+    mov  QWORD PTR _szDllNameW$[rsp], rcx ;save 1st parameter for later use
+
+    mov  rax, QWORD PTR gs:[30h]  ;TEB
+    mov  rax, QWORD PTR [rax+60h] ;PEB
     mov  rax, QWORD PTR [rax+18h] ;peb64+24 => pointer to PEB_LDR_DATA64
     test rax, rax
     je   @@not_found
@@ -317,7 +433,7 @@ szDllNameW$ = 20h+28h + 8h
     mov  rcx, QWORD PTR [rbx].MODULE_ENTRY64.BaseDllName.Buffer
     test rcx, rcx
     je   @@next
-    mov  rdx, QWORD PTR szDllNameW$[rsp]
+    mov  rdx, QWORD PTR _szDllNameW$[rsp]
     CALL SimpleStrNICmpW
     test rax, rax
     je   @@next
@@ -335,23 +451,25 @@ szDllNameW$ = 20h+28h + 8h
 @@not_found:
     xor  rax, rax
 @@found:
-    add  rsp, 20h + 28h
+    RemoveFrame rbx, r10
     ret
 GetModuleBaseAddress ENDP
 
 ALIGN 8
 ;LPVOID __stdcall GetProcedureAddress(LPVOID lpDllBase, LPCSTR szFuncNameA)
 GetProcedureAddress PROC
-lpDllBase$ = 40h+28h + 8h
-szFuncNameA$ = 40h+28h + 10h
-_lpNtHdr$ = 32
-_nNamesCount$ = 40
-_lpAddrOfNames$ = 48
 
-    mov  QWORD PTR [rsp+8h], rcx ;save 1st parameter for later use
-    mov  QWORD PTR [rsp+10h], rdx ;save 2nd parameter for later use
-    sub  rsp, 38h + 28h             ;locals + shadow space + return address. Size should be 0x####8h always to mantain 16-byte alignment
-    push r13
+    BuildFrame 18h, 0, r13
+
+_lpDllBase$ = OffsetHome
+_szFuncNameA$ = OffsetHome + 8
+_lpNtHdr$ = 0
+_nNamesCount$ = 8
+_lpAddrOfNames$ = 16
+
+    mov  QWORD PTR _lpDllBase$[rsp], rcx ;save 1st parameter for later use
+    mov  QWORD PTR _szFuncNameA$[rsp], rdx ;save 2nd parameter for later use
+
     ;check szFuncNameA for null
     test rdx, rdx
     je   @@not_found
@@ -359,69 +477,68 @@ _lpAddrOfNames$ = 48
     test rcx, rcx
     je   @@not_found
     ;get nt header
-    lea  rdx, QWORD PTR _lpNtHdr$[rsp]
+    lea  rdx, QWORD PTR _lpNtHdr$[rbp]
     call CheckImageType
     test rax, rax
     je   @@not_found
     ;check export data directory
-    mov  rax, QWORD PTR _lpNtHdr$[rsp]
+    mov  rax, QWORD PTR _lpNtHdr$[rbp]
     cmp  DWORD PTR [rax].IMAGE_NT_HEADERS64.OptionalHeader.DataDirectory[0]._Size, 0
     je   @@not_found
     xor  r8, r8
     mov  r8d, DWORD PTR [rax].IMAGE_NT_HEADERS64.OptionalHeader.DataDirectory[0].VirtualAddress
     test r8d, r8d
     je   @@not_found
-    add  r8, QWORD PTR lpDllBase$[rsp]
+    add  r8, QWORD PTR _lpDllBase$[rsp]
     ;get the number of names
     xor  rax, rax
     mov  eax, DWORD PTR [r8].IMAGE_EXPORT_DIRECTORY.NumberOfNames
-    mov  QWORD PTR _nNamesCount$[rsp], rax
+    mov  QWORD PTR _nNamesCount$[rbp], rax
     ;get the AddressOfNames
     xor  rax, rax
     mov  eax, DWORD PTR [r8].IMAGE_EXPORT_DIRECTORY.AddressOfNames
-    add  rax, QWORD PTR lpDllBase$[rsp]
-    mov  QWORD PTR _lpAddrOfNames$[rsp], rax
+    add  rax, QWORD PTR _lpDllBase$[rsp]
+    mov  QWORD PTR _lpAddrOfNames$[rbp], rax
     ;main loop
     xor  r13, r13
 @@loop:
-    cmp  r13, QWORD PTR _nNamesCount$[rsp]
+    cmp  r13, QWORD PTR _nNamesCount$[rbp]
     jae  @@not_found
     ;get exported name
-    mov  rdx, QWORD PTR szFuncNameA$[rsp]
-    mov  rax, QWORD PTR _lpAddrOfNames$[rsp]
+    mov  rdx, QWORD PTR _szFuncNameA$[rsp]
+    mov  rax, QWORD PTR _lpAddrOfNames$[rbp]
     xor  rcx, rcx
     mov  ecx, DWORD PTR [rax]
-    add  rcx, QWORD PTR lpDllBase$[rsp]
+    add  rcx, QWORD PTR _lpDllBase$[rsp]
     call SimpleStrCmpA
     test rax, rax
     je   @@next
     ;got the function
     xor  rax, rax
     mov  eax, DWORD PTR [r8].IMAGE_EXPORT_DIRECTORY.AddressOfNameOrdinals
-    add  rax, QWORD PTR lpDllBase$[rsp]
+    add  rax, QWORD PTR _lpDllBase$[rsp]
     shl  r13, 1
     add  rax, r13
     xor  rcx, rcx
     mov  cx, WORD PTR [rax] ;get the ordinal of this function
     xor  rax, rax
     mov  eax, DWORD PTR [r8].IMAGE_EXPORT_DIRECTORY.AddressOfFunctions
-    add  rax, QWORD PTR lpDllBase$[rsp]
+    add  rax, QWORD PTR _lpDllBase$[rsp]
     shl  rcx, 2
     add  rcx, rax
     ;get the function address
     xor  rax, rax
     mov  eax, DWORD PTR [rcx]
-    add  rax, QWORD PTR lpDllBase$[rsp]
+    add  rax, QWORD PTR _lpDllBase$[rsp]
     jmp  @@found
 @@next:
-    add  QWORD PTR _lpAddrOfNames$[rsp], 4
+    add  QWORD PTR _lpAddrOfNames$[rbp], 4
     inc  r13
     jmp  @@loop
 @@not_found:
     xor  rax, rax
 @@found:
-    pop  r13
-    add  rsp, 38h + 28h
+    RemoveFrame r13
     ret
 GetProcedureAddress ENDP
 
@@ -437,82 +554,183 @@ INJECTDLLINSUSPENDEDPROCESS_SECTION_START:
 
 ALIGN 8
 InjectDllInSuspendedProcess PROC
-_GETPROCADDR_1      EQU 0
-_GETMODBASEADDR_1   EQU 8
-_HINST_1            EQU 16
-_DLLNAME_1          EQU 24
-_SZ_KERNEL32DLL_1   EQU 32
-_SZ_LOADLIBRARYW_1  EQU 64
+_GETPROCADDR_1                    EQU 0
+_GETMODBASEADDR_1                 EQU 8
+_DLLNAME_1                        EQU 16
+_INITFUNCTION_1                   EQU 24
+_ORIGINAL_ENTRYPOINT_1            EQU 32
+_CHECKPOINTEVENT_1                EQU 40
+
+_ntdll_hinst$ = 0
+_ntcloseAddr$ = 8
+_ntseteventAddr$ = 16
+_kernel32_hinst$ = 24
+_loadlibrarywAddr$ = 32
+_freelibraryAddr$ = 40
+_injectdll_hinst$ = 48
+_initfunctionAddr$ = 56
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: will hold the dll instance
-    db   8 DUP (0h)                                                  ;offset 24: pointer to dll name
-    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 32: L"kernel32.dll"
-    db   'LoadLibraryW', 0,0,0,0                                     ;offset 64: "LoadLibraryW"
+    db   8 DUP (0h)                                                  ;offset 16: pointer to dll name
+    db   8 DUP (0h)                                                  ;offset 24: pointer to initialize function
+    db   8 DUP (0h)                                                  ;offset 32: original entrypoint
+    db   8 DUP (0h)                                                  ;offset 40: checkpoint event
+    jmp @@start
 
-    ;offset 80: code start
-    push rax
-    push rbx
-    push rcx
-    push rdx
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
-    push rsi
-    push rdi
-    pushfq
-    sub  rsp, 40h
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@kernel32_dll:
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
+@@loadlibraryw:
+    db   'LoadLibraryW', 0
+@@freelibrary:
+    db   'FreeLibrary', 0
 
-    ;get kernel32.dll base address
-    GetPtr rcx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_KERNEL32DLL_1
+@@start:
+    BuildFrame 40h, 0, rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+
+    ;get ntdll.dll base address
+    GetPtr rcx, @@ntdll_dll, 0
     GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
     call QWORD PTR [rax]
+    mov  QWORD PTR _ntdll_hinst$[rbp], rax
     test rax, rax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get kernel32.dll base address
+    GetPtr rcx, @@kernel32_dll, 0
+    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    call QWORD PTR [rax]
+    mov  QWORD PTR _kernel32_hinst$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@fail
+
+@@: GetPtr rbx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+
+    ;get address of NtClose
+    GetPtr rdx, @@ntclose, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntcloseAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of NtSetEvent
+    GetPtr rdx, @@ntsetevent, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntseteventAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of LoadLibraryW
+    GetPtr rdx, @@loadlibraryw, 0
+    mov  rcx, QWORD PTR _kernel32_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _loadlibrarywAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;get address of FreeLibrary
+    GetPtr rdx, @@freelibrary, 0
+    mov  rcx, QWORD PTR _kernel32_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _freelibraryAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;load library
+    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
+    mov rcx, QWORD PTR [rax]
+    call QWORD PTR _loadlibrarywAddr$[rbp]
+    mov  QWORD PTR _injectdll_hinst$[rbp], rax
+    test rax, rax
+    jne  @F
+    ;get last error
+    mov  rax, QWORD PTR gs:[30h]
+    mov  eax, DWORD PTR [rax+68h]
+    jmp  @@fail
+
+@@: ;call init function if provided
+    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _INITFUNCTION_1
+    mov  rdx, QWORD PTR [rax]
+    test rdx, rdx
     je   @@done
 
-    ;get address of LoadLibraryW
-    mov rcx, rax ;hinstance
-    GetPtr rdx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _SZ_LOADLIBRARYW_1
+    ;get init function address
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
     GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
     call QWORD PTR [rax]
     test rax, rax
-    je   @@done
+    jne  @F
 
-    ;call LoadLibraryW
-    GetPtr rcx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
-    mov rcx, QWORD PTR [rcx]
-    call rax
-    ;save hInstance
-    GetPtr rcx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _HINST_1
-    mov QWORD PTR [rcx], rax
+    ;free library if init function was not found
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
+    call QWORD PTR _freelibraryAddr$[rbp]
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@fail
+
+@@: ;call init function
+    CALL rax
+    test rax, rax
+    je   @@done
+    ;if init function returns an error, first free library
+    push rax ;save error code
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
+    call QWORD PTR _freelibraryAddr$[rbp]
+    pop  rax ;restore error code
+    jmp  @@fail
 
 @@done:
-    add  rsp, 40h
-    popfq
-    pop  rdi
-    pop  rsi
-    pop  r15
-    pop  r14
-    pop  r13
-    pop  r12
-    pop  r11
-    pop  r10
-    pop  r9
-    pop  r8
-    pop  rdx
-    pop  rcx
-    pop  rbx
-    pop  rax
+    ;set checkpoint event
+    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _CHECKPOINTEVENT_1
+    mov  rbx, QWORD PTR [rax]
+    test rbx, rbx
+    je   @F
+    xor  rdx, rdx
+    mov  rcx, rbx
+    call QWORD PTR _ntseteventAddr$[rbp]
+    ;close checkpoint event
+    mov  rcx, rbx
+    call QWORD PTR _ntcloseAddr$[rbp]
+
+@@: RemoveFrame rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+
     ;jmp to original address
-    db   48h, 0FFh, 25h
-    dd   0
-    dq   0
+    push rax
+    push rax
+    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    mov  rax, QWORD PTR [rax]
+    mov  QWORD PTR [rsp+8], rax
+    pop  rax
+    ret
+
+@@fail:
+    ;on error, quit
+    mov  DWORD PTR OffsetHome[rsp], eax ;save error code in the location of the 1st parameter
+
+    RemoveFrame rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+
+    ;return and exit process
+    mov  eax, DWORD PTR [rsp+8] ;retrieve error code previously stored
+    ret
 InjectDllInSuspendedProcess ENDP
 
 INJECTDLLINSUSPENDEDPROCESS_SECTION_END:
@@ -529,113 +747,120 @@ ALIGN 8
 InjectDllInRunningProcess PROC
 _GETPROCADDR_2                    EQU 0
 _GETMODBASEADDR_2                 EQU 8
-_HINST_2                          EQU 16
-_DLLNAME_2                        EQU 24
+_DLLNAME_2                        EQU 16
+_INITFUNCTION_2                   EQU 24
 _READYEVENT_2                     EQU 32
 _CONTINUEEVENT_2                  EQU 40
-_ADDR_LOADLIBRARYW_2              EQU 48
-_ADDR_NTCLOSE_2                   EQU 56
-_ADDR_NTSETEVENT_2                EQU 64
-_ADDR_NTWAITFORMULTIPLEOBJECTS_2  EQU 72
-_SZ_KERNEL32DLL_2                 EQU 80
-_SZ_LOADLIBRARYW_2                EQU 112
-_SZ_NTDLLDLL_2                    EQU 128
-_SZ_NTCLOSE_2                     EQU 160
-_SZ_NTSETEVENT_2                  EQU 168
-_SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 184
+
+_ntdll_hinst$ = 0
+_ntcloseAddr$ = 8
+_ntseteventAddr$ = 16
+_ntwaitformultipleobjectsAddr$ = 24
+_kernel32_hinst$ = 32
+_loadlibrarywAddr$ = 40
+_freelibraryAddr$ = 48
+_injectdll_hinst$ = 56
+_initfunctionAddr$ = 64
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: will hold the dll instance
-    db   8 DUP (0h)                                                  ;offset 24: pointer to dll name
+    db   8 DUP (0h)                                                  ;offset 16: pointer to dll name
+    db   8 DUP (0h)                                                  ;offset 24: pointer to initialize function
     db   8 DUP (0h)                                                  ;offset 32: ready event handle
     db   8 DUP (0h)                                                  ;offset 40: continue event handle
-    db   8 DUP (0h)                                                  ;offset 48: address of LoadLibraryW
-    db   8 DUP (0h)                                                  ;offset 56: address of NtClose
-    db   8 DUP (0h)                                                  ;offset 64: address of NtSetEvent
-    db   8 DUP (0h)                                                  ;offset 72: address of NtWaitForMultipleObjects
-    dw   'k','e','r','n','e','l','3','2','.','d','l','l',0,0,0,0     ;offset 80: L"kernel32.dll"
-    db   'LoadLibraryW', 0, 0, 0, 0                                  ;offset 112: "LoadLibraryW"
-    dw   'n','t','d','l','l','.','d','l','l', 0,0,0,0,0,0,0          ;offset 128: L"ntdll.dll"
-    db   'NtClose', 0                                                ;offset 160: "NtClose"
-    db   'NtSetEvent', 0,0,0,0,0,0                                   ;offset 168: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0,0,0,0,0,0,0,0                 ;offset 184: "NtWaitForMultipleObjects"
+    jmp @@start
 
-    ;offset 216: code start
-    push rax
-    push rbx
-    push rcx
-    push rdx
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
-    push rsi
-    push rdi
-    pushfq
-    sub  rsp, 40h
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@ntwaitformultipleobjects:
+    db   'NtWaitForMultipleObjects', 0
+@@kernel32_dll:
+    dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
+@@loadlibraryw:
+    db   'LoadLibraryW', 0
+@@freelibrary:
+    db   'FreeLibrary', 0
 
-    ;get kernel32.dll base address
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_KERNEL32DLL_2
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
-    call QWORD PTR [rax]
-    test rax, rax
-    je   @@done
-
-    mov  r12, rax ;save hinstance
-    GetPtr r13, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
-
-    ;get address of LdrLoadDll
-    mov  rcx, r12 ;hinstance
-    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_LOADLIBRARYW_2
-    call QWORD PTR [r13]
-    test rax, rax
-    je   @@done
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
-    mov  QWORD PTR [rcx], rax
+@@start:
+    BuildFrame 48h, 1, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
 
     ;get ntdll.dll base address
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTDLLDLL_2
+    GetPtr rcx, @@ntdll_dll, 0
     GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
     call QWORD PTR [rax]
+    mov  QWORD PTR _ntdll_hinst$[rbp], rax
     test rax, rax
-    je   @@done
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@exit
 
-    mov  r12, rax ;save hinstance
-    GetPtr r13, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
+@@: ;get kernel32.dll base address
+    GetPtr rcx, @@kernel32_dll, 0
+    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETMODBASEADDR_2
+    call QWORD PTR [rax]
+    mov  QWORD PTR _kernel32_hinst$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_MOD_NOT_FOUND
+    jmp  @@exit
+
+@@: GetPtr rbx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
 
     ;get address of NtClose
-    mov  rcx, r12 ;hinstance
-    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTCLOSE_2
-    call QWORD PTR [r13]
+    GetPtr rdx, @@ntclose, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntcloseAddr$[rbp], rax
     test rax, rax
-    je   @@done
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
-    mov  QWORD PTR [rcx], rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;get address of NtSetEvent
-    mov rcx, r12 ;hinstance
-    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTSETEVENT_2
-    call QWORD PTR [r13]
+@@: ;get address of NtSetEvent
+    GetPtr rdx, @@ntsetevent, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntseteventAddr$[rbp], rax
     test rax, rax
-    je   @@done
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTSETEVENT_2
-    mov  QWORD PTR [rcx], rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;get address of NtWaitForMultipleObjects
-    mov rcx, r12 ;hinstance
-    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _SZ_NTWAITFORMULTIPLEOBJECTS_2
-    call QWORD PTR [r13]
+@@: ;get address of NtWaitForMultipleObjects
+    GetPtr rdx, @@ntwaitformultipleobjects, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntwaitformultipleobjectsAddr$[rbp], rax
     test rax, rax
-    je   @@done
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_2
-    mov  QWORD PTR [rcx], rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
 
-    ;wait for ready event ?
+@@: ;get address of LoadLibraryW
+    GetPtr rdx, @@loadlibraryw, 0
+    mov  rcx, QWORD PTR _kernel32_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _loadlibrarywAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;get address of FreeLibrary
+    GetPtr rdx, @@freelibrary, 0
+    mov  rcx, QWORD PTR _kernel32_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _freelibraryAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;wait for ready event ?
     GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
     cmp  QWORD PTR [rdx], 0
     je   @F
@@ -643,59 +868,76 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_2    EQU 184
     mov  r8, 1 ;WaitAnyObject
     xor  r9, r9 ;FALSE
     mov  QWORD PTR [rsp+20h], 0
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_2
-    call QWORD PTR [rax]
+    call QWORD PTR _ntwaitformultipleobjectsAddr$[rbp]
 
     ;close ready event
     GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
     mov  rcx, QWORD PTR [rax]
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
-    call QWORD PTR [rax]
-@@:
+    call QWORD PTR _ntcloseAddr$[rbp]
 
-    ;load library
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
-    mov rcx, QWORD PTR [rcx]
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_LOADLIBRARYW_2
-    call QWORD PTR [rax]
-    ;save hInstance
-    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _HINST_2
-    mov QWORD PTR [rcx], rax
+@@: ;load library
+    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
+    mov rcx, QWORD PTR [rax]
+    call QWORD PTR _loadlibrarywAddr$[rbp]
+    mov  QWORD PTR _injectdll_hinst$[rbp], rax
+    test rax, rax
+    jne  @F
+    ;get last error
+    mov  rax, QWORD PTR gs:[30h]
+    mov  eax, DWORD PTR [rax+68h]
+    jmp  @@exit
 
-    ;set continue event
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
-    mov  rcx, QWORD PTR [rax]
-    cmp  rcx, 0
-    je   @F
-    xor  rdx, rdx ;NULL
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTSETEVENT_2
-    call QWORD PTR [rax]
+@@: ;call init function if provided
+    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTION_2
+    mov  rdx, QWORD PTR [rax]
+    test rdx, rdx
+    je   @@done
 
-    ;close continue event
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
-    mov  rcx, QWORD PTR [rax]
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _ADDR_NTCLOSE_2
+    ;get init function address
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
+    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
     call QWORD PTR [rax]
-@@:
+    test rax, rax
+    jne  @F
+
+    ;free library if init function was not found
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
+    call QWORD PTR _freelibraryAddr$[rbp]
+    mov  eax, ERROR_PROC_NOT_FOUND
+    jmp  @@exit
+
+@@: ;call init function
+    CALL rax
+    test rax, rax
+    je   @@done
+    ;if init function returns an error, first free library
+    push rax ;save error code
+    mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
+    call QWORD PTR _freelibraryAddr$[rbp]
+    pop  rax ;restore error code
+    jmp  @@exit
 
 @@done:
-    add  rsp, 40h
-    popfq
-    pop  rdi
-    pop  rsi
-    pop  r15
-    pop  r14
-    pop  r13
-    pop  r12
-    pop  r11
-    pop  r10
-    pop  r9
-    pop  r8
-    pop  rdx
-    pop  rcx
-    pop  rbx
-    pop  rax
-    xor  rax, rax
+    ;set continue event
+    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _CONTINUEEVENT_2
+    mov  rbx, QWORD PTR [rax]
+    test rbx, rbx
+    je   @F
+    xor  rdx, rdx
+    mov  rcx, rbx
+    call QWORD PTR _ntseteventAddr$[ebp]
+
+    ;close continue event
+    mov  rcx, rbx
+    call QWORD PTR _ntcloseAddr$[ebp]
+
+@@: ;no error
+    xor  eax, eax
+
+@@exit:
+    RemoveFrame rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+
+    ;return and exit thread
     ret
 InjectDllInRunningProcess ENDP
 
@@ -716,94 +958,76 @@ _GETMODBASEADDR_3                 EQU 8
 _READYEVENT_3                     EQU 16
 _CONTINUEEVENT_3                  EQU 24
 _CONTROLLERPROC_3                 EQU 32
-_ADDR_NTCLOSE_3                   EQU 40
-_ADDR_NTSETEVENT_3                EQU 48
-_ADDR_NTWAITFORMULTIPLEOBJECTS_3  EQU 56
-_SZ_NTDLLDLL_3                    EQU 64
-_SZ_NTCLOSE_3                     EQU 88
-_SZ_NTSETEVENT_3                  EQU 96
-_SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 108
+_ORIGINAL_ENTRYPOINT_3            EQU 40
+
+_ntdll_hinst$ = 0
+_ntcloseAddr$ = 8
+_ntseteventAddr$ = 16
+_ntwaitformultipleobjectsAddr$ = 24
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
     db   8 DUP (0h)                                                  ;offset 16: ready event handle
     db   8 DUP (0h)                                                  ;offset 24: continue event handle
     db   8 DUP (0h)                                                  ;offset 32: controller process handle
-    db   8 DUP (0h)                                                  ;offset 40: address of NtClose
-    db   8 DUP (0h)                                                  ;offset 48: address of NtSetEvent
-    db   8 DUP (0h)                                                  ;offset 56: address of NtWaitForMultipleObjects
-    dw   'n', 't', 'd', 'l', 'l', '.', 'd', 'l', 'l', 0, 0, 0        ;offset 64: L"ntdll.dll"
-    db   'NtClose', 0                                                ;offset 88: "NtClose"
-    db   'NtSetEvent', 0, 0                                          ;offset 96: "NtSetEvent"
-    db   'NtWaitForMultipleObjects', 0, 0, 0, 0                      ;offset 108: "NtWaitForMultipleObjects"
+    db   8 DUP (0h)                                                  ;offset 40: original entrypoint
+    jmp  @@start
 
-    ;offset 136: code start
-    push rax
-    push rbx
-    push rcx
-    push rdx
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
-    push rsi
-    push rdi
-    pushfq
-    sub  rsp, 40h
+@@ntdll_dll:
+    dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntclose:
+    db   'NtClose', 0
+@@ntsetevent:
+    db   'NtSetEvent', 0
+@@ntwaitformultipleobjects:
+    db   'NtWaitForMultipleObjects', 0
+
+@@start:
+    BuildFrame 20h, 1, rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
 
     ;get ntdll.dll base address
-    GetPtr rcx, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTDLLDLL_3
+    GetPtr rcx, @@ntdll_dll, 0
     GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _GETMODBASEADDR_3
     call QWORD PTR [rax]
     test rax, rax
     je   @@done
+    mov  QWORD PTR _ntdll_hinst$[rbp], rax
 
-    mov  r12, rax ;save hinstance
-    GetPtr r13, WAITFOREVENTATSTARTUP_SECTION_START, _GETPROCADDR_3
+    GetPtr rbx, WAITFOREVENTATSTARTUP_SECTION_START, _GETPROCADDR_3
 
     ;get address of NtClose
-    mov  rcx, r12 ;hinstance
-    GetPtr rdx, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTCLOSE_3
-    call QWORD PTR [r13]
+    GetPtr rdx, @@ntclose, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
     test rax, rax
     je   @@done
-    GetPtr rcx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    mov  QWORD PTR [rcx], rax
+    mov  QWORD PTR _ntcloseAddr$[rbp], rax
 
     ;get address of NtSetEvent
-    mov rcx, r12 ;hinstance
-    GetPtr rdx, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTSETEVENT_3
-    call QWORD PTR [r13]
+    GetPtr rdx, @@ntsetevent, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
     test rax, rax
     je   @@done
-    GetPtr rcx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTSETEVENT_3
-    mov  QWORD PTR [rcx], rax
+    mov  QWORD PTR _ntseteventAddr$[rbp], rax
 
     ;get address of NtWaitForMultipleObjects
-    mov rcx, r12 ;hinstance
-    GetPtr rdx, WAITFOREVENTATSTARTUP_SECTION_START, _SZ_NTWAITFORMULTIPLEOBJECTS_3
-    call QWORD PTR [r13]
+    GetPtr rdx, @@ntwaitformultipleobjects, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
     test rax, rax
     je   @@done
-    GetPtr rcx, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_3
-    mov  QWORD PTR [rcx], rax
+    mov  QWORD PTR _ntwaitformultipleobjectsAddr$[rbp], rax
 
     ;set ready event
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
-    mov  rcx, QWORD PTR [rax]
-    xor  rdx, rdx ;NULL
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTSETEVENT_3
-    call QWORD PTR [rax]
+    GetPtr rbx, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
+    xor  rdx, rdx
+    mov  rcx, QWORD PTR [rbx]
+    call QWORD PTR _ntseteventAddr$[rbp]
 
     ;close ready event
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
-    mov  rcx, QWORD PTR [rax]
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call QWORD PTR [rax]
+    mov  rcx, QWORD PTR [rbx]
+    call QWORD PTR _ntcloseAddr$[rbp]
 
     ;wait for continue event or controller process termination
     mov  rcx, 2
@@ -811,42 +1035,29 @@ _SZ_NTWAITFORMULTIPLEOBJECTS_3    EQU 108
     mov  r8, 1 ;WaitAnyObject
     xor  r9, r9 ;FALSE
     mov  QWORD PTR [rsp+20h], 0
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTWAITFORMULTIPLEOBJECTS_3
-    call QWORD PTR [rax]
+    call QWORD PTR _ntwaitformultipleobjectsAddr$[rbp]
 
     ;close continue event
     GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     mov  rcx, QWORD PTR [rax]
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call QWORD PTR [rax]
+    call QWORD PTR _ntcloseAddr$[rbp]
 
     ;close controller process
     GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTROLLERPROC_3
     mov  rcx, QWORD PTR [rax]
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ADDR_NTCLOSE_3
-    call QWORD PTR [rax]
+    call QWORD PTR _ntcloseAddr$[rbp]
 
 @@done:
-    add  rsp, 40h
-    popfq
-    pop  rdi
-    pop  rsi
-    pop  r15
-    pop  r14
-    pop  r13
-    pop  r12
-    pop  r11
-    pop  r10
-    pop  r9
-    pop  r8
-    pop  rdx
-    pop  rcx
-    pop  rbx
-    pop  rax
+    RemoveFrame rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+
     ;jmp to original address
-    db   48h, 0FFh, 25h
-    dd   0
-    dq   0
+    push rax
+    push rax
+    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ORIGINAL_ENTRYPOINT_3
+    mov  rax, QWORD PTR [rax]
+    mov  QWORD PTR [rsp+8], rax
+    pop  rax
+    ret
 WaitForEventAtStartup ENDP
 
 WAITFOREVENTATSTARTUP_SECTION_END:

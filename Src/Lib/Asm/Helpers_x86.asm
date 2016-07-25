@@ -105,21 +105,25 @@ NktHookLib_TryMemCopy_SEH PROTO C, :DWORD,:DWORD,:DWORD,:DWORD
 ALIGN 4
 ;SIZE_T __stdcall NktHookLib_TryMemCopy(__in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nCount);
 NktHookLib_TryMemCopy PROC STDCALL USES ebx ecx esi edi, lpDest:DWORD, lpSrc:DWORD, nCount:DWORD
+_lpDest$ = 8
+_lpSrc$ = 12
+_nCount$ = 16
+
     ASSUME FS:NOTHING
     push offset NktHookLib_TryMemCopy_SEH
     push fs:[0h]
     mov  fs:[0h], esp ;install SEH
 
-    mov  ebx, DWORD PTR [ebp+10h] ;copy original count
-    mov  esi, DWORD PTR [ebp+0Ch] ;source
-    mov  edi, DWORD PTR [ebp+8h]  ;destination
+    mov  ebx, DWORD PTR _nCount$[ebp]
+    mov  esi, DWORD PTR _lpSrc$[ebp]
+    mov  edi, DWORD PTR _lpDest$[ebp]
     mov  ecx, ebx
     test edi, 7 ;destination aligned?
-    jne  slowPath
+    jne  @slowPath
     test esi, 7 ;source aligned?
-    jne  slowPath
+    jne  @slowPath
     cmp  ecx, 4
-    jbe  slowPath
+    jbe  @slowPath
 @@:
     mov  eax, DWORD PTR [esi]
     add  esi, 4
@@ -128,7 +132,7 @@ NktHookLib_TryMemCopy PROC STDCALL USES ebx ecx esi edi, lpDest:DWORD, lpSrc:DWO
     sub  ecx, 4
     cmp  ecx, 4
     jae  @B
-slowPath:
+@slowPath:
     test ecx, ecx
     je   NktHookLib_TryMemCopy_AfterCopy
     mov  al, BYTE PTR [esi]
@@ -136,7 +140,7 @@ slowPath:
     mov  BYTE PTR [edi], al
     inc  edi
     dec  ecx
-    jmp  slowPath
+    jmp  @slowPath
 
 NktHookLib_TryMemCopy_AfterCopy::
     pop  fs:[0h] ;uninstall SEH
@@ -182,10 +186,10 @@ LOCAL seh:MYSEH
     push eax
     mov  eax, lpFunc
     cmp  bIsCDecl, 0
-    jne  isCDecl
+    jne  @isCDecl
     call eax
     jmp  NktHookLib_TryCallOneParam_AfterCall
-isCDecl:
+@isCDecl:
     call eax
     add  esp, 4h
 NktHookLib_TryCallOneParam_AfterCall::
