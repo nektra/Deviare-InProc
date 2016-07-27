@@ -15,6 +15,7 @@
 *.pch
 *.obj
 *.VC.db
+*.VC.opendb
 Bin/
 MISC/
 Libs/

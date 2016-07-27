@@ -625,7 +625,6 @@ static DWORD InstallWaitForEventAtStartup(__out LPHANDLE lphReadyEvent, __out LP
         dwOsErr = ERROR_SUCCESS;
     }
   }
-
   //write new startup data
   if (dwOsErr == ERROR_SUCCESS)
   {
