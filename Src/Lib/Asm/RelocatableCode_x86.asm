@@ -748,7 +748,6 @@ _initfunctionAddr$ = -40
     push ebp
     mov  ebp, esp
     sub  esp, 44
-
     push ebx
     push ecx
     push edx
@@ -920,8 +919,7 @@ ASSUME FS:ERROR
     pop  edx
     pop  ecx
     pop  ebx
-
-    add  esp, 44
+    mov  esp, ebp
     pop  ebp
     ;return and exit thread
     ret  4h
@@ -971,7 +969,6 @@ _ntwaitformultipleobjectsAddr$ = -16
     push ebp
     mov  ebp, esp
     sub  esp, 20
-
     push eax
     push ebx
     push ecx
@@ -1056,6 +1053,7 @@ _ntwaitformultipleobjectsAddr$ = -16
     pop  ecx
     pop  ebx
     pop  eax
+    mov  esp, ebp
     pop  ebp
     ret
 WaitForEventAtStartup ENDP

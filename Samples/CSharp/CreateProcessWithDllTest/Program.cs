@@ -56,13 +56,12 @@ namespace CreateProcessWithDllTest
             string cmdLine, dllName;
 
             cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\notepad.exe";
-            //cmdLine = @"c:\Archivos de programa (x86)\Java\jre1.8.0_40\bin\jp2launcher.exe";
             dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
             dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
             //TestCreateProcessWithDll(cmdLine, dllName);
-            TestCreateProcessAndInjectDll(cmdLine, dllName);
-            //TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
+            //TestCreateProcessAndInjectDll(cmdLine, dllName);
+            TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
         }
 
         static void TestCreateProcessWithDll(string cmdLine, string dllName)
