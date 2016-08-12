@@ -269,7 +269,7 @@ _string2$ = 12
     je   @F
     inc  esi
     inc  edi
-    jne  @@loop
+    jmp  @@loop
 @@: ;match
     xor  eax, eax
     inc  eax
@@ -474,14 +474,14 @@ GETMODULEANDPROCADDR_SECTION_END:
 
 ;---------------------------------------------------------------------------------
 
-PUBLIC INJECTDLLINSUSPENDEDPROCESS_SECTION_START
-PUBLIC INJECTDLLINSUSPENDEDPROCESS_SECTION_END
+PUBLIC INJECTDLLINNEWPROCESS_SECTION_START
+PUBLIC INJECTDLLINNEWPROCESS_SECTION_END
 
 ALIGN 4
-INJECTDLLINSUSPENDEDPROCESS_SECTION_START:
+INJECTDLLINNEWPROCESS_SECTION_START:
 
 ALIGN 4
-InjectDllInSuspendedProcess PROC
+InjectDllInNewProcess PROC
 _GETPROCADDR_1                    EQU 0
 _GETMODBASEADDR_1                 EQU 4
 _DLLNAME_1                        EQU 8
@@ -535,7 +535,7 @@ _initfunctionAddr$ = -32
     ;get ntdll.dll base address
     GetPtr eax, @@ntdll_dll, 0
     push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _GETMODBASEADDR_1
     call DWORD PTR [eax]
     mov  DWORD PTR _ntdll_hinst$[ebp], eax
     test eax, eax
@@ -546,7 +546,7 @@ _initfunctionAddr$ = -32
 @@: ;get kernel32.dll base address
     GetPtr eax, @@kernel32_dll, 0
     push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _GETMODBASEADDR_1
     call DWORD PTR [eax]
     mov  DWORD PTR _kernel32_hinst$[ebp], eax
     test eax, eax
@@ -554,7 +554,7 @@ _initfunctionAddr$ = -32
     mov  eax, ERROR_MOD_NOT_FOUND
     jmp  @@fail
 
-@@: GetPtr ebx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+@@: GetPtr ebx, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
 
     ;get address of NtClose
     GetPtr eax, @@ntclose, 0
@@ -601,7 +601,7 @@ _initfunctionAddr$ = -32
     jmp  @@fail
 
 @@: ;load library
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _DLLNAME_1
     push DWORD PTR [eax]
     call DWORD PTR _loadlibrarywAddr$[ebp]
     mov  DWORD PTR _injectdll_hinst$[ebp], eax
@@ -615,7 +615,7 @@ ASSUME FS:ERROR
     jmp  @@fail
 
 @@: ;call init function if provided
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _INITFUNCTION_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTION_1
     mov  eax, DWORD PTR [eax]
     test eax, eax
     je   @@done
@@ -623,7 +623,7 @@ ASSUME FS:ERROR
     ;get init function address
     push eax
     push DWORD PTR _injectdll_hinst$[ebp]
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
     call DWORD PTR [eax]
     test eax, eax
     jne  @F
@@ -647,7 +647,7 @@ ASSUME FS:ERROR
 
 @@done:
     ;set checkpoint event
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _CHECKPOINTEVENT_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _CHECKPOINTEVENT_1
     mov  ebx, DWORD PTR [eax]
     test ebx, ebx
     je   @F
@@ -671,7 +671,7 @@ ASSUME FS:ERROR
     ;jmp to original address
     push eax
     push eax
-    GetPtr eax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
     mov  eax, DWORD PTR [eax]
     mov  DWORD PTR [esp+4], eax
     pop  eax
@@ -690,9 +690,9 @@ ASSUME FS:ERROR
 
     ;return and exit process
     ret  4h
-InjectDllInSuspendedProcess ENDP
+InjectDllInNewProcess ENDP
 
-INJECTDLLINSUSPENDEDPROCESS_SECTION_END:
+INJECTDLLINNEWPROCESS_SECTION_END:
 
 ;---------------------------------------------------------------------------------
 
@@ -938,13 +938,13 @@ ALIGN 4
 WAITFOREVENTATSTARTUP_SECTION_START:
 
 ALIGN 4
+;VOID __cdecl WaitForEventAtStartup(LPVOID lpApcArgument1, LPVOID lpApcArgument2, LPVOID lpApcArgument3)
 WaitForEventAtStartup PROC
 _GETPROCADDR_3                    EQU 0
 _GETMODBASEADDR_3                 EQU 4
 _READYEVENT_3                     EQU 8
 _CONTINUEEVENT_3                  EQU 12
 _CONTROLLERPROC_3                 EQU 16
-_ORIGINAL_ENTRYPOINT_3            EQU 20
 
 _ntdll_hinst$ = -4
 _ntcloseAddr$ = -8
@@ -956,7 +956,6 @@ _ntwaitformultipleobjectsAddr$ = -16
     db   4 DUP (0h)                                                  ;offset 8: ready event handle
     db   4 DUP (0h)                                                  ;offset 12: continue event handle
     db   4 DUP (0h)                                                  ;offset 16: controller process handle
-    db   4 DUP (0h)                                                  ;offset 20: original entrypoint
     jmp  @@start
 
 @@ntdll_dll:
@@ -1058,14 +1057,6 @@ _ntwaitformultipleobjectsAddr$ = -16
     pop  ebx
     pop  eax
     pop  ebp
-
-    ;jmp to original address
-    push eax
-    push eax
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _ORIGINAL_ENTRYPOINT_3
-    mov  eax, DWORD PTR [eax]
-    mov  DWORD PTR [esp+4], eax
-    pop  eax
     ret
 WaitForEventAtStartup ENDP
 

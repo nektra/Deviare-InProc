@@ -363,7 +363,7 @@ SimpleStrCmpA PROC
     je   @F
     inc  rcx
     inc  rdx
-    jne  @@loop
+    jmp  @@loop
 @@: ;match
     xor  rax, rax
     inc  rax
@@ -546,14 +546,14 @@ GETMODULEANDPROCADDR_SECTION_END:
 
 ;---------------------------------------------------------------------------------
 
-PUBLIC INJECTDLLINSUSPENDEDPROCESS_SECTION_START
-PUBLIC INJECTDLLINSUSPENDEDPROCESS_SECTION_END
+PUBLIC INJECTDLLINNEWPROCESS_SECTION_START
+PUBLIC INJECTDLLINNEWPROCESS_SECTION_END
 
 ALIGN 8
-INJECTDLLINSUSPENDEDPROCESS_SECTION_START:
+INJECTDLLINNEWPROCESS_SECTION_START:
 
 ALIGN 8
-InjectDllInSuspendedProcess PROC
+InjectDllInNewProcess PROC
 _GETPROCADDR_1                    EQU 0
 _GETMODBASEADDR_1                 EQU 8
 _DLLNAME_1                        EQU 16
@@ -596,7 +596,7 @@ _initfunctionAddr$ = 56
 
     ;get ntdll.dll base address
     GetPtr rcx, @@ntdll_dll, 0
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _GETMODBASEADDR_1
     call QWORD PTR [rax]
     mov  QWORD PTR _ntdll_hinst$[rbp], rax
     test rax, rax
@@ -606,7 +606,7 @@ _initfunctionAddr$ = 56
 
 @@: ;get kernel32.dll base address
     GetPtr rcx, @@kernel32_dll, 0
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETMODBASEADDR_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _GETMODBASEADDR_1
     call QWORD PTR [rax]
     mov  QWORD PTR _kernel32_hinst$[rbp], rax
     test rax, rax
@@ -614,7 +614,7 @@ _initfunctionAddr$ = 56
     mov  eax, ERROR_MOD_NOT_FOUND
     jmp  @@fail
 
-@@: GetPtr rbx, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+@@: GetPtr rbx, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
 
     ;get address of NtClose
     GetPtr rdx, @@ntclose, 0
@@ -657,7 +657,7 @@ _initfunctionAddr$ = 56
     jmp  @@fail
 
 @@: ;load library
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _DLLNAME_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _DLLNAME_1
     mov rcx, QWORD PTR [rax]
     call QWORD PTR _loadlibrarywAddr$[rbp]
     mov  QWORD PTR _injectdll_hinst$[rbp], rax
@@ -669,14 +669,14 @@ _initfunctionAddr$ = 56
     jmp  @@fail
 
 @@: ;call init function if provided
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _INITFUNCTION_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTION_1
     mov  rdx, QWORD PTR [rax]
     test rdx, rdx
     je   @@done
 
     ;get init function address
     mov  rcx, QWORD PTR _injectdll_hinst$[rbp]
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _GETPROCADDR_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
     call QWORD PTR [rax]
     test rax, rax
     jne  @F
@@ -700,7 +700,7 @@ _initfunctionAddr$ = 56
 
 @@done:
     ;set checkpoint event
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _CHECKPOINTEVENT_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _CHECKPOINTEVENT_1
     mov  rbx, QWORD PTR [rax]
     test rbx, rbx
     je   @F
@@ -716,7 +716,7 @@ _initfunctionAddr$ = 56
     ;jmp to original address
     push rax
     push rax
-    GetPtr rax, INJECTDLLINSUSPENDEDPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
     mov  rax, QWORD PTR [rax]
     mov  QWORD PTR [rsp+8], rax
     pop  rax
@@ -731,9 +731,9 @@ _initfunctionAddr$ = 56
     ;return and exit process
     mov  eax, DWORD PTR [rsp+8] ;retrieve error code previously stored
     ret
-InjectDllInSuspendedProcess ENDP
+InjectDllInNewProcess ENDP
 
-INJECTDLLINSUSPENDEDPROCESS_SECTION_END:
+INJECTDLLINNEWPROCESS_SECTION_END:
 
 ;---------------------------------------------------------------------------------
 
@@ -952,13 +952,13 @@ ALIGN 8
 WAITFOREVENTATSTARTUP_SECTION_START:
 
 ALIGN 8
+;VOID __cdecl WaitForEventAtStartup(LPVOID lpApcArgument1, LPVOID lpApcArgument2, LPVOID lpApcArgument3)
 WaitForEventAtStartup PROC
 _GETPROCADDR_3                    EQU 0
 _GETMODBASEADDR_3                 EQU 8
 _READYEVENT_3                     EQU 16
 _CONTINUEEVENT_3                  EQU 24
 _CONTROLLERPROC_3                 EQU 32
-_ORIGINAL_ENTRYPOINT_3            EQU 40
 
 _ntdll_hinst$ = 0
 _ntcloseAddr$ = 8
@@ -970,7 +970,6 @@ _ntwaitformultipleobjectsAddr$ = 24
     db   8 DUP (0h)                                                  ;offset 16: ready event handle
     db   8 DUP (0h)                                                  ;offset 24: continue event handle
     db   8 DUP (0h)                                                  ;offset 32: controller process handle
-    db   8 DUP (0h)                                                  ;offset 40: original entrypoint
     jmp  @@start
 
 @@ntdll_dll:
@@ -1049,14 +1048,6 @@ _ntwaitformultipleobjectsAddr$ = 24
 
 @@done:
     RemoveFrame rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
-
-    ;jmp to original address
-    push rax
-    push rax
-    GetPtr rax, WAITFOREVENTATSTARTUP_SECTION_START, _ORIGINAL_ENTRYPOINT_3
-    mov  rax, QWORD PTR [rax]
-    mov  QWORD PTR [rsp+8], rax
-    pop  rax
     ret
 WaitForEventAtStartup ENDP
 

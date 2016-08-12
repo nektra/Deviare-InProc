@@ -48,8 +48,8 @@ typedef struct {
 SIZE_T GetModuleAndProcAddr_GetSize(__in LONG nPlatform);
 LPBYTE GetModuleAndProcAddr_GetCode(__in LONG nPlatform, __out GETMODULEANDPROCADDR_DATA &sAddresses);
 
-SIZE_T InjectDllInSuspendedProcess_GetSize(__in LONG nPlatform);
-LPBYTE InjectDllInSuspendedProcess_GetCode(__in LONG nPlatform);
+SIZE_T InjectDllInNewProcess_GetSize(__in LONG nPlatform);
+LPBYTE InjectDllInNewProcess_GetCode(__in LONG nPlatform);
 
 SIZE_T InjectDllInRunningProcess_GetSize(__in LONG nPlatform);
 LPBYTE InjectDllInRunningProcess_GetCode(__in LONG nPlatform);

@@ -34,6 +34,7 @@
 #include "HookEntry.h"
 #include "NtHeapBaseObj.h"
 #include <intrin.h>
+#include "Wow64.h"
 
 using namespace NktHookLib::Internals;
 using namespace NktHookLibHelpers;
