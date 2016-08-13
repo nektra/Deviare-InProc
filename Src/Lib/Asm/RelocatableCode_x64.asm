@@ -749,35 +749,27 @@ _GETPROCADDR_2                    EQU 0
 _GETMODBASEADDR_2                 EQU 8
 _DLLNAME_2                        EQU 16
 _INITFUNCTION_2                   EQU 24
-_READYEVENT_2                     EQU 32
-_CONTINUEEVENT_2                  EQU 40
+_CONTINUEEVENT_2                  EQU 32
 
 _ntdll_hinst$ = 0
-_ntcloseAddr$ = 8
-_ntseteventAddr$ = 16
-_ntwaitformultipleobjectsAddr$ = 24
-_kernel32_hinst$ = 32
-_loadlibrarywAddr$ = 40
-_freelibraryAddr$ = 48
-_injectdll_hinst$ = 56
-_initfunctionAddr$ = 64
+_ntseteventAddr$ = 8
+_kernel32_hinst$ = 16
+_loadlibrarywAddr$ = 24
+_freelibraryAddr$ = 32
+_injectdll_hinst$ = 40
+_initfunctionAddr$ = 48
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
     db   8 DUP (0h)                                                  ;offset 16: pointer to dll name
     db   8 DUP (0h)                                                  ;offset 24: pointer to initialize function
-    db   8 DUP (0h)                                                  ;offset 32: ready event handle
-    db   8 DUP (0h)                                                  ;offset 40: continue event handle
+    db   8 DUP (0h)                                                  ;offset 32: continue event handle
     jmp @@start
 
 @@ntdll_dll:
     dw   'n','t','d','l','l','.','d','l','l', 0
-@@ntclose:
-    db   'NtClose', 0
 @@ntsetevent:
     db   'NtSetEvent', 0
-@@ntwaitformultipleobjects:
-    db   'NtWaitForMultipleObjects', 0
 @@kernel32_dll:
     dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
 @@loadlibraryw:
@@ -786,7 +778,7 @@ _initfunctionAddr$ = 64
     db   'FreeLibrary', 0
 
 @@start:
-    BuildFrame 48h, 1, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+    BuildFrame 38h, 1, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
 
     ;get ntdll.dll base address
     GetPtr rcx, @@ntdll_dll, 0
@@ -810,31 +802,11 @@ _initfunctionAddr$ = 64
 
 @@: GetPtr rbx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
 
-    ;get address of NtClose
-    GetPtr rdx, @@ntclose, 0
-    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
-    call QWORD PTR [rbx]
-    mov  QWORD PTR _ntcloseAddr$[rbp], rax
-    test rax, rax
-    jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@exit
-
-@@: ;get address of NtSetEvent
+    ;get address of NtSetEvent
     GetPtr rdx, @@ntsetevent, 0
     mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
     call QWORD PTR [rbx]
     mov  QWORD PTR _ntseteventAddr$[rbp], rax
-    test rax, rax
-    jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@exit
-
-@@: ;get address of NtWaitForMultipleObjects
-    GetPtr rdx, @@ntwaitformultipleobjects, 0
-    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
-    call QWORD PTR [rbx]
-    mov  QWORD PTR _ntwaitformultipleobjectsAddr$[rbp], rax
     test rax, rax
     jne  @F
     mov  eax, ERROR_PROC_NOT_FOUND
@@ -859,21 +831,6 @@ _initfunctionAddr$ = 64
     jne  @F
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@exit
-
-@@: ;wait for ready event ?
-    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
-    cmp  QWORD PTR [rdx], 0
-    je   @F
-    mov  rcx, 1
-    mov  r8, 1 ;WaitAnyObject
-    xor  r9, r9 ;FALSE
-    mov  QWORD PTR [rsp+20h], 0
-    call QWORD PTR _ntwaitformultipleobjectsAddr$[rbp]
-
-    ;close ready event
-    GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
-    mov  rcx, QWORD PTR [rax]
-    call QWORD PTR _ntcloseAddr$[rbp]
 
 @@: ;load library
     GetPtr rax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
@@ -925,11 +882,7 @@ _initfunctionAddr$ = 64
     je   @F
     xor  rdx, rdx
     mov  rcx, rbx
-    call QWORD PTR _ntseteventAddr$[ebp]
-
-    ;close continue event
-    mov  rcx, rbx
-    call QWORD PTR _ntcloseAddr$[ebp]
+    call QWORD PTR _ntseteventAddr$[rbp]
 
 @@: ;no error
     xor  eax, eax
@@ -956,18 +909,18 @@ ALIGN 8
 WaitForEventAtStartup PROC
 _GETPROCADDR_3                    EQU 0
 _GETMODBASEADDR_3                 EQU 8
-_READYEVENT_3                     EQU 16
+_LOADERTHREAD_3                   EQU 16
 _CONTINUEEVENT_3                  EQU 24
 _CONTROLLERPROC_3                 EQU 32
 
 _ntdll_hinst$ = 0
 _ntcloseAddr$ = 8
-_ntseteventAddr$ = 16
+_ntresumethreadAddr$ = 16
 _ntwaitformultipleobjectsAddr$ = 24
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
-    db   8 DUP (0h)                                                  ;offset 16: ready event handle
+    db   8 DUP (0h)                                                  ;offset 16: loader thread handle
     db   8 DUP (0h)                                                  ;offset 24: continue event handle
     db   8 DUP (0h)                                                  ;offset 32: controller process handle
     jmp  @@start
@@ -976,10 +929,10 @@ _ntwaitformultipleobjectsAddr$ = 24
     dw   'n','t','d','l','l','.','d','l','l', 0
 @@ntclose:
     db   'NtClose', 0
-@@ntsetevent:
-    db   'NtSetEvent', 0
 @@ntwaitformultipleobjects:
     db   'NtWaitForMultipleObjects', 0
+@@ntresumethread:
+    db   'NtResumeThread', 0
 
 @@start:
     BuildFrame 20h, 1, rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
@@ -1002,14 +955,6 @@ _ntwaitformultipleobjectsAddr$ = 24
     je   @@done
     mov  QWORD PTR _ntcloseAddr$[rbp], rax
 
-    ;get address of NtSetEvent
-    GetPtr rdx, @@ntsetevent, 0
-    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
-    call QWORD PTR [rbx]
-    test rax, rax
-    je   @@done
-    mov  QWORD PTR _ntseteventAddr$[rbp], rax
-
     ;get address of NtWaitForMultipleObjects
     GetPtr rdx, @@ntwaitformultipleobjects, 0
     mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
@@ -1018,17 +963,23 @@ _ntwaitformultipleobjectsAddr$ = 24
     je   @@done
     mov  QWORD PTR _ntwaitformultipleobjectsAddr$[rbp], rax
 
-    ;set ready event
-    GetPtr rbx, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
+    ;get address of NtResumeThread
+    GetPtr rdx, @@ntresumethread, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    test rax, rax
+    je   @@done
+    mov  QWORD PTR _ntresumethreadAddr$[rbp], rax
+
+    ;resume secondary thread
+    GetPtr rbx, WAITFOREVENTATSTARTUP_SECTION_START, _LOADERTHREAD_3
     xor  rdx, rdx
     mov  rcx, QWORD PTR [rbx]
-    call QWORD PTR _ntseteventAddr$[rbp]
+    test rcx, rcx
+    je   @F
+    call QWORD PTR _ntresumethreadAddr$[rbp]
 
-    ;close ready event
-    mov  rcx, QWORD PTR [rbx]
-    call QWORD PTR _ntcloseAddr$[rbp]
-
-    ;wait for continue event or controller process termination
+@@: ;wait for continue event or controller process termination
     mov  rcx, 2
     GetPtr rdx, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     mov  r8, 1 ;WaitAnyObject

@@ -112,6 +112,7 @@
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <ExceptionHandling>false</ExceptionHandling>
@@ -119,7 +120,6 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Lib />
     <PreBuildEvent />

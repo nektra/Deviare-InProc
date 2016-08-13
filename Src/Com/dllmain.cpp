@@ -31,37 +31,7 @@
 #include "resource.h"
 #include "dllmain.h"
 #include "dlldatax.h"
-#if _MSC_VER >= 1900
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2015.c"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2015.c"
-  #endif //_WIN64
-#elif _MSC_VER >= 1800
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2013.c"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2013.c"
-  #endif //_WIN64
-#elif _MSC_VER >= 1700
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2012.c"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2012.c"
-  #endif //_WIN64
-#elif  _MSC_VER >= 1600
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2010.c"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2010.c"
-  #endif //_WIN64
-#else
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2008.c"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2008.c"
-  #endif //_WIN64
-#endif
+#include "DeviareLiteCOM_i.c"
 
 //-----------------------------------------------------------
 

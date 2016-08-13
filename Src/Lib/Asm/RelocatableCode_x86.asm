@@ -708,35 +708,27 @@ _GETPROCADDR_2                    EQU 0
 _GETMODBASEADDR_2                 EQU 4
 _DLLNAME_2                        EQU 8
 _INITFUNCTION_2                   EQU 12
-_READYEVENT_2                     EQU 16
-_CONTINUEEVENT_2                  EQU 20
+_CONTINUEEVENT_2                  EQU 16
 
 _ntdll_hinst$ = -4
-_ntcloseAddr$ = -8
-_ntseteventAddr$ = -16
-_ntwaitformultipleobjectsAddr$ = -24
-_kernel32_hinst$ = -28
-_loadlibrarywAddr$ = -32
-_freelibraryAddr$ = -16
-_injectdll_hinst$ = -36
-_initfunctionAddr$ = -40
+_ntseteventAddr$ = -8
+_kernel32_hinst$ = -12
+_loadlibrarywAddr$ = -16
+_freelibraryAddr$ = -20
+_injectdll_hinst$ = -24
+_initfunctionAddr$ = -28
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
     db   4 DUP (0h)                                                  ;offset 8: pointer to dll name
     db   4 DUP (0h)                                                  ;offset 12: pointer to initialize function
-    db   4 DUP (0h)                                                  ;offset 16: ready event handle
-    db   4 DUP (0h)                                                  ;offset 20: continue event handle
+    db   4 DUP (0h)                                                  ;offset 16: continue event handle
     jmp @@start
 
 @@ntdll_dll:
     dw   'n','t','d','l','l','.','d','l','l', 0
-@@ntclose:
-    db   'NtClose', 0
 @@ntsetevent:
     db   'NtSetEvent', 0
-@@ntwaitformultipleobjects:
-    db   'NtWaitForMultipleObjects', 0
 @@kernel32_dll:
     dw   'k','e','r','n','e','l','3','2','.','d','l','l', 0
 @@loadlibraryw:
@@ -779,34 +771,12 @@ _initfunctionAddr$ = -40
 
 @@: GetPtr ebx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _GETPROCADDR_2
 
-    ;get address of NtClose
-    GetPtr eax, @@ntclose, 0
-    push eax
-    push DWORD PTR _ntdll_hinst$[ebp]
-    call DWORD PTR [ebx]
-    mov  DWORD PTR _ntcloseAddr$[ebp], eax
-    test eax, eax
-    jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@exit
-
-@@: ;get address of NtSetEvent
+    ;get address of NtSetEvent
     GetPtr eax, @@ntsetevent, 0
     push eax
     push DWORD PTR _ntdll_hinst$[ebp]
     call DWORD PTR [ebx]
     mov  DWORD PTR _ntseteventAddr$[ebp], eax
-    test eax, eax
-    jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@exit
-
-@@: ;get address of NtWaitForMultipleObjects
-    GetPtr eax, @@ntwaitformultipleobjects, 0
-    push eax
-    push DWORD PTR _ntdll_hinst$[ebp]
-    call DWORD PTR [ebx]
-    mov  DWORD PTR _ntwaitformultipleobjectsAddr$[ebp], eax
     test eax, eax
     jne  @F
     mov  eax, ERROR_PROC_NOT_FOUND
@@ -833,22 +803,6 @@ _initfunctionAddr$ = -40
     jne  @F
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@exit
-
-@@: ;wait for ready event ?
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
-    cmp  DWORD PTR [eax], 0
-    je   @F
-    push 0 ;NULL
-    push 0 ;FALSE
-    push 1 ;WaitAnyObject
-    push eax
-    push 1
-    call DWORD PTR _ntwaitformultipleobjectsAddr$[ebp]
-
-    ;close ready event
-    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _READYEVENT_2
-    push DWORD PTR [eax]
-    call DWORD PTR _ntcloseAddr$[ebp]
 
 @@: ;load library
     GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _DLLNAME_2
@@ -905,10 +859,6 @@ ASSUME FS:ERROR
     push ebx
     call DWORD PTR _ntseteventAddr$[ebp]
 
-    ;close continue event
-    push ebx
-    call DWORD PTR _ntcloseAddr$[ebp]
-
 @@: ;no error
     xor  eax, eax
 
@@ -940,18 +890,18 @@ ALIGN 4
 WaitForEventAtStartup PROC
 _GETPROCADDR_3                    EQU 0
 _GETMODBASEADDR_3                 EQU 4
-_READYEVENT_3                     EQU 8
+_LOADERTHREAD_3                   EQU 8
 _CONTINUEEVENT_3                  EQU 12
 _CONTROLLERPROC_3                 EQU 16
 
 _ntdll_hinst$ = -4
 _ntcloseAddr$ = -8
-_ntseteventAddr$ = -12
+_ntresumethreadAddr$ = -12
 _ntwaitformultipleobjectsAddr$ = -16
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
-    db   4 DUP (0h)                                                  ;offset 8: ready event handle
+    db   4 DUP (0h)                                                  ;offset 8: loader thread handle
     db   4 DUP (0h)                                                  ;offset 12: continue event handle
     db   4 DUP (0h)                                                  ;offset 16: controller process handle
     jmp  @@start
@@ -960,10 +910,10 @@ _ntwaitformultipleobjectsAddr$ = -16
     dw   'n','t','d','l','l','.','d','l','l', 0
 @@ntclose:
     db   'NtClose', 0
-@@ntsetevent:
-    db   'NtSetEvent', 0
 @@ntwaitformultipleobjects:
     db   'NtWaitForMultipleObjects', 0
+@@ntresumethread:
+    db   'NtResumeThread', 0
 
 @@start:
     push ebp
@@ -997,15 +947,6 @@ _ntwaitformultipleobjectsAddr$ = -16
     je   @@done
     mov  DWORD PTR _ntcloseAddr$[ebp], eax
 
-    ;get address of NtSetEvent
-    GetPtr eax, @@ntsetevent, 0
-    push eax
-    push DWORD PTR _ntdll_hinst$[ebp]
-    call DWORD PTR [ebx]
-    test eax, eax
-    je   @@done
-    mov  DWORD PTR _ntseteventAddr$[ebp], eax
-
     ;get address of NtWaitForMultipleObjects
     GetPtr eax, @@ntwaitformultipleobjects, 0
     push eax
@@ -1015,18 +956,25 @@ _ntwaitformultipleobjectsAddr$ = -16
     je   @@done
     mov  DWORD PTR _ntwaitformultipleobjectsAddr$[ebp], eax
 
-    ;set ready event
-    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _READYEVENT_3
+    ;get address of NtResumeThread
+    GetPtr eax, @@ntresumethread, 0
+    push eax
+    push DWORD PTR _ntdll_hinst$[ebp]
+    call DWORD PTR [ebx]
+    test eax, eax
+    je   @@done
+    mov  DWORD PTR _ntresumethreadAddr$[ebp], eax
+
+    ;resume secondary thread
+    GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _LOADERTHREAD_3
     mov  ebx, DWORD PTR [eax]
+    test ebx, ebx
+    je   @F
     push 0
     push ebx
-    call DWORD PTR _ntseteventAddr$[ebp]
+    call DWORD PTR _ntresumethreadAddr$[ebp]
 
-    ;close ready event
-    push ebx
-    call DWORD PTR _ntcloseAddr$[ebp]
-
-    ;wait for continue event or controller process termination
+@@: ;wait for continue event or controller process termination
     GetPtr eax, WAITFOREVENTATSTARTUP_SECTION_START, _CONTINUEEVENT_3
     push 0 ;NULL
     push 0 ;FALSE
