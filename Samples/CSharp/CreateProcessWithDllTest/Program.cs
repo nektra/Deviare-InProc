@@ -59,8 +59,8 @@ namespace CreateProcessWithDllTest
             dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
             dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
-            //TestCreateProcessWithDll(cmdLine, dllName);
-            //TestCreateProcessAndInjectDll(cmdLine, dllName);
+            TestCreateProcessWithDll(cmdLine, dllName);
+            TestCreateProcessAndInjectDll(cmdLine, dllName);
             TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
         }
 
@@ -97,7 +97,7 @@ namespace CreateProcessWithDllTest
             {
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
                 pi = cHook.CreateProcess(cmdLine, "", null, null, false, 0, null, null, si);
-                System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
+                //System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
                 cHook.InjectDll(pi.procId, dllName, "");
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }

@@ -118,16 +118,12 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
                                          __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted,
                                          __in_z_opt LPCSTR szInitFunctionA);
 
-static DWORD IsProcessInitialized(__in HANDLE hProcess, __in LONG nProcPlatform, __out LPBOOL lpbIsInitialized);
+static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcPlatform, __in DWORD dwTimeoutMs);
 
 static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW,
                                        __in_z_opt LPCSTR szInitFunctionA, __out_opt LPHANDLE lphInjectorThread);
 static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread, __in_z LPCWSTR szDllNameW,
                                    __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent);
-
-static DWORD InstallApcAtStartup(__out CNktEvent &cLocalContinueEvent, __out HANDLE &hRemoteContinueEvent,
-                                 __in HANDLE hProcess, __in LONG nProcPlatform, __in HANDLE hMainThread,
-                                 __in HANDLE hLoaderThread);
 
 static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCodeStart, __in LPVOID lpThreadParam,
                                           __out LPHANDLE lphNewThread);
@@ -145,6 +141,7 @@ static NTSTATUS QueryTokenInfo(__in HANDLE hToken, __in TOKEN_INFORMATION_CLASS 
 static NTSTATUS GetPrimaryThread(__in HANDLE hProcess, __out HANDLE *lphThread);
 
 #if defined(_M_IX86)
+static SIZE_T ReadMem64(__in HANDLE hProcess, __in LPVOID lpDest, __in ULONGLONG lpSrc, __in SIZE_T nBytesCount);
 static BOOL WriteMem64(__in HANDLE hProcess, __in ULONGLONG lpDest, __in LPVOID lpSrc, __in SIZE_T nBytesCount);
 #endif //_M_IX86
 
@@ -428,6 +425,106 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
   return dwOsErr;
 }
 
+static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcPlatform, __in DWORD dwTimeoutMs)
+{
+  PROCESS_BASIC_INFORMATION sPbi;
+#if defined(_M_IX86)
+  NktHookLib::Internals::PROCESS_BASIC_INFORMATION64 sPbi64;
+#endif
+  LPBYTE lpPeb;
+  LONG nNtStatus;
+
+  //get remote process' PEB
+  switch (nProcPlatform)
+  {
+    case NKTHOOKLIB_ProcessPlatformX86:
+      {
+#if defined(_M_IX86)
+      nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessBasicInformation, &sPbi, (ULONG)sizeof(sPbi), NULL);
+      if (!NT_SUCCESS(nNtStatus))
+        return NktRtlNtStatusToDosError(nNtStatus);
+      lpPeb = (LPBYTE)(sPbi.PebBaseAddress);
+#elif defined(_M_X64)
+      ULONG_PTR nWow64;
+
+      nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
+      if (!NT_SUCCESS(nNtStatus))
+        return NktRtlNtStatusToDosError(nNtStatus);
+      if (nWow64 == 0)
+        return ERROR_INVALID_DATA;
+      lpPeb = (LPBYTE)nWow64;
+#endif
+      }
+      break;
+
+    case NKTHOOKLIB_ProcessPlatformX64:
+#if defined(_M_IX86)
+      nNtStatus = NktHookLib::Internals::NtQueryInformationProcess64(hProcess, ProcessBasicInformation, &sPbi64,
+                                                                     (ULONG)sizeof(sPbi64), NULL);
+      if (!NT_SUCCESS(nNtStatus))
+        return NktRtlNtStatusToDosError(nNtStatus);
+#elif defined(_M_X64)
+      nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessBasicInformation, &sPbi, (ULONG)sizeof(sPbi), NULL);
+      if (!NT_SUCCESS(nNtStatus))
+        return NktRtlNtStatusToDosError(nNtStatus);
+      lpPeb = (LPBYTE)(sPbi.PebBaseAddress);
+#endif
+      break;
+  }
+  //now check if process is really initialized
+  do
+  {
+    //is the loader lock field initialized?
+    switch (nProcPlatform)
+    {
+      case NKTHOOKLIB_ProcessPlatformX86:
+        {
+        DWORD dw;
+
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPeb + 0xA0, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw != 0)
+          return ERROR_SUCCESS;
+        }
+        break;
+
+      case NKTHOOKLIB_ProcessPlatformX64:
+        {
+        ULONGLONG ull;
+
+#if defined(_M_IX86)
+        if (ReadMem64(hProcess, &ull, sPbi64.PebBaseAddress + 0x110ui64, sizeof(ull)) != sizeof(ull))
+          return ERROR_ACCESS_DENIED;
+#elif defined(_M_X64)
+        if (NktHookLibHelpers::ReadMem(hProcess, &ull, lpPeb + 0x110, sizeof(ull)) != sizeof(ull))
+          return ERROR_ACCESS_DENIED;
+#endif
+        if (ull != 0ui64)
+          return ERROR_SUCCESS;
+        }
+        break;
+    }
+    if (dwTimeoutMs > 0)
+    {
+      LARGE_INTEGER sLI;
+
+      if (dwTimeoutMs > 10)
+      {
+        dwTimeoutMs -= 10;
+        sLI.QuadPart = -100000;
+      }
+      else
+      {
+        sLI.QuadPart = -10000 * (LONGLONG)dwTimeoutMs;
+        dwTimeoutMs = 0;
+      }
+      NktNtDelayExecution(FALSE, &sLI);
+    }
+  }
+  while (dwTimeoutMs > 0);
+  return ERROR_TIMEOUT;
+}
+
 static DWORD IsProcessInitialized(__in HANDLE hProcess, __in LONG nProcPlatform, __out LPBOOL lpbIsInitialized)
 {
   HANDLE hMainThread;
@@ -479,9 +576,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
 #if defined(_M_IX86)
   ULONGLONG nRemCode64 = 0ui64;
 #endif //_M_IX86
-  BOOL bIsInitialized;
   LONG nProcPlatform;
-  CNktEvent cContinueEv;
   HANDLE hNewThread = NULL, hRemoteReadyEvent = NULL, hRemoteContinueEvent = NULL;
   ULONGLONG nRemoteThreadHandleAddr = 0ui64;
   RelocatableCode::GETMODULEANDPROCADDR_DATA gmpa_data = { 0 };
@@ -515,9 +610,13 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     if (nProcPlatform != NKTHOOKLIB_ProcessPlatformX86 && nProcPlatform != NKTHOOKLIB_ProcessPlatformX64)
       dwOsErr = ERROR_CALL_NOT_IMPLEMENTED;
   }
-  //query if process is initialized
+  //wait until process is initialized
   if (dwOsErr == ERROR_SUCCESS)
-    dwOsErr = IsProcessInitialized(hProcess, nProcPlatform, &bIsInitialized);
+  {
+    dwOsErr = WaitForProcessInitialization(hProcess, nProcPlatform, 100);
+    if (dwOsErr == ERROR_TIMEOUT)
+      dwOsErr = ERROR_SUCCESS; //ignore timeouts right now
+  }
   //allocate memory in remote process
   if (dwOsErr == ERROR_SUCCESS)
   {
@@ -792,50 +891,6 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
         break;
     }
   }
-  //if the process is not initialized, queue a user APC in main thread and write remote event values
-  if (dwOsErr == ERROR_SUCCESS && bIsInitialized == FALSE)
-  {
-    union {
-      DWORD dw;
-      ULONGLONG ull;
-    };
-    HANDLE hThread;
-
-    nNtStatus = GetPrimaryThread(hProcess, &hThread);
-    if (NT_SUCCESS(nNtStatus))
-    {
-      dwOsErr = InstallApcAtStartup(cContinueEv, hRemoteContinueEvent, hProcess, nProcPlatform, hThread, hNewThread);
-      NktNtClose(hThread);
-    }
-    else
-    {
-      dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
-    }
-    //write remote event values
-    if (dwOsErr == ERROR_SUCCESS)
-    {
-      switch (nProcPlatform)
-      {
-        case NKTHOOKLIB_ProcessPlatformX86:
-          dw = (DWORD)((ULONG_PTR)hRemoteContinueEvent);
-          if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode + 4 * sizeof(DWORD), &dw, sizeof(DWORD)) == FALSE)
-            dwOsErr = ERROR_ACCESS_DENIED;
-          break;
-
-        case NKTHOOKLIB_ProcessPlatformX64:
-#if defined(_M_IX86)
-          ull = Handle2Ull(hRemoteContinueEvent);
-          if (WriteMem64(hProcess, nRemCode64 + (ULONGLONG)(4 * sizeof(ULONGLONG)), &ull, sizeof(ULONGLONG)) == FALSE)
-            dwOsErr = ERROR_ACCESS_DENIED;
-#elif defined(_M_X64)
-          ull = (ULONGLONG)hRemoteContinueEvent;
-          if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode+4*sizeof(ULONGLONG), &ull, sizeof(ULONGLONG)) == FALSE)
-            dwOsErr = ERROR_ACCESS_DENIED;
-#endif //_M_X64
-          break;
-      }
-    }
-  }
   //flush instruction cache
   if (dwOsErr == ERROR_SUCCESS)
   {
@@ -861,8 +916,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
   if (dwOsErr == ERROR_SUCCESS)
   {
     cProcSusp.ResumeAll();
-    if (bIsInitialized != FALSE)
-      NktNtResumeThread(hNewThread, NULL);
+    NktNtResumeThread(hNewThread, NULL);
     //store new thread handle
     if (lphInjectorThread != NULL)
       *lphInjectorThread = hNewThread;
@@ -895,8 +949,6 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
 #endif //_M_IX86
         NktNtFreeVirtualMemory(hProcess, (PVOID*)&lpRemCode, &nSize, MEM_RELEASE);
     }
-    if (cContinueEv.GetEventHandle() != NULL)
-      cContinueEv.Set();
   }
   return dwOsErr;
 }
@@ -1338,246 +1390,6 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
     if (hRemoteCheckPointEvent != NULL)
     {
       NktNtDuplicateObject(hProcess, hRemoteCheckPointEvent, hProcess, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
-    }
-    if (lpRemCode != NULL)
-    {
-      SIZE_T nSize = 0;
-
-#if defined(_M_IX86)
-      if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-        NktHookLib::Internals::NtFreeVirtualMemory64(hProcess, &nRemCode64, &nSize, MEM_RELEASE);
-      else
-#endif //_M_IX86
-        NktNtFreeVirtualMemory(hProcess, (PVOID*)&lpRemCode, &nSize, MEM_RELEASE);
-    }
-  }
-  return dwOsErr;
-}
-
-static DWORD InstallApcAtStartup(__out CNktEvent &cLocalContinueEvent, __out HANDLE &hRemoteContinueEvent,
-                                 __in HANDLE hProcess, __in LONG nProcPlatform, __in HANDLE hMainThread,
-                                 __in HANDLE hLoaderThread)
-{
-  SIZE_T k, nRemCodeSize;
-  LPBYTE lpRemCode = NULL;
-#if defined(_M_IX86)
-  ULONGLONG nRemCode64 = 0ui64;
-#endif //_M_IX86
-  HANDLE hRemoteSelfProc = NULL, hRemoteLoaderThread = NULL;
-  RelocatableCode::GETMODULEANDPROCADDR_DATA gmpa_data = { 0 };
-  DWORD dwOsErr;
-  NTSTATUS nNtStatus;
-
-  hRemoteContinueEvent = NULL;
-  //create "ready" and"continue" events. also create duplicates on remote process
-  if (cLocalContinueEvent.Create(TRUE, FALSE) == FALSE)
-    return ERROR_NOT_ENOUGH_MEMORY;
-  nNtStatus = NktNtDuplicateObject(NKTHOOKLIB_CurrentProcess, cLocalContinueEvent.GetEventHandle(), hProcess,
-                                   &hRemoteContinueEvent, 0, 0, DUPLICATE_SAME_ACCESS);
-  if (NT_SUCCESS(nNtStatus))
-  {
-    nNtStatus = NktNtDuplicateObject(NKTHOOKLIB_CurrentProcess, NKTHOOKLIB_CurrentProcess, hProcess, &hRemoteSelfProc,
-                                     0, 0, DUPLICATE_SAME_ACCESS);
-  }
-  if (NT_SUCCESS(nNtStatus))
-  {
-    nNtStatus = NktNtDuplicateObject(NKTHOOKLIB_CurrentProcess, hLoaderThread, hProcess, &hRemoteLoaderThread, 0, 0,
-                                     DUPLICATE_SAME_ACCESS);
-  }
-  dwOsErr = (NT_SUCCESS(nNtStatus)) ? ERROR_SUCCESS : NktRtlNtStatusToDosError(nNtStatus);
-  //calculate memory size and allocate in remote process
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    nRemCodeSize = _DOALIGN(RelocatableCode::WaitForEventAtStartup_GetSize(nProcPlatform), 8);
-    nRemCodeSize += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
-#if defined(_M_IX86)
-    if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-    {
-      nNtStatus = NktHookLib::Internals::NtAllocateVirtualMemory64(hProcess, &nRemCode64, 0, &nRemCodeSize,
-                                                                   MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    }
-    else
-    {
-#endif //_M_IX86
-      nNtStatus = NktNtAllocateVirtualMemory(hProcess, (PVOID*)&lpRemCode, 0, &nRemCodeSize, MEM_RESERVE | MEM_COMMIT,
-                                             PAGE_EXECUTE_READWRITE);
-#if defined(_M_IX86)
-    }
-#endif //_M_IX86
-    if (!NT_SUCCESS(nNtStatus))
-      dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
-  }
-  //write remote code
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    LPBYTE d, s;
-#if defined(_M_IX86)
-    ULONGLONG d64;
-#endif //_M_IX86
-    BOOL b;
-
-    //assume error
-    dwOsErr = ERROR_ACCESS_DENIED;
-#if defined(_M_IX86)
-    if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-      d64 = nRemCode64;
-    else
-#endif //_M_IX86
-      d = lpRemCode;
-    //write new startup code
-    k = RelocatableCode::WaitForEventAtStartup_GetSize(nProcPlatform);
-    s = RelocatableCode::WaitForEventAtStartup_GetCode(nProcPlatform);
-#if defined(_M_IX86)
-    if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-    {
-      b = WriteMem64(hProcess, d64, s, k);
-      d64 += (ULONGLONG)_DOALIGN(k, 8);
-    }
-    else
-    {
-#endif //_M_IX86
-      b = NktHookLibHelpers::WriteMem(hProcess, d, s, k);
-      d += _DOALIGN(k, 8);
-#if defined(_M_IX86)
-    }
-#endif //_M_IX86
-    if (b != FALSE)
-    {
-      //write get module address and get procedure address code
-      k = RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform);
-      s = RelocatableCode::GetModuleAndProcAddr_GetCode(nProcPlatform, gmpa_data);
-#if defined(_M_IX86)
-      if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-      {
-        if (WriteMem64(hProcess, d64, s, k) != FALSE)
-          dwOsErr = ERROR_SUCCESS;
-      }
-      else
-      {
-#endif //_M_IX86
-        if (NktHookLibHelpers::WriteMem(hProcess, d, s, k) != FALSE)
-          dwOsErr = ERROR_SUCCESS;
-#if defined(_M_IX86)
-      }
-#endif //_M_IX86
-    }
-  }
-  //write new startup data
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    union {
-      DWORD dw[5];
-      ULONGLONG ull[5];
-    };
-
-    k = _DOALIGN(RelocatableCode::WaitForEventAtStartup_GetSize(nProcPlatform), 8);
-    switch (nProcPlatform)
-    {
-    case NKTHOOKLIB_ProcessPlatformX86:
-      //GetProcedureAddress & GetModuleBaseAddress
-      dw[0] = (DWORD)((ULONG_PTR)(lpRemCode + k + gmpa_data.nOffset_GetProcedureAddress));
-      dw[1] = (DWORD)((ULONG_PTR)(lpRemCode + k + gmpa_data.nOffset_GetModuleBaseAddress));
-      //loader thread
-      dw[2] = (DWORD)((ULONG_PTR)hRemoteLoaderThread);
-      //events
-      dw[3] = (DWORD)((ULONG_PTR)hRemoteContinueEvent);
-      dw[4] = (DWORD)((ULONG_PTR)hRemoteSelfProc);
-      //original entrypoint
-      //write values
-      if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, dw, 5 * sizeof(DWORD)) == FALSE)
-        dwOsErr = ERROR_ACCESS_DENIED;
-      break;
-
-    case NKTHOOKLIB_ProcessPlatformX64:
-#if defined(_M_IX86)
-      //GetProcedureAddress & GetModuleBaseAddress
-      ull[0] = nRemCode64 + (ULONGLONG)k + (ULONGLONG)(gmpa_data.nOffset_GetProcedureAddress);
-      ull[1] = nRemCode64 + (ULONGLONG)k + (ULONGLONG)(gmpa_data.nOffset_GetModuleBaseAddress);
-      k += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
-      //loader thread
-      ull[2] = Handle2Ull(hRemoteLoaderThread);
-      //events
-      ull[3] = Handle2Ull(hRemoteContinueEvent);
-      ull[4] = Handle2Ull(hRemoteSelfProc);
-      //write values
-      if (WriteMem64(hProcess, nRemCode64, ull, 5 * sizeof(ULONGLONG)) == FALSE)
-        dwOsErr = ERROR_ACCESS_DENIED;
-#elif defined(_M_X64)
-      //GetProcedureAddress & GetModuleBaseAddress
-      ull[0] = (ULONGLONG)(lpRemCode + k + gmpa_data.nOffset_GetProcedureAddress);
-      ull[1] = (ULONGLONG)(lpRemCode + k + gmpa_data.nOffset_GetModuleBaseAddress);
-      //loader thread
-      ull[2] = (ULONGLONG)hRemoteLoaderThread;
-      //events
-      ull[3] = (ULONGLONG)hRemoteContinueEvent;
-      ull[4] = (ULONGLONG)hRemoteSelfProc;
-      //write values
-      if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, ull, 5 * sizeof(ULONGLONG)) == FALSE)
-        dwOsErr = ERROR_ACCESS_DENIED;
-#endif //_M_X64
-      break;
-    }
-  }
-  //change page protection and flush instruction cache
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    ULONG ulOldProt;
-
-#if defined(_M_IX86)
-    if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
-    {
-      NktHookLib::Internals::NtProtectVirtualMemory64(hProcess, &nRemCode64, &nRemCodeSize, PAGE_EXECUTE_READ,
-                                                      &ulOldProt);
-      NktHookLib::Internals::NtFlushInstructionCache64(hProcess, nRemCode64, (ULONG)nRemCodeSize);
-    }
-    else
-    {
-#endif //_M_IX86
-      NktNtProtectVirtualMemory(hProcess, (PVOID*)&lpRemCode, &nRemCodeSize, PAGE_EXECUTE_READ, &ulOldProt);
-      NktNtFlushInstructionCache(hProcess, lpRemCode, (ULONG)nRemCodeSize);
-#if defined(_M_IX86)
-    }
-#endif //_M_IX86
-  }
-  //insert APC in thread
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    switch (nProcPlatform)
-    {
-    case NKTHOOKLIB_ProcessPlatformX86:
-      nNtStatus = NktNtQueueApcThread(hMainThread, lpRemCode + 5 * sizeof(DWORD), NULL, NULL, NULL);
-      if (!NT_SUCCESS(nNtStatus))
-        dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
-      break;
-
-    case NKTHOOKLIB_ProcessPlatformX64:
-#if defined(_M_IX86)
-      nNtStatus = NktHookLib::Internals::NtQueueApcThread64(hMainThread, nRemCode64 +
-                                                            (ULONGLONG)(5 * sizeof(ULONGLONG)), NULL, NULL, NULL);
-#elif defined(_M_X64)
-      nNtStatus = NktNtQueueApcThread(hMainThread, lpRemCode + 5 * sizeof(ULONGLONG), NULL, NULL, NULL);
-#endif
-      if (!NT_SUCCESS(nNtStatus))
-        dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
-      break;
-    }
-  }
-  //done
-  if (dwOsErr != ERROR_SUCCESS)
-  {
-    //cleanup on error
-    if (hRemoteContinueEvent != NULL)
-    {
-      NktNtDuplicateObject(hProcess, hRemoteContinueEvent, hProcess, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
-      hRemoteContinueEvent = NULL;
-    }
-    if (hRemoteSelfProc != NULL)
-    {
-      NktNtDuplicateObject(hProcess, hRemoteSelfProc, hProcess, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
-    }
-    if (hRemoteLoaderThread != NULL)
-    {
-      NktNtDuplicateObject(hProcess, hRemoteLoaderThread, hProcess, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
     }
     if (lpRemCode != NULL)
     {
@@ -2070,6 +1882,19 @@ static NTSTATUS GetPrimaryThread(__in HANDLE hProcess, __out HANDLE *lphThread)
 }
 
 #if defined(_M_IX86)
+static SIZE_T ReadMem64(__in HANDLE hProcess, __in LPVOID lpDest, __in ULONGLONG lpSrc, __in SIZE_T nBytesCount)
+{
+  NTSTATUS nStatus;
+  SIZE_T nReaded;
+
+  if (nBytesCount == 0)
+    return 0;
+  nStatus = NktHookLib::Internals::NtReadVirtualMemory64(hProcess, lpSrc, lpDest, nBytesCount, &nReaded);
+  if (nStatus == STATUS_PARTIAL_COPY)
+    return nReaded;
+  return (NT_SUCCESS(nStatus)) ? nBytesCount : 0;
+}
+
 static BOOL WriteMem64(__in HANDLE hProcess, __in ULONGLONG lpDest, __in LPVOID lpSrc, __in SIZE_T nBytesCount)
 {
   NTSTATUS nStatus;
