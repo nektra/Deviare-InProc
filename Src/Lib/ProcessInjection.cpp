@@ -597,26 +597,20 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     if (nInitFuncNameLen >= 32768)
       return ERROR_INVALID_PARAMETER;
   }
+  //check process platform
+  nProcPlatform = NktHookLibHelpers::GetProcessPlatform(hProcess);
+  if (nProcPlatform != NKTHOOKLIB_ProcessPlatformX86 && nProcPlatform != NKTHOOKLIB_ProcessPlatformX64)
+    return ERROR_CALL_NOT_IMPLEMENTED;
+  //wait until process is initialized
+  dwOsErr = WaitForProcessInitialization(hProcess, nProcPlatform, 100);
+  if (dwOsErr != ERROR_SUCCESS && dwOsErr != ERROR_TIMEOUT) //ignore timeouts right now
+    return dwOsErr;
   //get process id and suspend
   nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessBasicInformation, &sPbi, sizeof(sPbi), NULL);
   if (NT_SUCCESS(nNtStatus))
     dwOsErr = cProcSusp.SuspendAll((DWORD)(sPbi.UniqueProcessId), NULL, 0);
   else
     dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
-  //check process platform
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    nProcPlatform = NktHookLibHelpers::GetProcessPlatform(hProcess);
-    if (nProcPlatform != NKTHOOKLIB_ProcessPlatformX86 && nProcPlatform != NKTHOOKLIB_ProcessPlatformX64)
-      dwOsErr = ERROR_CALL_NOT_IMPLEMENTED;
-  }
-  //wait until process is initialized
-  if (dwOsErr == ERROR_SUCCESS)
-  {
-    dwOsErr = WaitForProcessInitialization(hProcess, nProcPlatform, 100);
-    if (dwOsErr == ERROR_TIMEOUT)
-      dwOsErr = ERROR_SUCCESS; //ignore timeouts right now
-  }
   //allocate memory in remote process
   if (dwOsErr == ERROR_SUCCESS)
   {
