@@ -56,13 +56,12 @@ namespace CreateProcessWithDllTest
             string cmdLine, dllName;
 
             cmdLine = Environment.ExpandEnvironmentVariables("%WINDIR%") + @"\System32\notepad.exe";
-            //cmdLine = @"c:\Archivos de programa (x86)\Java\jre1.8.0_40\bin\jp2launcher.exe";
             dllName = System.Reflection.Assembly.GetEntryAssembly().Location;
             dllName = System.IO.Path.GetDirectoryName(dllName) + @"\TestDll.dll";
 
-            //TestCreateProcessWithDll(cmdLine, dllName);
+            TestCreateProcessWithDll(cmdLine, dllName);
             TestCreateProcessAndInjectDll(cmdLine, dllName);
-            //TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
+            TestCreateSuspendedProcessAndInjectDll(cmdLine, dllName);
         }
 
         static void TestCreateProcessWithDll(string cmdLine, string dllName)
@@ -98,7 +97,7 @@ namespace CreateProcessWithDllTest
             {
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
                 pi = cHook.CreateProcess(cmdLine, "", null, null, false, 0, null, null, si);
-                System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
+                //System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
                 cHook.InjectDll(pi.procId, dllName, "");
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }

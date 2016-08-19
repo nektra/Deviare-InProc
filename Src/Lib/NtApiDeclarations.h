@@ -166,7 +166,7 @@ NKT_PARSE_NTAPI_NTSTATUS(NtReadVirtualMemory, (__in HANDLE ProcessHandle, __in P
                                                __out_opt PSIZE_T NumberOfBytesRead),
                          (ProcessHandle, BaseAddress, Buffer, NumberOfBytesToRead, NumberOfBytesRead))
 NKT_PARSE_NTAPI_NTSTATUS(NtWriteVirtualMemory, (__in HANDLE ProcessHandle, __in PVOID BaseAddress,
-                                                __out PVOID Buffer, __in SIZE_T NumberOfBytesToWrite,
+                                                __in PVOID Buffer, __in SIZE_T NumberOfBytesToWrite,
                                                 __out_opt PSIZE_T NumberOfBytesWritten),
                          (ProcessHandle, BaseAddress, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten))
 NKT_PARSE_NTAPI_NTSTATUS(NtQueryVirtualMemory, (__in HANDLE ProcessHandle, __in PVOID Address,
@@ -215,8 +215,12 @@ NKT_PARSE_NTAPI_VOID(RtlRaiseException, (__in PEXCEPTION_RECORD ExceptionRecord)
 NKT_PARSE_NTAPI_ULONG(RtlNtStatusToDosError, (__in NTSTATUS Status), (Status))
 
 NKT_PARSE_NTAPI_NTSTATUS(NtFlushInstructionCache, (__in HANDLE ProcessHandle, __in PVOID BaseAddress,
-                                                   __in ULONG NumberOfBytesToFlush),
+                                                   __in SIZE_T NumberOfBytesToFlush),
                          (ProcessHandle, BaseAddress, NumberOfBytesToFlush))
+
+NKT_PARSE_NTAPI_NTSTATUS(NtQueueApcThread, (__in HANDLE ThreadHandle, __in PVOID ApcRoutine, __in PVOID ApcArgument1,
+                                            __in PVOID ApcArgument2, __in PVOID ApcArgument3),
+                         (ThreadHandle, ApcRoutine, ApcArgument1, ApcArgument2, ApcArgument3))
 
 //--------
 

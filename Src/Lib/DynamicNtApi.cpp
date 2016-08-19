@@ -52,8 +52,12 @@ extern LPVOID lpUserParam;
 
 } //namespace NktHookLibHelpers
 
+//-----------------------------------------------------------
+
 static VOID InitializeInternals();
 static LPVOID ResolveNtDllApi(__inout LPVOID &_hNtDll, __in_z LPCSTR szApiNameA);
+
+//-----------------------------------------------------------
 
 namespace NktHookLib {
 namespace Internals {

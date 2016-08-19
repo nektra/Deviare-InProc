@@ -94,7 +94,7 @@ LPVOID lpUserParam = NULL;
 } //namespace NktHookLibHelpers
 
 extern "C" {
-  size_t __stdcall NktHookLib_TryMemCopy(__out const void *lpDest, __in const void *lpSrc, __in size_t nCount);
+  SIZE_T __stdcall NktHookLib_TryMemCopy(__out const void *lpDest, __in const void *lpSrc, __in size_t nCount);
   SIZE_T __stdcall NktHookLib_TryCallOneParam(__in LPVOID lpFunc, __in SIZE_T nParam1, __in BOOL bIsCDecl);
   int NktHookLib_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA,
                            __in va_list lpArgList);
@@ -232,6 +232,9 @@ HANDLE OpenThread(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in DWO
 
 NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
 {
+  ULONG_PTR nWow64;
+  NTSTATUS nNtStatus;
+
   if (hProcess == NKTHOOKLIB_CurrentProcess)
   {
 #if defined(_M_IX86)
@@ -247,9 +250,6 @@ NTSTATUS GetProcessPlatform(__in HANDLE hProcess)
 
     case PROCESSOR_ARCHITECTURE_AMD64:
       //check on 64-bit platforms
-      ULONG_PTR nWow64;
-      NTSTATUS nNtStatus;
-
       nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
       if (NT_SUCCESS(nNtStatus))
       {

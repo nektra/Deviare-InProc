@@ -12,46 +12,7 @@
 
 #define ENTRY_PREFIX	Prx
 
-#if _MSC_VER >= 1900
-  #ifdef _WIN64
-    #include "dlldata64_vs2015.c"
-    #include "DeviareLiteCOM_p64_vs2015.c"
-  #else //_WIN64
-    #include "dlldata_vs2015.c"
-    #include "DeviareLiteCOM_p_vs2015.c"
-  #endif //_WIN64
-#elif _MSC_VER >= 1800
-  #ifdef _WIN64
-    #include "dlldata64_vs2013.c"
-    #include "DeviareLiteCOM_p64_vs2013.c"
-  #else //_WIN64
-    #include "dlldata_vs2013.c"
-    #include "DeviareLiteCOM_p_vs2013.c"
-  #endif //_WIN64
-#elif _MSC_VER >= 1700
-  #ifdef _WIN64
-    #include "dlldata64_vs2012.c"
-    #include "DeviareLiteCOM_p64_vs2012.c"
-  #else //_WIN64
-    #include "dlldata_vs2012.c"
-    #include "DeviareLiteCOM_p_vs2012.c"
-  #endif //_WIN64
-#elif  _MSC_VER >= 1600
-  #ifdef _WIN64
-    #include "dlldata64_vs2010.c"
-    #include "DeviareLiteCOM_p64_vs2010.c"
-  #else //_WIN64
-    #include "dlldata_vs2010.c"
-    #include "DeviareLiteCOM_p_vs2010.c"
-  #endif //_WIN64
-#else
-  #ifdef _WIN64
-    #include "dlldata64_vs2008.c"
-    #include "DeviareLiteCOM_p64_vs2008.c"
-  #else //_WIN64
-    #include "dlldata_vs2008.c"
-    #include "DeviareLiteCOM_p_vs2008.c"
-  #endif //_WIN64
-#endif
+#include "DeviareLiteCOM_dlldata.c"
+#include "DeviareLiteCOM_p.c"
 
 #endif //_MERGE_PROXYSTUB

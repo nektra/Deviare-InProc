@@ -31,37 +31,7 @@
 
 #include "resource.h"       // main symbols
 #include "CustomRegistryMap.h"
-#if _MSC_VER >= 1900
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2015.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2015.h"
-  #endif //_WIN64
-#elif _MSC_VER >= 1800
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2013.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2013.h"
-  #endif //_WIN64
-#elif _MSC_VER >= 1700
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2012.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2012.h"
-  #endif //_WIN64
-#elif  _MSC_VER >= 1600
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2010.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2010.h"
-  #endif //_WIN64
-#else
-  #ifdef _WIN64
-    #include "DeviareLiteCOM_i64_vs2008.h"
-  #else //_WIN64
-    #include "DeviareLiteCOM_i_vs2008.h"
-  #endif //_WIN64
-#endif
+#include "DeviareLiteCOM_h.h"
 #include "DotNetCoreHooks.h"
 #include "..\..\Include\NktHookLib.h"
 

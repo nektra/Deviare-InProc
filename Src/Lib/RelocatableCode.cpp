@@ -30,10 +30,8 @@
 #include "RelocatableCode.h"
 static
 #include <RelocatableCode_x86.inl>
-#if defined(_M_X64)
-  static
-  #include <RelocatableCode_x64.inl>
-#endif //_M_X64
+static
+#include <RelocatableCode_x64.inl>
 
 namespace NktHookLib {
 namespace Internals {
@@ -49,11 +47,9 @@ SIZE_T GetModuleAndProcAddr_GetSize(__in LONG nPlatform)
       return RelocatableCodeX86_GETMODULEANDPROCADDR_SECTION_END_OFFSET -
              RelocatableCodeX86_GETMODULEANDPROCADDR_SECTION_START_OFFSET;
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       return RelocatableCodeX64_GETMODULEANDPROCADDR_SECTION_END_OFFSET -
              RelocatableCodeX64_GETMODULEANDPROCADDR_SECTION_START_OFFSET;
-#endif //_M_X64
   }
   return 0;
 }
@@ -67,12 +63,10 @@ LPBYTE GetModuleAndProcAddr_GetCode(__in LONG nPlatform, __out GETMODULEANDPROCA
       sAddresses.nOffset_GetProcedureAddress = RelocatableCodeX86_GetProcedureAddress_OFFSET;
       return &RelocatableCodeX86[RelocatableCodeX86_GETMODULEANDPROCADDR_SECTION_START_OFFSET];
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       sAddresses.nOffset_GetModuleBaseAddress = RelocatableCodeX64_GetModuleBaseAddress_OFFSET;
       sAddresses.nOffset_GetProcedureAddress = RelocatableCodeX64_GetProcedureAddress_OFFSET;
       return &RelocatableCodeX64[RelocatableCodeX64_GETMODULEANDPROCADDR_SECTION_START_OFFSET];
-#endif //_M_X64
   }
   sAddresses.nOffset_GetModuleBaseAddress = sAddresses.nOffset_GetProcedureAddress = 0;
   return 0;
@@ -80,34 +74,30 @@ LPBYTE GetModuleAndProcAddr_GetCode(__in LONG nPlatform, __out GETMODULEANDPROCA
 
 //----------------
 
-SIZE_T InjectDllInSuspendedProcess_GetSize(__in LONG nPlatform)
+SIZE_T InjectDllInNewProcess_GetSize(__in LONG nPlatform)
 {
   switch (nPlatform)
   {
     case NKTHOOKLIB_ProcessPlatformX86:
-      return RelocatableCodeX86_INJECTDLLINSUSPENDEDPROCESS_SECTION_END_OFFSET -
-             RelocatableCodeX86_INJECTDLLINSUSPENDEDPROCESS_SECTION_START_OFFSET;
+      return RelocatableCodeX86_INJECTDLLINNEWPROCESS_SECTION_END_OFFSET -
+             RelocatableCodeX86_INJECTDLLINNEWPROCESS_SECTION_START_OFFSET;
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
-      return RelocatableCodeX64_INJECTDLLINSUSPENDEDPROCESS_SECTION_END_OFFSET -
-             RelocatableCodeX64_INJECTDLLINSUSPENDEDPROCESS_SECTION_START_OFFSET;
-#endif //_M_X64
+      return RelocatableCodeX64_INJECTDLLINNEWPROCESS_SECTION_END_OFFSET -
+             RelocatableCodeX64_INJECTDLLINNEWPROCESS_SECTION_START_OFFSET;
   }
   return 0;
 }
 
-LPBYTE InjectDllInSuspendedProcess_GetCode(__in LONG nPlatform)
+LPBYTE InjectDllInNewProcess_GetCode(__in LONG nPlatform)
 {
   switch ( nPlatform)
   {
     case NKTHOOKLIB_ProcessPlatformX86:
-      return &RelocatableCodeX86[RelocatableCodeX86_INJECTDLLINSUSPENDEDPROCESS_SECTION_START_OFFSET];
+      return &RelocatableCodeX86[RelocatableCodeX86_INJECTDLLINNEWPROCESS_SECTION_START_OFFSET];
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
-      return &RelocatableCodeX64[RelocatableCodeX64_INJECTDLLINSUSPENDEDPROCESS_SECTION_START_OFFSET];
-#endif //_M_X64
+      return &RelocatableCodeX64[RelocatableCodeX64_INJECTDLLINNEWPROCESS_SECTION_START_OFFSET];
   }
   return 0;
 }
@@ -122,11 +112,9 @@ SIZE_T InjectDllInRunningProcess_GetSize(__in LONG nPlatform)
       return RelocatableCodeX86_INJECTDLLINRUNNINGPROCESS_SECTION_END_OFFSET -
              RelocatableCodeX86_INJECTDLLINRUNNINGPROCESS_SECTION_START_OFFSET;
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       return RelocatableCodeX64_INJECTDLLINRUNNINGPROCESS_SECTION_END_OFFSET -
              RelocatableCodeX64_INJECTDLLINRUNNINGPROCESS_SECTION_START_OFFSET;
-#endif //_M_X64
   }
   return 0;
 }
@@ -138,10 +126,8 @@ LPBYTE InjectDllInRunningProcess_GetCode(__in LONG nPlatform)
     case NKTHOOKLIB_ProcessPlatformX86:
       return &RelocatableCodeX86[RelocatableCodeX86_INJECTDLLINRUNNINGPROCESS_SECTION_START_OFFSET];
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       return &RelocatableCodeX64[RelocatableCodeX64_INJECTDLLINRUNNINGPROCESS_SECTION_START_OFFSET];
-#endif //_M_X64
   }
   return 0;
 }
@@ -156,11 +142,9 @@ SIZE_T WaitForEventAtStartup_GetSize(__in LONG nPlatform)
       return RelocatableCodeX86_WAITFOREVENTATSTARTUP_SECTION_END_OFFSET -
              RelocatableCodeX86_WAITFOREVENTATSTARTUP_SECTION_START_OFFSET;
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       return RelocatableCodeX64_WAITFOREVENTATSTARTUP_SECTION_END_OFFSET -
              RelocatableCodeX64_WAITFOREVENTATSTARTUP_SECTION_START_OFFSET;
-#endif //_M_X64
   }
   return 0;
 }
@@ -172,10 +156,8 @@ LPBYTE WaitForEventAtStartup_GetCode(__in LONG nPlatform)
     case NKTHOOKLIB_ProcessPlatformX86:
       return &RelocatableCodeX86[RelocatableCodeX86_WAITFOREVENTATSTARTUP_SECTION_START_OFFSET];
 
-#if defined(_M_X64)
     case NKTHOOKLIB_ProcessPlatformX64:
       return &RelocatableCodeX64[RelocatableCodeX64_WAITFOREVENTATSTARTUP_SECTION_START_OFFSET];
-#endif //_M_X64
   }
   return 0;
 }
