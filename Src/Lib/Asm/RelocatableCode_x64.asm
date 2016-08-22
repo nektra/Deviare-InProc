@@ -346,32 +346,43 @@ SimpleStrNICmpW PROC
 SimpleStrNICmpW ENDP
 
 ALIGN 8
-;BOOL __stdcall SimpleStrCmpA(LPCSTR string1, LPCSTR string2)
-SimpleStrCmpA PROC
+;BOOL __stdcall SimpleStrICmpA(LPCSTR string1, LPCSTR string2)
+SimpleStrICmpA PROC
+    push rbx
+    xor  rax, rax
     ;get string1 and check for null
     test rcx, rcx
-    je   @@mismatch
+    je   @@done
     ;get string2 and check for null
     test rdx, rdx
-    je   @@mismatch
+    je   @@done
 @@loop:
     ;compare letter
-    mov  al, BYTE PTR [rcx]
-    cmp  al, BYTE PTR [rdx]
-    jne  @@mismatch
-    cmp  al, 0
-    je   @F
+    mov  bl, BYTE PTR [rcx]
+    mov  bh, BYTE PTR [rdx]
     inc  rcx
     inc  rdx
-    jmp  @@loop
-@@: ;match
-    xor  rax, rax
+    ;check letters between A-Z and a-z
+    cmp  bl, 41h
+    jb   @F
+    cmp  bl, 5Ah
+    ja   @F
+    or   bl, 20h
+@@: cmp  bh, 41h
+    jb   @F
+    cmp  bh, 5Ah
+    ja   @F
+    or   bh, 20h
+@@: cmp  bl, bh
+    jne  @@done
+    cmp  bl, 0
+    jne  @@loop
+    ;match
     inc  rax
+@@done:
+    pop  rbx
     ret
-@@mismatch:
-    xor  rax, rax
-    ret
-SimpleStrCmpA ENDP
+SimpleStrICmpA ENDP
 
 ALIGN 8
 ;BOOL __stdcall CheckImageType(LPVOID lpBase, LPVOID *lplpNtHdr)
@@ -510,7 +521,7 @@ _lpAddrOfNames$ = 16
     xor  rcx, rcx
     mov  ecx, DWORD PTR [rax]
     add  rcx, QWORD PTR _lpDllBase$[rsp]
-    call SimpleStrCmpA
+    call SimpleStrICmpA
     test rax, rax
     je   @@next
     ;got the function
@@ -562,13 +573,14 @@ _ORIGINAL_ENTRYPOINT_1            EQU 32
 _CHECKPOINTEVENT_1                EQU 40
 
 _ntdll_hinst$ = 0
-_ntcloseAddr$ = 8
-_ntseteventAddr$ = 16
-_kernel32_hinst$ = 24
-_loadlibrarywAddr$ = 32
-_freelibraryAddr$ = 40
-_injectdll_hinst$ = 48
-_initfunctionAddr$ = 56
+_ntterminateprocessAddr$ = 8
+_ntcloseAddr$ = 16
+_ntseteventAddr$ = 24
+_kernel32_hinst$ = 32
+_loadlibrarywAddr$ = 40
+_freelibraryAddr$ = 48
+_injectdll_hinst$ = 56
+_initfunctionAddr$ = 64
 
     db   8 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   8 DUP (0h)                                                  ;offset 8: address of GetModuleBaseAddress
@@ -580,6 +592,8 @@ _initfunctionAddr$ = 56
 
 @@ntdll_dll:
     dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntterminateprocess:
+    db   'NtTerminateProcess', 0
 @@ntclose:
     db   'NtClose', 0
 @@ntsetevent:
@@ -592,7 +606,7 @@ _initfunctionAddr$ = 56
     db   'FreeLibrary', 0
 
 @@start:
-    BuildFrame 40h, 0, rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
+    BuildFrame 50h, 0, rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
 
     ;get ntdll.dll base address
     GetPtr rcx, @@ntdll_dll, 0
@@ -601,8 +615,8 @@ _initfunctionAddr$ = 56
     mov  QWORD PTR _ntdll_hinst$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_MOD_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_modnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get kernel32.dll base address
     GetPtr rcx, @@kernel32_dll, 0
@@ -611,20 +625,30 @@ _initfunctionAddr$ = 56
     mov  QWORD PTR _kernel32_hinst$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_MOD_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_modnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: GetPtr rbx, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
 
-    ;get address of NtClose
+    ;get address of NtTerminateProcess
+    GetPtr rdx, @@ntterminateprocess, 0
+    mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
+    call QWORD PTR [rbx]
+    mov  QWORD PTR _ntterminateprocessAddr$[rbp], rax
+    test rax, rax
+    jne  @F
+    GetPtr rax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
+
+@@: ;get address of NtClose
     GetPtr rdx, @@ntclose, 0
     mov  rcx, QWORD PTR _ntdll_hinst$[rbp]
     call QWORD PTR [rbx]
     mov  QWORD PTR _ntcloseAddr$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of NtSetEvent
     GetPtr rdx, @@ntsetevent, 0
@@ -633,8 +657,8 @@ _initfunctionAddr$ = 56
     mov  QWORD PTR _ntseteventAddr$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of LoadLibraryW
     GetPtr rdx, @@loadlibraryw, 0
@@ -643,8 +667,8 @@ _initfunctionAddr$ = 56
     mov  QWORD PTR _loadlibrarywAddr$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of FreeLibrary
     GetPtr rdx, @@freelibrary, 0
@@ -653,8 +677,8 @@ _initfunctionAddr$ = 56
     mov  QWORD PTR _freelibraryAddr$[rbp], rax
     test rax, rax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr rax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;load library
     GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _DLLNAME_1
@@ -723,13 +747,34 @@ _initfunctionAddr$ = 56
     ret
 
 @@fail:
-    ;on error, quit
-    mov  DWORD PTR OffsetHome[rsp], eax ;save error code in the location of the 1st parameter
+    ;on error, terminate process
+    mov  rdx, rax
+    xor  rcx, rcx
+    dec  rcx
+    call QWORD PTR _ntterminateprocessAddr$[ebp]
+    int  3
+
+@@hardfail:
+    ;replace RCX (entrypoint) value with our code
+    mov QWORD PTR [rsp+StackSize + 32 + 11 * 8], rax
 
     RemoveFrame rax, rbx, rcx, rdx, r8, r9, r10, r11, r12, r13, r14, r15, rsi, rdi
 
-    ;return and exit process
-    mov  eax, DWORD PTR [rsp+8] ;retrieve error code previously stored
+    ;jmp to original address
+    push rax
+    push rax
+    GetPtr rax, INJECTDLLINNEWPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    mov  rax, QWORD PTR [rax]
+    mov  QWORD PTR [rsp+8], rax
+    pop  rax
+    ret
+
+@@hardfail_modnotfound_helper:
+    mov  eax, ERROR_MOD_NOT_FOUND
+    ret
+
+@@hardfail_procnotfound_helper:
+    mov  eax, ERROR_PROC_NOT_FOUND
     ret
 InjectDllInNewProcess ENDP
 

@@ -619,7 +619,7 @@ GetProcedureAddress64 PROC
     mov  eax, DWORD PTR [ebx] ;mov eax, DWORD PTR [rdx]
     DB   REX_W
     add  ecx, eax
-    call SimpleStrCmpA
+    call SimpleStrICmpA
     pop  edx
     pop  ecx
     DB   REX_W
@@ -676,9 +676,7 @@ GetProcedureAddress64 PROC
     ret
 GetProcedureAddress64 ENDP
 
-ALIGN 4
-;BOOL __stdcall SimpleStrCmpA(LPCSTR string1, LPCSTR string2)
-SimpleStrCmpA PROC
+SimpleStrICmpA PROC
     ;get string1 and check for null
     DB   REX_W
     test ecx, ecx
@@ -690,7 +688,19 @@ SimpleStrCmpA PROC
 @@loop:
     ;compare letter
     mov  al, BYTE PTR [ecx]
-    cmp  al, BYTE PTR [edx]
+    mov  ah, BYTE PTR [edx]
+    ;check letters between A-Z and a-z
+    cmp  al, 41h
+    jb   @F
+    cmp  al, 5Ah
+    ja   @F
+    or   al, 20h
+@@: cmp  ah, 41h
+    jb   @F
+    cmp  ah, 5Ah
+    ja   @F
+    or   ah, 20h
+@@: cmp  al, ah
     jne  @@mismatch
     cmp  al, 0
     je   @F
@@ -706,7 +716,7 @@ SimpleStrCmpA PROC
     DB   REX_W
     xor  eax, eax
     ret
-SimpleStrCmpA ENDP
+SimpleStrICmpA ENDP
 
 ;---------------------------------------------------------------------------------
 

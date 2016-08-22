@@ -244,45 +244,55 @@ _len$ = 16
 SimpleStrNICmpW ENDP
 
 ALIGN 4
-;BOOL __stdcall SimpleStrCmpA(LPCSTR string1, LPCSTR string2)
-SimpleStrCmpA PROC
+;BOOL __stdcall SimpleStrICmpA(LPCSTR string1, LPCSTR string2)
+SimpleStrICmpA PROC
 _string1$ = 8
 _string2$ = 12
     push ebp
     mov  ebp, esp
+    push ebx
     push esi
     push edi
+    xor  eax, eax
     ;get string1 and check for null
     mov  esi, DWORD PTR _string1$[ebp]
     test esi, esi
-    je   @@mismatch
+    je   @@done
     ;get string2 and check for null
     mov  edi, DWORD PTR _string2$[ebp]
     test edi, edi
-    je   @@mismatch
+    je   @@done
 @@loop:
     ;compare letter
-    mov  al, BYTE PTR [esi]
-    cmp  al, BYTE PTR [edi]
-    jne  @@mismatch
-    cmp  al, 0
-    je   @F
+    mov  bl, BYTE PTR [esi]
+    mov  bh, BYTE PTR [edi]
     inc  esi
     inc  edi
-    jmp  @@loop
-@@: ;match
-    xor  eax, eax
+    ;check letters between A-Z and a-z
+    cmp  bl, 41h
+    jb   @F
+    cmp  bl, 5Ah
+    ja   @F
+    or   bl, 20h
+@@: cmp  bh, 41h
+    jb   @F
+    cmp  bh, 5Ah
+    ja   @F
+    or   bh, 20h
+@@: cmp  bl, bh
+    jne  @@done
+    cmp  bl, 0
+    jne  @@loop
+    ;match
     inc  eax
-    jmp  @@end
-@@mismatch:
-    xor  eax, eax
-@@end:
+@@done:
     pop  edi
     pop  esi
+    pop  ebx
     mov  esp, ebp
     pop  ebp
     ret  8h ;pop parameters
-SimpleStrCmpA ENDP
+SimpleStrICmpA ENDP
 
 ALIGN 4
 ;BOOL __stdcall CheckImageType(LPVOID lpBase, LPVOID *lplpNtHdr)
@@ -438,7 +448,7 @@ _lpAddrOfNames$ = -16
     mov  eax, DWORD PTR [eax]
     add  eax, DWORD PTR [ebp+8h]
     push eax
-    call SimpleStrCmpA
+    call SimpleStrICmpA
     test eax, eax
     je   @@next
     ;got the function
@@ -490,13 +500,14 @@ _ORIGINAL_ENTRYPOINT_1            EQU 16
 _CHECKPOINTEVENT_1                EQU 20
 
 _ntdll_hinst$ = -4
-_ntcloseAddr$ = -8
-_ntseteventAddr$ = -12
-_kernel32_hinst$ = -16
-_loadlibrarywAddr$ = -20
-_freelibraryAddr$ = -24
-_injectdll_hinst$ = -28
-_initfunctionAddr$ = -32
+_ntterminateprocessAddr$ = -8
+_ntcloseAddr$ = -12
+_ntseteventAddr$ = -16
+_kernel32_hinst$ = -20
+_loadlibrarywAddr$ = -24
+_freelibraryAddr$ = -28
+_injectdll_hinst$ = -32
+_initfunctionAddr$ = -36
 
     db   4 DUP (0h)                                                  ;offset 0: address of GetProcedureAddress
     db   4 DUP (0h)                                                  ;offset 4: address of GetModuleBaseAddress
@@ -508,6 +519,8 @@ _initfunctionAddr$ = -32
 
 @@ntdll_dll:
     dw   'n','t','d','l','l','.','d','l','l', 0
+@@ntterminateprocess:
+    db   'NtTerminateProcess', 0
 @@ntclose:
     db   'NtClose', 0
 @@ntsetevent:
@@ -522,7 +535,7 @@ _initfunctionAddr$ = -32
 @@start:
     push ebp
     mov  ebp, esp
-    sub  esp, 32
+    sub  esp, 36
 
     push eax
     push ebx
@@ -540,8 +553,8 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _ntdll_hinst$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_MOD_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_modnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get kernel32.dll base address
     GetPtr eax, @@kernel32_dll, 0
@@ -551,12 +564,23 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _kernel32_hinst$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_MOD_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_modnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: GetPtr ebx, INJECTDLLINNEWPROCESS_SECTION_START, _GETPROCADDR_1
 
-    ;get address of NtClose
+    ;get address of NtTerminateProcess
+    GetPtr eax, @@ntterminateprocess, 0
+    push eax
+    push DWORD PTR _ntdll_hinst$[ebp]
+    call DWORD PTR [ebx]
+    mov  DWORD PTR _ntterminateprocessAddr$[ebp], eax
+    test eax, eax
+    jne  @F
+    GetPtr eax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
+
+@@: ;get address of NtClose
     GetPtr eax, @@ntclose, 0
     push eax
     push DWORD PTR _ntdll_hinst$[ebp]
@@ -564,8 +588,8 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _ntcloseAddr$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of NtSetEvent
     GetPtr eax, @@ntsetevent, 0
@@ -575,8 +599,8 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _ntseteventAddr$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of LoadLibraryW
     GetPtr eax, @@loadlibraryw, 0
@@ -586,8 +610,8 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _loadlibrarywAddr$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;get address of FreeLibrary
     GetPtr eax, @@freelibrary, 0
@@ -597,8 +621,8 @@ _initfunctionAddr$ = -32
     mov  DWORD PTR _freelibraryAddr$[ebp], eax
     test eax, eax
     jne  @F
-    mov  eax, ERROR_PROC_NOT_FOUND
-    jmp  @@fail
+    GetPtr eax, @@hardfail_procnotfound_helper, 0
+    jmp  @@hardfail
 
 @@: ;load library
     GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _DLLNAME_1
@@ -665,7 +689,7 @@ ASSUME FS:ERROR
     pop  ecx
     pop  ebx
     pop  eax
-    add  esp, 32
+    add  esp, 36
     pop  ebp
 
     ;jmp to original address
@@ -678,18 +702,38 @@ ASSUME FS:ERROR
     ret
 
 @@fail:
-    ;on error, quit
+    ;on error, terminate process
+    push eax
+    push 0FFFFFFFFh
+    call DWORD PTR _ntterminateprocessAddr$[ebp]
+    int  3
+
+@@hardfail:
     popfd
     pop  edi
     pop  esi
     pop  edx
     pop  ecx
     pop  ebx
-    add  esp, 32+4 ;skip popping eax
+    add  esp, 36+4 ;skip popping EAX
     pop  ebp
 
-    ;return and exit process
-    ret  4h
+    ;jmp to original address
+    push eax
+    push eax
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _ORIGINAL_ENTRYPOINT_1
+    mov  eax, DWORD PTR [eax]
+    mov  DWORD PTR [esp+4], eax
+    pop  eax
+    ret
+
+@@hardfail_modnotfound_helper:
+    mov  eax, ERROR_MOD_NOT_FOUND
+    ret
+
+@@hardfail_procnotfound_helper:
+    mov  eax, ERROR_PROC_NOT_FOUND
+    ret
 InjectDllInNewProcess ENDP
 
 INJECTDLLINNEWPROCESS_SECTION_END:
