@@ -751,7 +751,7 @@ _initfunctionAddr$ = 64
     mov  rdx, rax
     xor  rcx, rcx
     dec  rcx
-    call QWORD PTR _ntterminateprocessAddr$[ebp]
+    call QWORD PTR _ntterminateprocessAddr$[rbp]
     int  3
 
 @@hardfail:
