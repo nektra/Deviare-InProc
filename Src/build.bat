@@ -6,7 +6,7 @@ SET __SolutionDir=
 IF [%~1] == [] (
     ECHO Use: BUILD.BAT [options]
     ECHO Where 'options' can be
-    ECHO    /MSVCVERSION ^(2008^|2010^|2012^|2013^|2015^)
+    ECHO    /MSVCVERSION ^(2010^|2012^|2013^|2015^)
     ENDLOCAL
     PAUSE
     EXIT /B 1
@@ -28,10 +28,7 @@ IF /I [%~1] == [/MSVCVERSION] (
         PAUSE
         EXIT /B 1
     )
-    IF /I [%~2] == [2008] (
-        SET "__ComnTools=%VS90COMNTOOLS%"
-        SET __SolutionDir=vs2008
-    ) ELSE IF /I [%~2] == [2010] (
+    IF /I [%~2] == [2010] (
         SET "__ComnTools=%VS100COMNTOOLS%"
         SET __SolutionDir=vs2010
     ) ELSE IF /I [%~2] == [2012] (
