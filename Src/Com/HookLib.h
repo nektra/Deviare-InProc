@@ -133,10 +133,10 @@ public:
                                           __deref_out INktHookProcessInfo **ppProcInfo);
 
   STDMETHOD(InjectDll)(__in LONG processId, __in BSTR dllName, __in_opt BSTR initFunctionName=NULL,
-                       __out_opt my_ssize_t *injectorThreadHandle=NULL);
+                       __in_opt LONG processInitWaitTimeoutMs=5000, __out_opt my_ssize_t *injectorThreadHandle=NULL);
 
   STDMETHOD(InjectDllH)(__in my_ssize_t processHandle, __in BSTR dllName, __in_opt BSTR initFunctionName=NULL,
-                        __out_opt my_ssize_t *injectorThreadHandle=NULL);
+                        __in_opt LONG processInitWaitTimeoutMs=5000, __out_opt my_ssize_t *injectorThreadHandle=NULL);
 
 private:
   friend class CNktHookInfoImpl;

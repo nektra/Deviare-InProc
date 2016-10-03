@@ -31,7 +31,7 @@
 
 //-----------------------------------------------------------
 
-BOOL APIENTRY DllMain(__in HMODULE hModule, __in DWORD ulReasonForCall, __in LPVOID lpReserved)
+extern "C" BOOL APIENTRY DllMain(__in HMODULE hModule, __in DWORD ulReasonForCall, __in LPVOID lpReserved)
 {
   switch (ulReasonForCall)
   {
@@ -46,14 +46,12 @@ BOOL APIENTRY DllMain(__in HMODULE hModule, __in DWORD ulReasonForCall, __in LPV
   return TRUE;
 }
 
-extern "C" {
-
-__declspec(dllexport) DWORD __stdcall InitializeDll()
+extern "C" DWORD __stdcall InitializeDll()
 {
   if (::MessageBoxW(NULL, L"In InitializeDll. Press 'OK' to continue or 'Cancel' to return an error.", L"TestDll",
                     MB_OKCANCEL) != IDOK)
+  {
     return ERROR_CANCELLED;
+  }
   return ERROR_SUCCESS;
 }
-
-};

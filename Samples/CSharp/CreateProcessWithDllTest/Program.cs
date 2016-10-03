@@ -98,7 +98,7 @@ namespace CreateProcessWithDllTest
                 si = new DeviareLiteInterop.HookLib.STARTUPINFO();
                 pi = cHook.CreateProcess(cmdLine, "", null, null, false, 0, null, null, si);
                 //System.Threading.Thread.Sleep(1000); //sleep for a while so the process initializes properly
-                cHook.InjectDll(pi.procId, dllName, "");
+                cHook.InjectDll(pi.procId, dllName, "", 5000);
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }
             catch (Exception ex)
@@ -123,7 +123,7 @@ namespace CreateProcessWithDllTest
                 pi = cHook.CreateProcess(cmdLine, "", null, null, false,
                                          DeviareLiteInterop.HookLib.ProcessCreationFlags.CREATE_SUSPENDED,
                                          null, null, si);
-                cHook.InjectDll(pi.procId, dllName, "");
+                cHook.InjectDll(pi.procId, dllName, "", 5000);
                 cHook.ResumeThread(pi.threadHandle);
                 WaitForSingleObject(pi.procHandle.DangerousGetHandle(), 0xFFFFFFFF);
             }

@@ -249,10 +249,10 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
                                     __in_z_opt LPCSTR szInitFunctionA=NULL);
 
 DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA=NULL,
-                      __out_opt LPHANDLE lphInjectorThread=NULL);
+                      __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL);
 
 DWORD InjectDllByHandleW(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA=NULL,
-                         __out_opt LPHANDLE lphInjectorThread=NULL);
+                         __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL);
 
 } //NktHookLibHelpers
 

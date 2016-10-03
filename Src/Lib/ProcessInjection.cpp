@@ -120,8 +120,8 @@ static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __i
 
 static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcPlatform, __in DWORD dwTimeoutMs);
 
-static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW,
-                                       __in_z_opt LPCSTR szInitFunctionA, __out_opt LPHANDLE lphInjectorThread);
+static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFuncA,
+                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread);
 static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread, __in_z LPCWSTR szDllNameW,
                                    __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent);
 
@@ -358,7 +358,7 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
 }
 
 DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA,
-                      __out_opt LPHANDLE lphInjectorThread)
+                      __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
 {
   HANDLE hProc;
   DWORD dwOsErr;
@@ -371,7 +371,7 @@ DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LP
                                                  PROCESS_QUERY_INFORMATION | PROCESS_SUSPEND_RESUME);
   if (hProc != NULL)
   {
-    dwOsErr = InjectDllByHandleW(hProc, szDllNameW, szInitFunctionA, lphInjectorThread);
+    dwOsErr = InjectDllByHandleW(hProc, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs, lphInjectorThread);
     NktNtClose(hProc);
   }
   else
@@ -382,11 +382,12 @@ DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LP
 }
 
 DWORD InjectDllByHandleW(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA,
-                         __out_opt LPHANDLE lphInjectorThread)
+                         __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
 {
   if (lphInjectorThread != NULL)
     *lphInjectorThread = NULL;
-  return InjectDllInRunningProcess(hProcess, szDllNameW, szInitFunctionA, lphInjectorThread);
+  return InjectDllInRunningProcess(hProcess, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs,
+                                   lphInjectorThread);
 }
 
 } //namespace NktHookLibHelpers
@@ -431,7 +432,9 @@ static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcP
 #if defined(_M_IX86)
   NktHookLib::Internals::PROCESS_BASIC_INFORMATION64 sPbi64;
 #endif
-  LPBYTE lpPeb;
+  LPBYTE lpPeb, lpPtr;
+  DWORD dw;
+  ULONGLONG ull;
   LONG nNtStatus;
 
   //get remote process' PEB
@@ -478,20 +481,35 @@ static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcP
     switch (nProcPlatform)
     {
       case NKTHOOKLIB_ProcessPlatformX86:
-        {
-        DWORD dw;
-
+        //read loader lock pointer
         if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPeb + 0xA0, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw == 0)
+          break; //loader data is not initialized
+        //read loader lock's recursion count
+        lpPtr = (LPBYTE)((SIZE_T)dw);
+        dw = 0;
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPtr + 0x08, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw != 0)
+          break; //loader lock is held
+
+        //read PEB_LDR_DATA pointer
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPeb + 0x0C, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw == 0)
+          break; //PEB_LDR_DATA not initialized
+        //read PEB_LDR_DATA.Initialize value
+        lpPtr = (LPBYTE)((SIZE_T)dw);
+        dw = 0;
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPtr + 0x04, sizeof(dw)) != sizeof(dw))
           return ERROR_ACCESS_DENIED;
         if (dw != 0)
           return ERROR_SUCCESS;
-        }
         break;
 
       case NKTHOOKLIB_ProcessPlatformX64:
-        {
-        ULONGLONG ull;
-
+        //read loader lock pointer
 #if defined(_M_IX86)
         if (ReadMem64(hProcess, &ull, sPbi64.PebBaseAddress + 0x110ui64, sizeof(ull)) != sizeof(ull))
           return ERROR_ACCESS_DENIED;
@@ -499,9 +517,33 @@ static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcP
         if (NktHookLibHelpers::ReadMem(hProcess, &ull, lpPeb + 0x110, sizeof(ull)) != sizeof(ull))
           return ERROR_ACCESS_DENIED;
 #endif
-        if (ull != 0ui64)
+        if (ull == 0ui64)
+          break;
+        //read loader lock's recursion count
+        lpPtr = (LPBYTE)ull;
+        dw = 0;
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPtr + 0x0C, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw != 0)
+          break; //loader lock is held
+
+        //read PEB_LDR_DATA pointer
+#if defined(_M_IX86)
+        if (ReadMem64(hProcess, &ull, sPbi64.PebBaseAddress + 0x110ui64, sizeof(ull)) != sizeof(ull))
+          return ERROR_ACCESS_DENIED;
+#elif defined(_M_X64)
+        if (NktHookLibHelpers::ReadMem(hProcess, &ull, lpPeb + 0x110, sizeof(ull)) != sizeof(ull))
+          return ERROR_ACCESS_DENIED;
+#endif
+        if (ull == 0ui64)
+          break; //PEB_LDR_DATA not initialized
+        //read PEB_LDR_DATA.Initialize value
+        lpPtr = (LPBYTE)ull;
+        dw = 0;
+        if (NktHookLibHelpers::ReadMem(hProcess, &dw, lpPtr + 0x04, sizeof(dw)) != sizeof(dw))
+          return ERROR_ACCESS_DENIED;
+        if (dw != 0)
           return ERROR_SUCCESS;
-        }
         break;
     }
     if (dwTimeoutMs > 0)
@@ -565,8 +607,8 @@ static DWORD IsProcessInitialized(__in HANDLE hProcess, __in LONG nProcPlatform,
   return ERROR_SUCCESS;
 }
 
-static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW,
-                                       __in_z_opt LPCSTR szInitFunctionA, __out_opt LPHANDLE lphInjectorThread)
+static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFuncA,
+                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
 {
   CNktThreadSuspend cProcSusp;
   PROCESS_BASIC_INFORMATION sPbi;
@@ -591,9 +633,9 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     return ERROR_INVALID_PARAMETER;
   //calculate init function name length if provided
   nInitFuncNameLen = 0;
-  if (szInitFunctionA != NULL)
+  if (szInitFuncA != NULL)
   {
-    for (nInitFuncNameLen=0; nInitFuncNameLen<16384 && szInitFunctionA[nInitFuncNameLen]!=0; nInitFuncNameLen++);
+    for (nInitFuncNameLen=0; nInitFuncNameLen<16384 && szInitFuncA[nInitFuncNameLen]!=0; nInitFuncNameLen++);
     if (nInitFuncNameLen >= 32768)
       return ERROR_INVALID_PARAMETER;
   }
@@ -602,7 +644,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
   if (nProcPlatform != NKTHOOKLIB_ProcessPlatformX86 && nProcPlatform != NKTHOOKLIB_ProcessPlatformX64)
     return ERROR_CALL_NOT_IMPLEMENTED;
   //wait until process is initialized
-  dwOsErr = WaitForProcessInitialization(hProcess, nProcPlatform, 100);
+  dwOsErr = WaitForProcessInitialization(hProcess, nProcPlatform, dwProcessInitWaitTimeoutMs);
   if (dwOsErr != ERROR_SUCCESS && dwOsErr != ERROR_TIMEOUT) //ignore timeouts right now
     return dwOsErr;
   //get process id and suspend
@@ -766,7 +808,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
           if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
           {
             d64 += (ULONGLONG)_DOALIGN(nDllNameLen + 2, 8);
-            if (WriteMem64(hProcess, d64, (LPVOID)szInitFunctionA, nInitFuncNameLen) == FALSE ||
+            if (WriteMem64(hProcess, d64, (LPVOID)szInitFuncA, nInitFuncNameLen) == FALSE ||
                 WriteMem64(hProcess, d64 + (ULONGLONG)nInitFuncNameLen, (LPVOID)aZeroes, 1) == FALSE)
             {
               dwOsErr = ERROR_ACCESS_DENIED;
@@ -776,7 +818,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
           {
 #endif //_M_IX86
             d += _DOALIGN(nDllNameLen+2, 8);
-            if (NktHookLibHelpers::WriteMem(hProcess, d, (LPVOID)szInitFunctionA, nInitFuncNameLen) == FALSE ||
+            if (NktHookLibHelpers::WriteMem(hProcess, d, (LPVOID)szInitFuncA, nInitFuncNameLen) == FALSE ||
                 NktHookLibHelpers::WriteMem(hProcess, d+nInitFuncNameLen, (LPVOID)aZeroes, 1) == FALSE)
             {
               dwOsErr = ERROR_ACCESS_DENIED;

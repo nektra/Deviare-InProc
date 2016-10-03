@@ -371,6 +371,7 @@ STDMETHODIMP CNktHookLibImpl::CreateProcessWithTokenAndDll(__in my_ssize_t token
 }
 
 STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG processId, __in BSTR dllName, __in_opt BSTR initFunctionName,
+                                        __in_opt LONG processInitWaitTimeoutMs,
                                         __out_opt my_ssize_t *injectorThreadHandle)
 {
   LPSTR szInitFunctionA = NULL;
@@ -378,7 +379,7 @@ STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG processId, __in BSTR dllName, 
 
   if (dllName == NULL)
     return E_POINTER;
-  if (dllName[0] == NULL || processId == 0)
+  if (dllName[0] == NULL || processId == 0 || processInitWaitTimeoutMs < -1)
     return E_INVALIDARG;
   if (initFunctionName != NULL && initFunctionName[0] != 0)
   {
@@ -386,7 +387,10 @@ STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG processId, __in BSTR dllName, 
     if (szInitFunctionA == NULL)
       return E_OUTOFMEMORY;
   }
+  if (processInitWaitTimeoutMs < 0)
+    processInitWaitTimeoutMs = INFINITE;
   hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByPidW((DWORD)processId, dllName, szInitFunctionA,
+                                                                   (DWORD)processInitWaitTimeoutMs,
                                                                    (LPHANDLE)injectorThreadHandle));
   if (szInitFunctionA != NULL)
     free(szInitFunctionA);
@@ -394,14 +398,15 @@ STDMETHODIMP CNktHookLibImpl::InjectDll(__in LONG processId, __in BSTR dllName, 
 }
 
 STDMETHODIMP CNktHookLibImpl::InjectDllH(__in my_ssize_t processHandle, __in BSTR dllName,
-                                         __in_opt BSTR initFunctionName, __out_opt my_ssize_t *injectorThreadHandle)
+                                         __in_opt BSTR initFunctionName, __in_opt LONG processInitWaitTimeoutMs,
+                                         __out_opt my_ssize_t *injectorThreadHandle)
 {
   LPSTR szInitFunctionA = NULL;
   HRESULT hRes;
 
   if (dllName == NULL)
     return E_POINTER;
-  if (dllName[0] == NULL || processHandle == 0)
+  if (dllName[0] == NULL || processHandle == 0 || processInitWaitTimeoutMs < -1)
     return E_INVALIDARG;
   if (initFunctionName != NULL && initFunctionName[0] != 0)
   {
@@ -409,7 +414,10 @@ STDMETHODIMP CNktHookLibImpl::InjectDllH(__in my_ssize_t processHandle, __in BST
     if (szInitFunctionA == NULL)
       return E_OUTOFMEMORY;
   }
+  if (processInitWaitTimeoutMs < 0)
+    processInitWaitTimeoutMs = INFINITE;
   hRes = NKT_HRESULT_FROM_WIN32(NktHookLibHelpers::InjectDllByHandleW((HANDLE)processHandle, dllName, szInitFunctionA,
+                                                                      (DWORD)processInitWaitTimeoutMs,
                                                                       (LPHANDLE)injectorThreadHandle));
   if (szInitFunctionA != NULL)
     free(szInitFunctionA);

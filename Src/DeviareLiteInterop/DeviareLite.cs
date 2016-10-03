@@ -465,40 +465,38 @@ namespace DeviareLiteInterop
             return pi;
         }
 
-        public void InjectDll(int procId, string dllName, string initFunctionName)
+        public void InjectDll(int procId, string dllName, string initFunctionName, uint processInitWaitTimeoutMs )
         {
             IntPtr injectorThreadHandle;
 
-            InjectDll(procId, dllName, initFunctionName, out injectorThreadHandle);
+            InjectDll(procId, dllName, initFunctionName, processInitWaitTimeoutMs, out injectorThreadHandle);
             if (injectorThreadHandle != IntPtr.Zero)
                 NativeCloseHandle(injectorThreadHandle);
         }
 
-        public void InjectDll(int procId, string dllName, string initFunctionName, out IntPtr injectorThreadHandle)
+        public void InjectDll(int procId, string dllName, string initFunctionName, uint processInitWaitTimeoutMs, out IntPtr injectorThreadHandle)
         {
             ParameterModifier argsMod = new ParameterModifier(4);
             argsMod[3] = true;
-            object[] args = new object[] { procId, dllName, initFunctionName, IntPtr2Obj(new IntPtr()) };
+            object[] args = new object[] { procId, dllName, initFunctionName, (int)processInitWaitTimeoutMs, IntPtr2Obj(new IntPtr()) };
             this.Invoke(this.hookLib, "InjectDll", args, argsMod);
             injectorThreadHandle = Obj2IntPtr(args[3]);
         }
 
-        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName)
+        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName, uint processInitWaitTimeoutMs)
         {
             IntPtr injectorThreadHandle;
 
-            InjectDllH(procHandle, dllName, initFunctionName, out injectorThreadHandle);
+            InjectDllH(procHandle, dllName, initFunctionName, processInitWaitTimeoutMs, out injectorThreadHandle);
             if (injectorThreadHandle != IntPtr.Zero)
                 NativeCloseHandle(injectorThreadHandle);
         }
 
-        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName,
-                               out IntPtr injectorThreadHandle)
+        public void InjectDllH(IntPtr procHandle, string dllName, string initFunctionName, uint processInitWaitTimeoutMs, out IntPtr injectorThreadHandle)
         {
             ParameterModifier argsMod = new ParameterModifier(4);
             argsMod[3] = true;
-            object[] args = new object[] { IntPtr2Obj(procHandle), dllName, initFunctionName,
-                                           IntPtr2Obj(new IntPtr()) };
+            object[] args = new object[] { IntPtr2Obj(procHandle), dllName, initFunctionName, (int)processInitWaitTimeoutMs, IntPtr2Obj(new IntPtr()) };
             this.Invoke(this.hookLib, "InjectDllH", args, argsMod);
             injectorThreadHandle = Obj2IntPtr(args[3]);
         }

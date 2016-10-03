@@ -134,7 +134,7 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     DWORD dwExitCode;
     HANDLE hInjectorThread;
 
-    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, szDllToInjectNameW, szInitFunctionA, &hInjectorThread);
+    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, szDllToInjectNameW, szInitFunctionA, 5000, &hInjectorThread);
     if (dwOsErr == ERROR_SUCCESS)
     {
       wprintf_s(L"Dll successfully injected!\n");
