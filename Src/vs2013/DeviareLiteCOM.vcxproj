@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{0F79BD19-F305-4C06-8EBD-8BD7251ADB22}</ProjectGuid>
+    <ProjectGuid>{BFBFCB20-3637-4ee2-B6B5-23BF2F37B171}</ProjectGuid>
     <RootNamespace>HookLib</RootNamespace>
     <Keyword>AtlProj</Keyword>
   </PropertyGroup>

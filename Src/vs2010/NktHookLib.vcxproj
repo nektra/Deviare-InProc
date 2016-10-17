@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{7DE03078-DA93-4D66-8164-76277522D3F6}</ProjectGuid>
+    <ProjectGuid>{E5BB5B5B-EFFE-4033-84DE-6C13C4E90041}</ProjectGuid>
     <RootNamespace>NktHookLib</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>

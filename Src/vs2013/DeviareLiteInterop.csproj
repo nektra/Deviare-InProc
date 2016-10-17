@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{AD8D0F36-E576-4249-8523-EA84FE5A4E47}</ProjectGuid>
+    <ProjectGuid>{DC8254B8-8A25-49c9-ACD1-CBF42324B9D2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DeviareLiteInterop</RootNamespace>
