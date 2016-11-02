@@ -133,8 +133,17 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
       bGrowCheckProcessThreadsMem = FALSE;
     }
     //----
-    dwOsErr = EnumProcessThreads(dwPid, hProcess, bIsLowIlProcess, &nEnumMethod, &dwCurrSessionId);
+    dwOsErr = EnumProcessThreads(dwPid, hProcess, &nEnumMethod, &dwCurrSessionId);
     if (dwOsErr != ERROR_SUCCESS)
+    {
+      //if the current process is has a low mandatory integrity level, then it may not be capable of enumerating threads
+      //so assume zero threads although might be unsafe
+      if (dwOsErr == ERROR_ACCESS_DENIED && bIsLowIlProcess != FALSE)
+        dwOsErr = ERROR_SUCCESS;
+      break;
+    }
+    //if no threads were found, exit loop (should never happen)
+    if (sSuspendedTids.nCount == 0)
       break;
     //suspend all threads in the list
     for (i=0; i<sSuspendedTids.nCount; i++)
@@ -262,8 +271,8 @@ BOOL CNktThreadSuspend::CheckIfThreadIsInRange(__in SIZE_T nStart, __in SIZE_T n
   return FALSE;
 }
 
-DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __in BOOL bCurrentProcessIsLowIL,
-                                            __out SIZE_T *lpnEnumMethod, __out LPDWORD lpdwSessionId)
+DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProcess, __out SIZE_T *lpnEnumMethod,
+                                            __out LPDWORD lpdwSessionId)
 {
   SIZE_T nSize, nRealSize;
   LPNKT_HK_SYSTEM_PROCESS_INFORMATION lpSysProcInfo, lpCurrProc;
@@ -346,10 +355,6 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
   {
     nSize = 0;
     NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-    //if the current process is has a low mandatory integrity level, then it may not be capable of enumerating threads
-    //so assume zero threads although might be unsafe
-    if (bCurrentProcessIsLowIL != FALSE)
-      return ERROR_SUCCESS;
     return ERROR_ACCESS_DENIED;
   }
   if (lpCurrProc->NumberOfThreads > 0)
