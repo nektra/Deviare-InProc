@@ -529,10 +529,10 @@ static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcP
 
         //read PEB_LDR_DATA pointer
 #if defined(_M_IX86)
-        if (ReadMem64(hProcess, &ull, sPbi64.PebBaseAddress + 0x110ui64, sizeof(ull)) != sizeof(ull))
+        if (ReadMem64(hProcess, &ull, sPbi64.PebBaseAddress + 0x18ui64, sizeof(ull)) != sizeof(ull))
           return ERROR_ACCESS_DENIED;
 #elif defined(_M_X64)
-        if (NktHookLibHelpers::ReadMem(hProcess, &ull, lpPeb + 0x110, sizeof(ull)) != sizeof(ull))
+        if (NktHookLibHelpers::ReadMem(hProcess, &ull, lpPeb + 0x18, sizeof(ull)) != sizeof(ull))
           return ERROR_ACCESS_DENIED;
 #endif
         if (ull == 0ui64)
