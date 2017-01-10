@@ -585,9 +585,11 @@ DWORD GetWin32LastError(__in_opt HANDLE hThread)
 {
   NKT_HK_THREAD_BASIC_INFORMATION sTbi;
   LPBYTE lpPtr;
+  DWORD dwErr;
+  OBJECT_ATTRIBUTES sObjAttr;
+  NKT_HK_CLIENT_ID sClientId;
+  HANDLE hProc = NULL;
   NTSTATUS nNtStatus;
-  DWORD dwErr, dwProcId;
-  HANDLE hProc;
 
   if (hThread == NULL || hThread == NKTHOOKLIB_CurrentThread)
   {
@@ -603,11 +605,13 @@ DWORD GetWin32LastError(__in_opt HANDLE hThread)
   nNtStatus = NktNtQueryInformationThread(hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi, sizeof(sTbi), NULL);
   if (!NT_SUCCESS(nNtStatus))
     return 0xFFFFFFFFUL;
-  dwProcId = (DWORD)(sTbi.ClientId.UniqueProcess);
-  hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
-  if (hProc == NULL)
-    hProc = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, FALSE, dwProcId);
-  if (hProc == NULL)
+  sClientId.UniqueProcess = sTbi.ClientId.UniqueProcess;
+  sClientId.UniqueThread = 0;
+  InitializeObjectAttributes(&sObjAttr, NULL, 0, NULL, NULL);
+  nNtStatus = NktNtOpenProcess(&hProc, PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, &sObjAttr, &sClientId);
+  if (!NT_SUCCESS(nNtStatus))
+    nNtStatus = NktNtOpenProcess(&hProc, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, &sObjAttr, &sClientId);
+  if (!NT_SUCCESS(nNtStatus))
     return 0xFFFFFFFFUL;
   switch (GetProcessPlatform(hProc))
   {
@@ -634,8 +638,9 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
   NKT_HK_THREAD_BASIC_INFORMATION sTbi;
   LPBYTE lpPtr;
   NTSTATUS nNtStatus;
-  DWORD dwProcId;
-  HANDLE hProc;
+  OBJECT_ATTRIBUTES sObjAttr;
+  NKT_HK_CLIENT_ID sClientId;
+  HANDLE hProc = NULL;
   BOOL b;
 
   if (hThread == NULL || hThread == NKTHOOKLIB_CurrentThread)
@@ -652,13 +657,21 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
   //not current thread
   nNtStatus = NktNtQueryInformationThread(hThread, (THREADINFOCLASS)ThreadBasicInformation, &sTbi, sizeof(sTbi), NULL);
   if (!NT_SUCCESS(nNtStatus))
+  {
+    SetWin32LastError(NktRtlNtStatusToDosError(nNtStatus));
     return FALSE;
-  dwProcId = (DWORD)(sTbi.ClientId.UniqueProcess);
-  hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION|PROCESS_VM_WRITE, FALSE, dwProcId);
-  if (hProc == NULL)
-    hProc = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_WRITE, FALSE, dwProcId);
-  if (hProc == NULL)
+  }
+  sClientId.UniqueProcess = sTbi.ClientId.UniqueProcess;
+  sClientId.UniqueThread = 0;
+  InitializeObjectAttributes(&sObjAttr, NULL, 0, NULL, NULL);
+  nNtStatus = NktNtOpenProcess(&hProc, PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_WRITE, &sObjAttr, &sClientId);
+  if (!NT_SUCCESS(nNtStatus))
+    nNtStatus = NktNtOpenProcess(&hProc, PROCESS_QUERY_INFORMATION | PROCESS_VM_WRITE, &sObjAttr, &sClientId);
+  if (!NT_SUCCESS(nNtStatus))
+  {
+    SetWin32LastError(NktRtlNtStatusToDosError(nNtStatus));
     return FALSE;
+  }
   switch (GetProcessPlatform(hProc))
   {
     case NKTHOOKLIB_ProcessPlatformX86:
@@ -671,14 +684,8 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
 #endif //_M_X64
   }
   NktNtClose(hProc);
+  SetWin32LastError(NktRtlNtStatusToDosError((b != FALSE) ? STATUS_SUCCESS : STATUS_ACCESS_DENIED));
   return b;
 }
-
-BOOL SetWin32LastErrorFromNtStatus(__in NTSTATUS nNtStatus, __in_opt HANDLE hThread)
-{
-  return SetWin32LastError(::NktRtlNtStatusToDosError(nNtStatus), hThread);
-}
-
-//-----------------------------------------------------------
 
 } //namespace NktHookLibHelpers

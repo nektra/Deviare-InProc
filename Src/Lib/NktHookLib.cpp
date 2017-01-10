@@ -522,9 +522,9 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
     NTSTATUS nNtStatus;
 
     //get process handle
-    cProcEntry.Attach(int_data->cProcHdrMgr.Get(dwPid));
-    if (cProcEntry == NULL)
-      return ERROR_ACCESS_DENIED;
+    nNtStatus = int_data->cProcHdrMgr.Get(dwPid, &cProcEntry);
+    if (!NT_SUCCESS(nNtStatus))
+      return NktRtlNtStatusToDosError(nNtStatus);
     //calculate the size of a SIZE_T value
     nSizeOfSizeT = 0;
     switch (cProcEntry->GetPlatform())

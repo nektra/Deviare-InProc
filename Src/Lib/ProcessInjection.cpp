@@ -360,23 +360,24 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
 DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA,
                       __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
 {
-  HANDLE hProc;
+  HANDLE hProc = NULL;
   DWORD dwOsErr;
+  NTSTATUS nNtStatus;
 
   if (lphInjectorThread != NULL)
     *lphInjectorThread = NULL;
-  hProc = CProcessesHandles::CreateHandle(dwPid, STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | PROCESS_CREATE_THREAD |
-                                                 PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE |
-                                                 PROCESS_DUP_HANDLE | PROCESS_SET_INFORMATION |
-                                                 PROCESS_QUERY_INFORMATION | PROCESS_SUSPEND_RESUME);
-  if (hProc != NULL)
+  nNtStatus = CProcessesHandles::CreateHandle(dwPid, STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | PROCESS_CREATE_THREAD |
+                                                     PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE |
+                                                     PROCESS_DUP_HANDLE | PROCESS_SET_INFORMATION |
+                                                     PROCESS_QUERY_INFORMATION | PROCESS_SUSPEND_RESUME, &hProc);
+  if (NT_SUCCESS(nNtStatus))
   {
     dwOsErr = InjectDllByHandleW(hProc, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs, lphInjectorThread);
     NktNtClose(hProc);
   }
   else
   {
-    dwOsErr = ERROR_ACCESS_DENIED;
+    dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
   }
   return dwOsErr;
 }
@@ -1858,9 +1859,10 @@ static NTSTATUS GetPrimaryThread(__in HANDLE hProcess, __out HANDLE *lphThread)
   TNktAutoFreePtr<NKT_HK_SYSTEM_PROCESS_INFORMATION> cBuf;
   PROCESS_BASIC_INFORMATION sPbi;
   SIZE_T nSize, nMethod;
-  DWORD dwTid;
   LPNKT_HK_SYSTEM_PROCESS_INFORMATION lpCurrProc;
   ULONG nRetLength;
+  OBJECT_ATTRIBUTES sObjAttr;
+  NKT_HK_CLIENT_ID sClientId;
   NTSTATUS nNtStatus;
 
   nNtStatus = NktNtQueryInformationProcess(hProcess, ProcessBasicInformation, &sPbi, (ULONG)sizeof(sPbi), NULL);
@@ -1900,14 +1902,16 @@ static NTSTATUS GetPrimaryThread(__in HANDLE hProcess, __out HANDLE *lphThread)
     {
       if (lpCurrProc->NumberOfThreads == 0)
         break;
-      dwTid = (nMethod == 0) ? (DWORD)(lpCurrProc->Threads[0].ClientId.UniqueThread) :
-                               (DWORD)(lpCurrProc->ExtThreads[0].ThreadInfo.ClientId.UniqueThread);
-      *lphThread = NktHookLibHelpers::OpenThread(STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | THREAD_TERMINATE |
-                                                 THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT |
-                                                 THREAD_QUERY_INFORMATION | THREAD_SET_INFORMATION |
-                                                 THREAD_SET_THREAD_TOKEN | THREAD_IMPERSONATE |
-                                                 THREAD_DIRECT_IMPERSONATION, FALSE, dwTid);
-      return ((*lphThread) != NULL) ? STATUS_SUCCESS : STATUS_ACCESS_DENIED;
+      sClientId.UniqueProcess = 0;
+      sClientId.UniqueThread = (nMethod == 0) ? (lpCurrProc->Threads[0].ClientId.UniqueThread) :
+                                                (lpCurrProc->ExtThreads[0].ThreadInfo.ClientId.UniqueThread);
+      InitializeObjectAttributes(&sObjAttr, NULL, 0, NULL, NULL);
+      nNtStatus = NktNtOpenThread(lphThread, STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | THREAD_TERMINATE |
+                                             THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_SET_CONTEXT |
+                                             THREAD_QUERY_INFORMATION | THREAD_SET_INFORMATION |
+                                             THREAD_SET_THREAD_TOKEN | THREAD_IMPERSONATE |
+                                             THREAD_DIRECT_IMPERSONATION, &sObjAttr, &sClientId);
+      return nNtStatus;
     }
     if (lpCurrProc->NextEntryOffset == 0)
       break;

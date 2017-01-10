@@ -166,6 +166,12 @@ public:
       return _lpEntry;
       };
 
+    CEntry** operator&()
+      {
+      NKT_ASSERT(lpEntry == NULL);
+      return &lpEntry;
+      };
+
     CEntry* operator->() const
       {
       return lpEntry;
@@ -194,9 +200,9 @@ public:
   CProcessesHandles();
   ~CProcessesHandles();
 
-  CEntry* Get(__in DWORD dwPid);
+  NTSTATUS Get(__in DWORD dwPid, __out CEntry **lplpEntry);
 
-  static HANDLE CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAccess);
+  static NTSTATUS CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAccess, __out HANDLE *lphProc);
 
 private:
   VOID RemoveKilledProcesses();

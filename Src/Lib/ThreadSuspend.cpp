@@ -97,6 +97,8 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
   BOOL bGrowCheckProcessThreadsMem, bIsLowIlProcess;
   DWORD dwOsErr;
   int nOrigPriority;
+  OBJECT_ATTRIBUTES sObjAttr;
+  NKT_HK_CLIENT_ID sClientId;
   NTSTATUS nNtStatus;
 
   if (dwPid == NktHookLibHelpers::GetCurrentProcessId())
@@ -105,9 +107,9 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
   }
   else
   {
-    hProcess = CProcessesHandles::CreateHandle(dwPid, PROCESS_SUSPEND_RESUME|PROCESS_QUERY_INFORMATION);
-    if (hProcess == NULL)
-      return ERROR_ACCESS_DENIED;
+    nNtStatus = CProcessesHandles::CreateHandle(dwPid, PROCESS_SUSPEND_RESUME | PROCESS_QUERY_INFORMATION, &hProcess);
+    if (!NT_SUCCESS(nNtStatus))
+      return NktRtlNtStatusToDosError(nNtStatus);
   }
   dwOsErr = IsCurrentProcessLowIntegrity(&bIsLowIlProcess);
   if (dwOsErr != ERROR_SUCCESS)
@@ -151,9 +153,11 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
       if (sSuspendedTids.lpList[i].dwTid == dwCurrTid)
         continue; //skip myself
       //open thread for context and suspend
-      hThread = sSuspendedTids.lpList[i].hThread = NktHookLibHelpers::OpenThread(
-                                  THREAD_GET_CONTEXT|THREAD_SUSPEND_RESUME, FALSE, sSuspendedTids.lpList[i].dwTid);
-      if (hThread != NULL)
+      sClientId.UniqueProcess = 0;
+      sClientId.UniqueThread = (SIZE_T)(ULONG_PTR)(sSuspendedTids.lpList[i].dwTid);
+      InitializeObjectAttributes(&sObjAttr, NULL, 0, NULL, NULL);
+      nNtStatus = NktNtOpenThread(&hThread, THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, &sObjAttr, &sClientId);
+      if (NT_SUCCESS(nNtStatus))
       {
         //suspend the thread
         for (nSuspendTries=20; nSuspendTries>0; nSuspendTries--)

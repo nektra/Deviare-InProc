@@ -62,16 +62,20 @@ CProcessesHandles::~CProcessesHandles()
   return;
 }
 
-CProcessesHandles::CEntry* CProcessesHandles::Get(__in DWORD dwPid)
+NTSTATUS CProcessesHandles::Get(__in DWORD dwPid, __out CProcessesHandles::CEntry **lplpEntry)
 {
   CNktAutoFastMutex cLock(&cMtx);
   TNktLnkLst<CEntry>::Iterator it;
   CEntry *lpEntry;
   LONG nPlatform;
   HANDLE h;
+  NTSTATUS nNtStatus;
 
+  if (lplpEntry == NULL)
+    return STATUS_INVALID_PARAMETER;
+  *lplpEntry = NULL;
   if (dwPid == 0)
-    return NULL;
+    return STATUS_INVALID_PARAMETER;
   RemoveKilledProcesses();
   for (lpEntry=it.Begin(cEntries); lpEntry!=NULL; lpEntry=it.Next())
   {
@@ -86,43 +90,49 @@ CProcessesHandles::CEntry* CProcessesHandles::Get(__in DWORD dwPid)
     }
     else
     {
-      h = CreateHandle(dwPid, PROCESS_SUSPEND_RESUME|PROCESS_QUERY_INFORMATION|PROCESS_VM_OPERATION|PROCESS_VM_READ|
-                              PROCESS_VM_WRITE);
-      if (h == NULL)
-        return NULL;
+      nNtStatus = CreateHandle(dwPid, PROCESS_SUSPEND_RESUME|PROCESS_QUERY_INFORMATION|PROCESS_VM_OPERATION|PROCESS_VM_READ|
+                              PROCESS_VM_WRITE, &h);
+      if (!NT_SUCCESS(nNtStatus))
+        return nNtStatus;
     }
     nPlatform = NktHookLibHelpers::GetProcessPlatform(h);
     if (!NT_SUCCESS(nPlatform))
     {
       if (h != NKTHOOKLIB_CurrentProcess)
         NktNtClose(h);
-      return NULL;
+      return (NTSTATUS)nNtStatus;
     }
     lpEntry = new CEntry(dwPid, h, nPlatform);
     if (lpEntry == NULL)
     {
       if (h != NKTHOOKLIB_CurrentProcess)
         NktNtClose(h);
-      return NULL;
+      return STATUS_NO_MEMORY;
     }
     cEntries.PushHead(lpEntry);
   }
   lpEntry->AddRef();
-  return lpEntry;
+  *lplpEntry = lpEntry;
+  return STATUS_SUCCESS;
 }
 
-HANDLE CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAccess)
+NTSTATUS CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAccess, __out HANDLE *lphProc)
 {
-  HANDLE hToken, hProc;
+  HANDLE hToken;
   TOKEN_PRIVILEGES sTokPriv;
   BOOL bRevertToSelf;
+  OBJECT_ATTRIBUTES sObjAttr;
+  NKT_HK_CLIENT_ID sClientId;
   NTSTATUS nNtStatus;
 
+  if (lphProc == NULL)
+    return STATUS_INVALID_PARAMETER;
+  *lphProc = NULL;
   if (dwPid == 0)
-    return NULL;
+    return STATUS_INVALID_PARAMETER;
   //try to enable SeDebugPrivilege
   bRevertToSelf = FALSE;
-  nNtStatus = NktNtOpenThreadToken(NKTHOOKLIB_CurrentThread, TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY, FALSE, &hToken);
+  nNtStatus = NktNtOpenThreadToken(NKTHOOKLIB_CurrentThread, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, FALSE, &hToken);
   if (!NT_SUCCESS(nNtStatus))
   {
     hToken = NULL;
@@ -130,7 +140,7 @@ HANDLE CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAcc
     if (NT_SUCCESS(nNtStatus))
     {
       bRevertToSelf = TRUE;
-      nNtStatus = NktNtOpenThreadToken(NKTHOOKLIB_CurrentThread, TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY, FALSE, &hToken);
+      nNtStatus = NktNtOpenThreadToken(NKTHOOKLIB_CurrentThread, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, FALSE, &hToken);
       if (!NT_SUCCESS(nNtStatus))
         hToken = NULL;
     }
@@ -145,14 +155,17 @@ HANDLE CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAcc
     NktNtAdjustPrivilegesToken(hToken, 0, &sTokPriv, sizeof(sTokPriv), NULL, NULL);
   }
   //open process
-  hProc = NktHookLibHelpers::OpenProcess(dwDesiredAccess, FALSE, dwPid);
-  if (hProc == NULL)
+  sClientId.UniqueProcess = (SIZE_T)(ULONG_PTR)(dwPid);
+  sClientId.UniqueThread = 0;
+  InitializeObjectAttributes(&sObjAttr, NULL, 0, NULL, NULL);
+  nNtStatus = NktNtOpenProcess(lphProc, dwDesiredAccess, &sObjAttr, &sClientId);
+  if (!NT_SUCCESS(nNtStatus))
   {
-    if ((dwDesiredAccess & (PROCESS_QUERY_INFORMATION|PROCESS_QUERY_LIMITED_INFORMATION)) == PROCESS_QUERY_INFORMATION)
+    if ((dwDesiredAccess & (PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION)) == PROCESS_QUERY_INFORMATION)
     {
       dwDesiredAccess &= (~PROCESS_QUERY_INFORMATION);
       dwDesiredAccess |= PROCESS_QUERY_LIMITED_INFORMATION;
-      hProc = NktHookLibHelpers::OpenProcess(dwDesiredAccess, FALSE, dwPid);
+      nNtStatus = NktNtOpenProcess(lphProc, dwDesiredAccess, &sObjAttr, &sClientId);
     }
   }
   //restore privileges
@@ -170,7 +183,7 @@ HANDLE CProcessesHandles::CreateHandle(__in DWORD dwPid, __in DWORD dwDesiredAcc
   if (hToken != NULL)
     NktNtClose(hToken);
   //done
-  return hProc;
+  return nNtStatus;
 }
 
 VOID CProcessesHandles::RemoveKilledProcesses()
