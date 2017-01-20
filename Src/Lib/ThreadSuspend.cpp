@@ -159,6 +159,7 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
       nNtStatus = NktNtOpenThread(&hThread, THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, &sObjAttr, &sClientId);
       if (NT_SUCCESS(nNtStatus))
       {
+        sSuspendedTids.lpList[i].hThread = hThread;
         //suspend the thread
         for (nSuspendTries=20; nSuspendTries>0; nSuspendTries--)
         {
