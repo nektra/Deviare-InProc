@@ -138,8 +138,8 @@ DWORD CNktThreadSuspend::SuspendAll(__in DWORD dwPid, __in IP_RANGE *lpRanges, _
     dwOsErr = EnumProcessThreads(dwPid, hProcess, &nEnumMethod, &dwCurrSessionId);
     if (dwOsErr != ERROR_SUCCESS)
     {
-      //if the current process is has a low mandatory integrity level, then it may not be capable of enumerating threads
-      //so assume zero threads although might be unsafe
+      //if the current process is has a low mandatory integrity level, then it may not be capable of enumerating
+      //threads so assume zero threads although might be unsafe
       if (dwOsErr == ERROR_ACCESS_DENIED && bIsLowIlProcess != FALSE)
         dwOsErr = ERROR_SUCCESS;
       break;
@@ -270,7 +270,9 @@ BOOL CNktThreadSuspend::CheckIfThreadIsInRange(__in SIZE_T nStart, __in SIZE_T n
     {
       if (sSuspendedTids.lpList[i].hThread != NULL &&
           sSuspendedTids.lpList[i].nCurrIP >= nStart && sSuspendedTids.lpList[i].nCurrIP < nEnd)
+      {
         return TRUE;
+      }
     }
   }
   return FALSE;
@@ -280,11 +282,12 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
                                             __out LPDWORD lpdwSessionId)
 {
   SIZE_T nSize, nRealSize;
-  LPNKT_HK_SYSTEM_PROCESS_INFORMATION lpSysProcInfo, lpCurrProc;
+  LPNKT_HK_SYSTEM_PROCESS_INFORMATION lpSysProcInfo = NULL, lpCurrProc;
   NKT_HK_SYSTEM_SESSION_PROCESS_INFORMATION sSpi;
   ULONG k, kNeeded, nSysProcInfoLen;
   PVOID lpPtr;
   NTSTATUS nNtStatus;
+  DWORD dwOsErr;
 
   NKT_ASSERT(lpnEnumMethod != NULL && lpdwSessionId != NULL);
   sSuspendedTids.lpList = NULL;
@@ -303,12 +306,20 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
     NKT_ASSERT(nSysProcInfoLen >= sizeof(NKT_HK_SYSTEM_PROCESS_INFORMATION));
     for (;;)
     {
-      lpSysProcInfo = NULL;
+      if (lpSysProcInfo != NULL)
+      {
+        nSize = 0;
+        NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
+        lpSysProcInfo = NULL;
+      }
       nSize = (SIZE_T)nSysProcInfoLen;
       nNtStatus = NktNtAllocateVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, 0, &nSize,
                                              MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
       if (!NT_SUCCESS(nNtStatus))
-        return ERROR_NOT_ENOUGH_MEMORY;
+      {
+        dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
+        goto done;
+      }
       switch (*lpnEnumMethod)
       {
         case 1:
@@ -329,9 +340,8 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
         break;
       if (nNtStatus != STATUS_INFO_LENGTH_MISMATCH && nNtStatus != STATUS_BUFFER_TOO_SMALL)
       {
-        nSize = 0;
-        NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-        return ERROR_ACCESS_DENIED;
+        dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
+        goto done;
       }
       if (kNeeded == 0)
       {
@@ -343,8 +353,6 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
       if (kNeeded < nSysProcInfoLen)
         kNeeded = nSysProcInfoLen+4096;
       nSysProcInfoLen = kNeeded;
-      nSize = 0; //mem-leak fix by tkoecker
-      NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
     }
     //find the target process
     lpCurrProc = lpSysProcInfo;
@@ -358,9 +366,8 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
   //current process not found (?), may be, for e.g., ThinApp hooking apis
   if (lpCurrProc == NULL)
   {
-    nSize = 0;
-    NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-    return ERROR_ACCESS_DENIED;
+    dwOsErr = ERROR_ACCESS_DENIED;
+    goto done;
   }
   if (lpCurrProc->NumberOfThreads > 0)
   {
@@ -371,9 +378,8 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
                                            MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     if (!NT_SUCCESS(nNtStatus))
     {
-      nSize = 0;
-      NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-      return ERROR_NOT_ENOUGH_MEMORY;
+      dwOsErr = NktRtlNtStatusToDosError(nNtStatus);
+      goto done;
     }
     //scan the threads of the process
     if ((*lpnEnumMethod) != 2)
@@ -393,9 +399,15 @@ DWORD CNktThreadSuspend::EnumProcessThreads(__in DWORD dwPid, __in HANDLE hProce
       }
     }
   }
-  nSize = 0;
-  NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
-  return ERROR_SUCCESS;
+  dwOsErr = ERROR_SUCCESS;
+
+done:
+  if (lpSysProcInfo != NULL)
+  {
+    nSize = 0;
+    NktNtFreeVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID*)&lpSysProcInfo, &nSize, MEM_RELEASE);
+  }
+  return dwOsErr;
 }
 
 BOOL CNktThreadSuspend::GrowCheckProcessThreadsMem()
@@ -521,6 +533,7 @@ DWORD CNktThreadSuspend::IsCurrentProcessLowIntegrity(__out BOOL *lpbProcessIsLo
   TNktAutoFreePtr<TOKEN_MANDATORY_LABEL> cIntegrityLevel;
   NKT_SID *lpSid;
   DWORD dwIntegrityLevel;
+  ULONG nRetLength;
   HANDLE hToken;
   NTSTATUS nNtStatus;
 
@@ -531,10 +544,6 @@ DWORD CNktThreadSuspend::IsCurrentProcessLowIntegrity(__out BOOL *lpbProcessIsLo
   if (NT_SUCCESS(nNtStatus))
   {
     //query for restricted sids
-
-    ULONG nRetLength;
-    NTSTATUS nNtStatus;
-
     nNtStatus = NktNtQueryInformationToken(hToken, TokenIntegrityLevel, NULL, 0, &nRetLength);
     while (nNtStatus == STATUS_BUFFER_TOO_SMALL)
     {
