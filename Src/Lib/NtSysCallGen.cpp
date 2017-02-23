@@ -308,15 +308,25 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
     }
     if (lpFileFuncAddr[nSrcOfs] == 0xC3)
     {
-      nSrcOfs++;
-      nCurrSize++;
-      break;
+      //handle special case for Windows 10 x64 anniversary
+      if (nPlatformBits == 64 && lpOsVerInfoW->dwMajorVersion >= 10 &&
+          lpFileFuncAddr[nSrcOfs + 1] == 0xCD && lpFileFuncAddr[nSrcOfs + 2] == 0x2E)
+      {
+        nSrcOfs++;
+        nCurrSize++;
+      }
+      else
+      {
+        nSrcOfs++;
+        nCurrSize++;
+        break;
+      }
     }
     //handle special case for Windows 10 x86
     if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
         lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
     {
-      //call edx
+      //mov EDX, OFFSET _Wow64SystemServiceCall@0 / call EDX
       dwRawAddr = HelperConvertVAToRaw(*((ULONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1)), lpFileImgSect, nSecCount);
       lpSrc = lpData + dwRawAddr;
       nSrcOfs += 7;
@@ -324,12 +334,12 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       k = nDestSize = 0;
       while (nDestSize < 128)
       {
-        if (lpSrc[k] == 0xFF && lpSrc[k] == 0xE2)
+        if (lpSrc[k] == 0xFF && lpSrc[k+1] == 0xE2) //jmp EDX
         {
           nDestSize += 2;
           break;
         }
-        if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00)
+        if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00) //jmp 0x33:OFFSET
         {
           k += 7;
           nDestSize += 12;
@@ -397,14 +407,23 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       }
       if (lpFileFuncAddr[nSrcOfs] == 0xC3)
       {
-        lpStub[nCurrSize++] = lpFileFuncAddr[nSrcOfs++];
-        break;
+        //handle special case for Windows 10 x64 anniversary
+        if (nPlatformBits == 64 && lpOsVerInfoW->dwMajorVersion >= 10 &&
+            lpFileFuncAddr[nSrcOfs + 1] == 0xCD && lpFileFuncAddr[nSrcOfs + 2] == 0x2E)
+        {
+          lpStub[nCurrSize++] = lpFileFuncAddr[nSrcOfs++];
+        }
+        else
+        {
+          lpStub[nCurrSize++] = lpFileFuncAddr[nSrcOfs++];
+          break;
+        }
       }
       //handle special case for Windows 10 x86
       if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
           lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
       {
-        //call edx
+        //mov EDX, OFFSET _Wow64SystemServiceCall@0 / call EDX
         dwRawAddr = HelperConvertVAToRaw(*((ULONG NKT_UNALIGNED*)(lpFileFuncAddr+nSrcOfs+1)), lpFileImgSect, nSecCount);
         lpStub[nCurrSize] = 0xE8;
         *((ULONG NKT_UNALIGNED*)(lpStub+nCurrSize+1)) = (ULONG)(nMainCodeSize+nExtraSize - (nCurrSize+5));
@@ -415,13 +434,13 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
         k = nDestSize = 0;
         while (nDestSize < 128)
         {
-          if (lpSrc[k] == 0xFF && lpSrc[k] == 0xE2)
+          if (lpSrc[k] == 0xFF && lpSrc[k+1] == 0xE2) //jmp EDX
           {
             NktHookLibHelpers::MemCopy(d+nDestSize, lpSrc+k, 2);
             nDestSize += 2;
             break;
           }
-          if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00)
+          if (lpSrc[k] == 0xEA && lpSrc[k+5] == 0x33 && lpSrc[k+6] == 0x00) //jmp 0x33:OFFSET
           {
             d[nDestSize] = 0x6A; d[nDestSize+1] = 0x33;                     //push 0x0033
             d[nDestSize+2] = 0xE8;                                          //call +0
