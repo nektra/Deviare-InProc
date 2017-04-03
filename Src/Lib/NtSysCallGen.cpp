@@ -42,8 +42,7 @@ using namespace NktHookLib::Internals;
 //-----------------------------------------------------------
 
 static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits,
-                                __in PRTL_OSVERSIONINFOW lpOsVerInfoW, __in LPBYTE lpData,
-                                __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount);
+                                __in LPBYTE lpData, __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount);
 static DWORD HelperConvertVAToRaw(__in DWORD dwVirtAddr, __in IMAGE_SECTION_HEADER *lpImgSect, __in SIZE_T nSecCount);
 static BOOL IsNtOrZw(__in_z LPCSTR szApiA);
 static BOOL StrCompareNoCaseA(__in_z LPCSTR szStr1, __in_z LPCSTR szStr2);
@@ -76,7 +75,6 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
   IMAGE_EXPORT_DIRECTORY *lpExpDir;
   DWORD dwRawAddr, *lpdwAddressOfFunctions, *lpdwAddressOfNames;
   WORD wOrd, *lpwAddressOfNameOrdinals;
-  RTL_OSVERSIONINFOW sOsVerInfoW;
   LPSTR sA;
 
   if (lpnCodeSize != NULL)
@@ -85,9 +83,6 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
     return ERROR_INVALID_PARAMETER;
   for (i=0; i<nDefsCount; i++)
     lpDefs[i].nOffset = (SIZE_T)-1;
-  NktHookLibHelpers::MemSet(&sOsVerInfoW, 0, sizeof(sOsVerInfoW));
-  sOsVerInfoW.dwOSVersionInfoSize = sizeof(sOsVerInfoW);
-  NktRtlGetVersion(&sOsVerInfoW);
   switch (nPlatform)
   {
     case NKTHOOKLIB_ProcessPlatformX86:
@@ -251,7 +246,7 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
             //create new stub
             lpDefs[k].nOffset = nDestSize;
             nCodeSize = GenerateNtSysCall((lpCode != NULL) ? (LPBYTE)lpCode+nDestSize : NULL, lpFileFuncAddr,
-                                          nPlatformBits, &sOsVerInfoW, lpData, lpFileImgSect, nSecCount);
+                                          nPlatformBits, lpData, lpFileImgSect, nSecCount);
             if (nCodeSize == 0)
             {
               nNtStatus = STATUS_UNSUCCESSFUL;
@@ -289,13 +284,15 @@ DWORD BuildNtSysCalls(__in LPSYSCALLDEF lpDefs, __in SIZE_T nDefsCount, __in SIZ
 //-----------------------------------------------------------
 
 static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, __in SIZE_T nPlatformBits,
-                                __in PRTL_OSVERSIONINFOW lpOsVerInfoW, __in LPBYTE lpData,
-                                __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount)
+                                __in LPBYTE lpData, __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount)
 {
   SIZE_T k, nSrcOfs, nInstrLen, nCurrSize, nExtraSize, nDestSize, nMainCodeSize;
-  DWORD dwRawAddr;
+  DWORD dwRawAddr, dwOsVerMajor, dwOsVerMinor;
   LPBYTE lpSrc, d, lpStub;
 
+  //check OS version
+  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor, &dwOsVerMinor) == FALSE)
+    dwOsVerMajor = dwOsVerMinor = 0;
   //stage 1: scan for a return
   nSrcOfs = nCurrSize = nExtraSize = 0;
   while (nCurrSize < 128)
@@ -309,7 +306,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
     if (lpFileFuncAddr[nSrcOfs] == 0xC3)
     {
       //handle special case for Windows 10 x64 anniversary
-      if (nPlatformBits == 64 && lpOsVerInfoW->dwMajorVersion >= 10 &&
+      if (nPlatformBits == 64 && dwOsVerMajor >= 10 &&
           lpFileFuncAddr[nSrcOfs + 1] == 0xCD && lpFileFuncAddr[nSrcOfs + 2] == 0x2E)
       {
         nSrcOfs++;
@@ -323,7 +320,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       }
     }
     //handle special case for Windows 10 x86
-    if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
+    if (nPlatformBits == 32 && dwOsVerMajor >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
         lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
     {
       //mov EDX, OFFSET _Wow64SystemServiceCall@0 / call EDX
@@ -408,7 +405,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
       if (lpFileFuncAddr[nSrcOfs] == 0xC3)
       {
         //handle special case for Windows 10 x64 anniversary
-        if (nPlatformBits == 64 && lpOsVerInfoW->dwMajorVersion >= 10 &&
+        if (nPlatformBits == 64 && dwOsVerMajor >= 10 &&
             lpFileFuncAddr[nSrcOfs + 1] == 0xCD && lpFileFuncAddr[nSrcOfs + 2] == 0x2E)
         {
           lpStub[nCurrSize++] = lpFileFuncAddr[nSrcOfs++];
@@ -420,7 +417,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
         }
       }
       //handle special case for Windows 10 x86
-      if (nPlatformBits == 32 && lpOsVerInfoW->dwMajorVersion >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
+      if (nPlatformBits == 32 && dwOsVerMajor >= 10 && lpFileFuncAddr[nSrcOfs] == 0xBA &&
           lpFileFuncAddr[nSrcOfs+5] == 0xFF && lpFileFuncAddr[nSrcOfs+6] == 0xD2)
       {
         //mov EDX, OFFSET _Wow64SystemServiceCall@0 / call EDX

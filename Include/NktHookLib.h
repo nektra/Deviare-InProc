@@ -221,6 +221,11 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread=NULL);
 
 //--------------------------------
 
+BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor=NULL, __out_opt LPDWORD lpdwVerMinor=NULL,
+                  __out_opt LPDWORD lpdwdwBuildNumber=NULL);
+
+//--------------------------------
+
 //NOTE: CreateProcessWithDllW and related functions returns the Win32 error code directly. NOERROR => Success.
 //
 //      If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted

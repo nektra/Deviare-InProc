@@ -532,12 +532,17 @@ DWORD CNktThreadSuspend::IsCurrentProcessLowIntegrity(__out BOOL *lpbProcessIsLo
 {
   TNktAutoFreePtr<TOKEN_MANDATORY_LABEL> cIntegrityLevel;
   NKT_SID *lpSid;
-  DWORD dwIntegrityLevel;
+  DWORD dwOsVerMajor, dwIntegrityLevel;
   ULONG nRetLength;
   HANDLE hToken;
   NTSTATUS nNtStatus;
 
   *lpbProcessIsLow = FALSE;
+  //check OS version
+  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor) == FALSE)
+    return ERROR_SUCCESS;
+  if (dwOsVerMajor < 6)
+    return ERROR_SUCCESS; //only on Vista or later
   //open process token
   nNtStatus = NktNtOpenProcessToken(NKTHOOKLIB_CurrentProcess, TOKEN_QUERY, &hToken);
   //query for restricted sids

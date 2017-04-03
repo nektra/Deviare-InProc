@@ -656,7 +656,6 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
                                    __in LPCWSTR szDllToFindW)
 {
   LPBYTE lpPeb, lpApiMapSet, lpPtr;
-  RTL_OSVERSIONINFOW sOvi;
   DWORD dwDllToFindLen, dwDllToFindLenInBytes, dwTemp32;
   struct {
     NKT_HK_UNICODE_STRING us;
@@ -666,12 +665,12 @@ static LPVOID FindDllInApiSetCheck(__in HANDLE hProcess, __in SIZE_T nPlatformBi
   ULONGLONG qwTemp64;
 #endif //_M_X64
   SIZE_T nRetLen;
+  DWORD dwOsVerMajor, dwOsVerMinor;
 
-  //check if Win7 or later
-  sOvi.dwOSVersionInfoSize = sizeof(sOvi);
-  if (!NT_SUCCESS(NktRtlGetVersion(&sOvi)))
+  //check OS version
+  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor, &dwOsVerMinor) == FALSE)
     return NULL;
-  if (sOvi.dwMajorVersion < 6 || (sOvi.dwMajorVersion == 6 && sOvi.dwMinorVersion < 1))
+  if (dwOsVerMajor < 6 || (dwOsVerMajor == 6 && dwOsVerMinor < 1))
     return NULL; //only on Win7 or later
   //query importing dll name
   if (!NT_SUCCESS(NktNtQueryVirtualMemory(hProcess, (PVOID)lpImportingDllBase, MyMemorySectionName, &usImportingDll,

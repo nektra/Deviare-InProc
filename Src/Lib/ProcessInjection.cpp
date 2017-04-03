@@ -1575,23 +1575,18 @@ static NTSTATUS GenerateRestrictedThreadToken(__in HANDLE hProcess, __out HANDLE
   TNktAutoFreePtr<ACL> cAcl;
   OBJECT_ATTRIBUTES sObjAttr;
   SECURITY_QUALITY_OF_SERVICE sSqos;
-  RTL_OSVERSIONINFOW sOvi;
   NKT_SID sSid;
   ULONG nSize;
+  DWORD dwOsVerMajor, dwOsVerMinor;
   HINSTANCE hNtDll;
   NTSTATUS nNtStatus;
 
   *lphThreadToken = NULL;
-  //get OS version
-  NktHookLibHelpers::MemSet(&sOvi, 0, sizeof(sOvi));
-  sOvi.dwOSVersionInfoSize = sizeof(sOvi);
-  nNtStatus = NktRtlGetVersion(&sOvi);
-  if (!NT_SUCCESS(nNtStatus))
-    return nNtStatus;
-  if (sOvi.dwPlatformId != VER_PLATFORM_WIN32_NT || sOvi.dwMajorVersion < 5)
-    return STATUS_SUCCESS; //return if pre-XP
-  if (sOvi.dwMajorVersion == 5 && sOvi.dwMinorVersion < 1)
+  //check OS version
+  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor, &dwOsVerMinor) == FALSE)
     return STATUS_SUCCESS;
+  if (dwOsVerMajor < 5 || (dwOsVerMajor == 5 && dwOsVerMinor < 1))
+    return STATUS_SUCCESS; //only on XP or later
   //open process token
   nNtStatus = NktNtOpenProcessToken(hProcess, TOKEN_QUERY, &hToken);
   //query for restricted sids
@@ -1625,7 +1620,7 @@ static NTSTATUS GenerateRestrictedThreadToken(__in HANDLE hProcess, __out HANDLE
     return STATUS_PROCEDURE_NOT_FOUND;
   }
   //get integrity level
-  if (sOvi.dwMajorVersion >= 6)
+  if (dwOsVerMajor >= 6)
   {
     nNtStatus = GetTokenIntegrityLevel(hToken, &nLevel);
     if (!NT_SUCCESS(nNtStatus))
@@ -1678,7 +1673,7 @@ static NTSTATUS GenerateRestrictedThreadToken(__in HANDLE hProcess, __out HANDLE
     nNtStatus = NktNtSetInformationToken(hToken, TokenDefaultDacl, &sNewDefDacl, sizeof(sNewDefDacl));
   }
   //set token's integrity level
-  if (NT_SUCCESS(nNtStatus) && sOvi.dwMajorVersion >= 6)
+  if (NT_SUCCESS(nNtStatus) && dwOsVerMajor >= 6)
     nNtStatus = SetTokenIntegrityLevel(hToken, nLevel);
   //duplicate token for impersonation
   if (NT_SUCCESS(nNtStatus))

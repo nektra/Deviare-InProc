@@ -29,6 +29,7 @@
 
 #include "..\..\Include\NktHookLib.h"
 #include "DynamicNtApi.h"
+#include "WaitableObjects.h"
 #include <intrin.h>
 
 #pragma intrinsic (_InterlockedIncrement)
@@ -686,6 +687,49 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
   NktNtClose(hProc);
   SetWin32LastError(NktRtlNtStatusToDosError((b != FALSE) ? STATUS_SUCCESS : STATUS_ACCESS_DENIED));
   return b;
+}
+
+//--------------------------------
+
+BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor, __out_opt LPDWORD lpdwVerMinor, __out_opt LPDWORD lpdwdwBuildNumber)
+{
+  static DWORD dwVersion[3] = { 0xFFFFFFFFUL, 0, 0 };
+  static LONG volatile nMutex = 0;
+
+  if (dwVersion[0] == 0xFFFFFFFFUL)
+  {
+    CNktSimpleLockNonReentrant cLock(&nMutex);
+    RTL_OSVERSIONINFOW sOviW;
+
+    if (dwVersion[0] == 0xFFFFFFFFUL)
+    {
+      //get OS version
+      MemSet(&sOviW, 0, sizeof(sOviW));
+      sOviW.dwOSVersionInfoSize = sizeof(sOviW);
+      if (!NT_SUCCESS(NktRtlGetVersion(&sOviW)))
+      {
+        if (lpdwVerMajor != NULL)
+          *lpdwVerMajor = 0;
+        if (lpdwVerMinor != NULL)
+          *lpdwVerMinor = 0;
+        if (lpdwdwBuildNumber != NULL)
+          *lpdwdwBuildNumber = 0;
+        return FALSE;
+      }
+      if (sOviW.dwPlatformId != VER_PLATFORM_WIN32_NT)
+        return FALSE;
+      dwVersion[2] = sOviW.dwBuildNumber;
+      dwVersion[1] = sOviW.dwMinorVersion;
+      dwVersion[0] = sOviW.dwMajorVersion;
+    }
+  }
+  if (lpdwVerMajor != NULL)
+    *lpdwVerMajor = dwVersion[0];
+  if (lpdwVerMinor != NULL)
+    *lpdwVerMinor = dwVersion[1];
+  if (lpdwdwBuildNumber != NULL)
+    *lpdwdwBuildNumber = dwVersion[2];
+  return TRUE;
 }
 
 } //namespace NktHookLibHelpers
