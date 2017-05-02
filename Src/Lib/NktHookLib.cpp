@@ -662,8 +662,17 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
             *((ULONG NKT_UNALIGNED*)p) = 0x00000101;
             p += sizeof(ULONG);
             //----
-            *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            lpCallOrigOfs[0] = p++;
+            if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
+            {
+              *p++ = 0x0F;  *p++ = 0x85;                                         //jne   FAR CALL_ORIGINAL
+              lpCallOrigOfs[0] = p;
+              p += sizeof(ULONG);
+            }
+            else
+            {
+              *p++ = 0x75;                                                       //jne   CALL_ORIGINAL
+              lpCallOrigOfs[0] = p++;
+            }
             //check for reentranct
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
@@ -683,14 +692,15 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
               //----  L1:
               *p++ = 0x3B;  *p++ = 0x02;                                         //cmp   eax, DWORD PTR [edx]
               //----
-              *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
-              lpCallOrigOfs[1] = p++;
+              *p++ = 0x0F;  *p++ = 0x84;                                         //je    FAR CALL_ORIGINAL
+              lpCallOrigOfs[1] = p;
+              p += sizeof(ULONG);
               //----
               *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 8h
               *((ULONG NKT_UNALIGNED*)p) = 8;
               p += sizeof(ULONG);
               //----
-              *p++ = 0xE2;  *p++ = 0xF4;                                         //loop  L1
+              *p++ = 0xE2;  *p++ = 0xF0;                                         //loop  L1
               //----
               *p++ = 0x8B;  *p++ = 0xD8;                                         //mov   ebx, eax
               //----
@@ -706,7 +716,7 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
               //----
               *p++ = 0xF0;  *p++ = 0x0F;  *p++ = 0xB1;  *p++ = 0x1A;             //lock cmpxchg DWORD PTR [edx], ebx
               //----
-              *p++ = 0x74;  *p++ = 0x0A;                                         //jz    CHG_RETADDR
+              *p++ = 0x74;  *p++ = 0x0A;                                         //je    CHG_RETADDR
               //----
               *p++ = 0x81;  *p++ = 0xC2;                                         //add   edx, 8h
               *((ULONG NKT_UNALIGNED*)p) = 8;
@@ -748,14 +758,18 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
                                          (ULONG)(ULONG_PTR)(p + 4 - aCodeBlock));
             p += sizeof(ULONG);
             //---- CALL_ORIGINAL:
-            *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
-            if (lpCallOrigOfs[1] != NULL)
-              *lpCallOrigOfs[1] = (BYTE)(p - lpCallOrigOfs[1] - 1);
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
+              *((LPDWORD)(lpCallOrigOfs[0])) = (DWORD)(p - lpCallOrigOfs[0] - 4);
+              *((LPDWORD)(lpCallOrigOfs[1])) = (DWORD)(p - lpCallOrigOfs[1] - 4);
+
               *p++ = 0x59;                                                       //pop   ecx
               *p++ = 0x5B;                                                       //pop   ebx
               *p++ = 0x58;                                                       //pop   eax
+            }
+            else
+            {
+              *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
             }
             *p++ = 0x5A;                                                         //pop   edx
             lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCode + (SIZE_T)(p-aCodeBlock);
@@ -795,8 +809,17 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
             *((ULONG NKT_UNALIGNED*)p) = 0x00000101;
             p += sizeof(ULONG);
             //----
-            *p++ = 0x75;                                                         //jne   CALL_ORIGINAL
-            lpCallOrigOfs[0] = p++;
+            if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
+            {
+              *p++ = 0x0F;  *p++ = 0x85;                                         //jne   FAR CALL_ORIGINAL
+              lpCallOrigOfs[0] = p;
+              p += sizeof(ULONG);
+            }
+            else
+            {
+              *p++ = 0x75;                                                       //jne   CALL_ORIGINAL
+              lpCallOrigOfs[0] = p++;
+            }
             //check for reentranct
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
@@ -817,14 +840,15 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
               //----  L1:
               *p++ = 0x3B;  *p++ = 0x02;                                         //cmp   eax, DWORD PTR [rdx]
               //----
-              *p++ = 0x74;                                                       //jz    CALL_ORIGINAL
-              lpCallOrigOfs[1] = p++;
+              *p++ = 0x0F;  *p++ = 0x84;                                         //je    FAR CALL_ORIGINAL
+              lpCallOrigOfs[1] = p;
+              p += sizeof(ULONG);
               //----
               *p++ = 0x48;  *p++ = 0x81;  *p++ = 0xC2;                           //add   rdx, 10h
               *((ULONG NKT_UNALIGNED*)p) = 16;
               p += sizeof(ULONG);
               //----
-              *p++ = 0xE2;  *p++ = 0xF3;                                         //loop  L1
+              *p++ = 0xE2;  *p++ = 0xEF;                                         //loop  L1
               //----
               *p++ = 0x8B;  *p++ = 0xD8;                                         //mov   ebx, eax
               //----
@@ -886,14 +910,18 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
             *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpNewProc);
             p += sizeof(ULONGLONG);
             //---- CALL_ORIGINAL:
-            *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
-            if (lpCallOrigOfs[1] != NULL)
-              *lpCallOrigOfs[1] = (BYTE)(p - lpCallOrigOfs[1] - 1);
             if (FlagOn(lpHookEntry->dwFlags, NKTHOOKLIB_DisallowReentrancy))
             {
+              *((LPDWORD)(lpCallOrigOfs[0])) = (DWORD)(p - lpCallOrigOfs[0] - 4);
+              *((LPDWORD)(lpCallOrigOfs[1])) = (DWORD)(p - lpCallOrigOfs[1] - 4);
+
               *p++ = 0x59;                                                       //pop   rcx
               *p++ = 0x5B;                                                       //pop   rbx
               *p++ = 0x58;                                                       //pop   rax
+            }
+            else
+            {
+              *lpCallOrigOfs[0] = (BYTE)(p - lpCallOrigOfs[0] - 1);
             }
             *p++ = 0x5A;                                                         //pop   rdx
             lpHookEntry->lpCall2Orig = lpHookEntry->lpInjCode + (SIZE_T)(p - aCodeBlock);
