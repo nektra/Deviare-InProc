@@ -63,6 +63,8 @@ using namespace NktHookLib::Internals;
 
 #define THREAD_CREATE_FLAGS_CREATE_SUSPENDED      0x00000001
 
+#define MAX_INIT_PARAMS_SIZE                        10485760
+
 #define Handle2Ull(_param) (ULONGLONG)((LONGLONG)((LONG)(_param)))
 #define Ptr2Ull(_param)    (ULONGLONG)((SIZE_T)(_param))
 #define Ul2Ull(_param)     (ULONGLONG)((ULONG)(_param))
@@ -116,14 +118,17 @@ typedef struct {
 
 static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __in DWORD dwCreationFlags,
                                          __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted,
-                                         __in_z_opt LPCSTR szInitFunctionA);
+                                         __in_z_opt LPCSTR szInitFunctionA, __in_opt LPVOID lpInitFuncParams,
+                                         __in_opt ULONG nInitFuncParamsSize);
 
 static DWORD WaitForProcessInitialization(__in HANDLE hProcess, __in LONG nProcPlatform, __in DWORD dwTimeoutMs);
 
 static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFuncA,
-                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread);
+                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread,
+                                       __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize);
 static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread, __in_z LPCWSTR szDllNameW,
-                                   __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent);
+                                   __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent,
+                                   __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize);
 
 static DWORD CreateThreadInRunningProcess(__in HANDLE hProcess, __in LPVOID lpCodeStart, __in LPVOID lpThreadParam,
                                           __out LPHANDLE lphNewThread);
@@ -155,7 +160,8 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
                             __in DWORD dwCreationFlags, __in_z_opt LPCWSTR lpEnvironment,
                             __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
                             __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW,
-                            __in_opt HANDLE hSignalCompleted, __in_z_opt LPCSTR szInitFunctionA)
+                            __in_opt HANDLE hSignalCompleted, __in_z_opt LPCSTR szInitFunctionA,
+                            __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize)
 {
   typedef BOOL (WINAPI *lpfnCreateProcessW)(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt LPWSTR lpCommandLine,
                                             __in_opt LPSECURITY_ATTRIBUTES lpProcessAttributes,
@@ -171,6 +177,8 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
     MemSet(lpProcessInformation, 0, sizeof(PROCESS_INFORMATION));
   //check parameters
   if (szDllNameW == NULL || szDllNameW[0] == 0 || lpProcessInformation == NULL)
+    return ERROR_INVALID_PARAMETER;
+  if ((lpInitFuncParams == NULL && nInitFuncParamsSize > 0) || nInitFuncParamsSize > MAX_INIT_PARAMS_SIZE)
     return ERROR_INVALID_PARAMETER;
   //get needed api from kernel32
   hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
@@ -199,7 +207,7 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
     return GetWin32LastError();
   //inject dll load at entrypoint
   return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW, hSignalCompleted,
-                                     szInitFunctionA);
+                                     szInitFunctionA, lpInitFuncParams, nInitFuncParamsSize);
 }
 
 DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
@@ -208,7 +216,8 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
                                     __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted,
-                                    __in_z_opt LPCSTR szInitFunctionA)
+                                    __in_z_opt LPCSTR szInitFunctionA, __in_opt LPVOID lpInitFuncParams,
+                                    __in_opt ULONG nInitFuncParamsSize)
 {
   typedef HMODULE (WINAPI *lpfnLoadLibraryW)(__in_z LPCWSTR lpFileNameW);
   typedef HMODULE (WINAPI *lpfnFreeLibrary)(__in HMODULE hLibModule);
@@ -229,6 +238,8 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
     MemSet(lpProcessInformation, 0, sizeof(PROCESS_INFORMATION));
   //check parameters
   if (szDllNameW == NULL || szDllNameW[0] == 0 || lpProcessInformation == NULL)
+    return ERROR_INVALID_PARAMETER;
+  if ((lpInitFuncParams == NULL && nInitFuncParamsSize > 0) || nInitFuncParamsSize > MAX_INIT_PARAMS_SIZE)
     return ERROR_INVALID_PARAMETER;
   //get needed api from kernel32
   hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
@@ -283,7 +294,7 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
   fnFreeLibrary(hAdvApi32Dll);
   //inject dll load at entrypoint
   return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW, hSignalCompleted,
-                                     szInitFunctionA);
+                                     szInitFunctionA, lpInitFuncParams, nInitFuncParamsSize);
 }
 
 DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
@@ -291,7 +302,8 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
                                     __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted,
-                                    __in_z_opt LPCSTR szInitFunctionA)
+                                    __in_z_opt LPCSTR szInitFunctionA, __in_opt LPVOID lpInitFuncParams,
+                                    __in_opt ULONG nInitFuncParamsSize)
 {
   typedef HMODULE (WINAPI *lpfnLoadLibraryW)(__in_z LPCWSTR lpFileNameW);
   typedef HMODULE (WINAPI *lpfnFreeLibrary)(__in HMODULE hLibModule);
@@ -311,6 +323,8 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
   //check parameters
   if (szDllNameW == NULL || szDllNameW[0] == 0 || lpProcessInformation == NULL)
     return ERROR_INVALID_PARAMETER;
+  if ((lpInitFuncParams == NULL && nInitFuncParamsSize > 0) || nInitFuncParamsSize > MAX_INIT_PARAMS_SIZE)
+    return ERROR_INVALID_PARAMETER;
   //get needed api from kernel32
   hKernel32Dll = GetModuleBaseAddress(L"kernel32.dll");
   if (hKernel32Dll == NULL)
@@ -323,7 +337,8 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
   hAdvApi32Dll = fnLoadLibraryW(L"advapi32.dll");
   if (hAdvApi32Dll == NULL)
     return ERROR_PROC_NOT_FOUND;
-  fnCreateProcessWithTokenW = (lpfnCreateProcessWithTokenW)GetProcedureAddress(hAdvApi32Dll, "CreateProcessWithTokenW");
+  fnCreateProcessWithTokenW = (lpfnCreateProcessWithTokenW)GetProcedureAddress(hAdvApi32Dll,
+                                                                               "CreateProcessWithTokenW");
   if (fnCreateProcessWithTokenW == NULL)
   {
     fnFreeLibrary(hAdvApi32Dll);
@@ -354,11 +369,12 @@ DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags,
   fnFreeLibrary(hAdvApi32Dll);
   //inject dll load at entrypoint
   return CreateProcessWithDll_Common(lpProcessInformation, dwCreationFlags, szDllNameW, hSignalCompleted,
-                                     szInitFunctionA);
+                                     szInitFunctionA, lpInitFuncParams, nInitFuncParamsSize);
 }
 
 DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA,
-                      __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
+                      __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread,
+                      __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize)
 {
   HANDLE hProc = NULL;
   DWORD dwOsErr;
@@ -366,13 +382,16 @@ DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LP
 
   if (lphInjectorThread != NULL)
     *lphInjectorThread = NULL;
+  if ((lpInitFuncParams == NULL && nInitFuncParamsSize > 0) || nInitFuncParamsSize > MAX_INIT_PARAMS_SIZE)
+    return ERROR_INVALID_PARAMETER;
   nNtStatus = CProcessesHandles::CreateHandle(dwPid, STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | PROCESS_CREATE_THREAD |
                                                      PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE |
                                                      PROCESS_DUP_HANDLE | PROCESS_SET_INFORMATION |
                                                      PROCESS_QUERY_INFORMATION | PROCESS_SUSPEND_RESUME, &hProc);
   if (NT_SUCCESS(nNtStatus))
   {
-    dwOsErr = InjectDllByHandleW(hProc, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs, lphInjectorThread);
+    dwOsErr = InjectDllByHandleW(hProc, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs, lphInjectorThread,
+                                 lpInitFuncParams, nInitFuncParamsSize);
     NktNtClose(hProc);
   }
   else
@@ -383,12 +402,15 @@ DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LP
 }
 
 DWORD InjectDllByHandleW(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA,
-                         __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
+                         __in_opt DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread,
+                         __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize)
 {
   if (lphInjectorThread != NULL)
     *lphInjectorThread = NULL;
+  if ((lpInitFuncParams == NULL && nInitFuncParamsSize > 0) || nInitFuncParamsSize > MAX_INIT_PARAMS_SIZE)
+    return ERROR_INVALID_PARAMETER;
   return InjectDllInRunningProcess(hProcess, szDllNameW, szInitFunctionA, dwProcessInitWaitTimeoutMs,
-                                   lphInjectorThread);
+                                   lphInjectorThread, lpInitFuncParams, nInitFuncParamsSize);
 }
 
 } //namespace NktHookLibHelpers
@@ -397,11 +419,13 @@ DWORD InjectDllByHandleW(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z
 
 static DWORD CreateProcessWithDll_Common(__inout LPPROCESS_INFORMATION lpPI, __in DWORD dwCreationFlags,
                                          __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted,
-                                         __in_z_opt LPCSTR szInitFunctionA)
+                                         __in_z_opt LPCSTR szInitFunctionA, __in_opt LPVOID lpInitFuncParams,
+                                         __in_opt ULONG nInitFuncParamsSize)
 {
   DWORD dwOsErr;
 
-  dwOsErr = InjectDllInNewProcess(lpPI->hProcess, lpPI->hThread, szDllNameW, szInitFunctionA, hSignalCompleted);
+  dwOsErr = InjectDllInNewProcess(lpPI->hProcess, lpPI->hThread, szDllNameW, szInitFunctionA, hSignalCompleted,
+                                  lpInitFuncParams, nInitFuncParamsSize);
   if (dwOsErr == ERROR_SUCCESS)
   {
     if ((dwCreationFlags & CREATE_SUSPENDED) == 0)
@@ -609,7 +633,8 @@ static DWORD IsProcessInitialized(__in HANDLE hProcess, __in LONG nProcPlatform,
 }
 
 static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFuncA,
-                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread)
+                                       __in DWORD dwProcessInitWaitTimeoutMs, __out_opt LPHANDLE lphInjectorThread,
+                                       __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize)
 {
   CNktThreadSuspend cProcSusp;
   PROCESS_BASIC_INFORMATION sPbi;
@@ -661,6 +686,8 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     nRemCodeSize += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
     nRemCodeSize += _DOALIGN(nDllNameLen+2, 8);
     nRemCodeSize += _DOALIGN(nInitFuncNameLen+1, 8);
+    if (nInitFuncNameLen > 0)
+      nRemCodeSize += _DOALIGN(nInitFuncParamsSize, 8);
     nRemCodeSize = _DOALIGN(nRemCodeSize, 4096);
 #if defined(_M_IX86)
     if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
@@ -671,7 +698,7 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     else
     {
 #endif //_M_IX86
-      nNtStatus = NktNtAllocateVirtualMemory(hProcess, (PVOID*)&lpRemCode, 0, &nRemCodeSize, MEM_RESERVE|MEM_COMMIT,
+      nNtStatus = NktNtAllocateVirtualMemory(hProcess, (PVOID*)&lpRemCode, 0, &nRemCodeSize, MEM_RESERVE | MEM_COMMIT,
                                              PAGE_EXECUTE_READWRITE);
 #if defined(_M_IX86)
     }
@@ -828,6 +855,30 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
           }
 #endif //_M_IX86
         }
+        //write init function parameters, if provided
+        if (dwOsErr == ERROR_SUCCESS && nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+#if defined(_M_IX86)
+          if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
+          {
+            d64 += (ULONGLONG)_DOALIGN(nInitFuncNameLen+1, 8);
+            if (WriteMem64(hProcess, d64, lpInitFuncParams, nInitFuncParamsSize) == FALSE)
+            {
+              dwOsErr = ERROR_ACCESS_DENIED;
+            }
+          }
+          else
+          {
+#endif //_M_IX86
+            d += _DOALIGN(nInitFuncNameLen+1, 8);
+            if (NktHookLibHelpers::WriteMem(hProcess, d, lpInitFuncParams, nInitFuncParamsSize) == FALSE)
+            {
+              dwOsErr = ERROR_ACCESS_DENIED;
+            }
+#if defined(_M_IX86)
+          }
+#endif //_M_IX86
+        }
       }
     }
   }
@@ -835,8 +886,8 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
   if (dwOsErr == ERROR_SUCCESS)
   {
     union {
-      DWORD dw[5];
-      ULONGLONG ull[5];
+      DWORD dw[7];
+      ULONGLONG ull[7];
     };
 
     k = _DOALIGN(RelocatableCode::InjectDllInRunningProcess_GetSize(nProcPlatform), 8);
@@ -859,8 +910,19 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
         }
         //initialize 'continue' event to NULL
         dw[4] = NULL;
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          dw[5] = (DWORD)((ULONG_PTR)(lpRemCode + k));
+          dw[6] = (DWORD)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          dw[5] = dw[6] = 0;
+        }
         //write values
-        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, dw, 5 * sizeof(DWORD)) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, dw, 7 * sizeof(DWORD)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
         break;
 
@@ -882,8 +944,19 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
         }
         //initialize 'continue' event to NULL
         ull[4] = NULL;
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          ull[5] = nRemCode64 + (ULONGLONG)k;
+          ull[6] = (ULONGLONG)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          ull[5] = ull[6] = 0;
+        }
         //write values
-        if (WriteMem64(hProcess, nRemCode64, ull, 5 * sizeof(ULONGLONG)) == FALSE)
+        if (WriteMem64(hProcess, nRemCode64, ull, 7 * sizeof(ULONGLONG)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
 #elif defined(_M_X64)
         //GetProcedureAddress & GetModuleBaseAddress
@@ -902,8 +975,19 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
         }
         //initialize 'continue' event to NULL
         ull[4] = NULL;
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          ull[5] = (ULONGLONG)(lpRemCode + k);
+          ull[6] = (ULONGLONG)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          ull[5] = ull[6] = 0;
+        }
         //write values
-        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, ull, 5 * sizeof(ULONGLONG)) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, ull, 7 * sizeof(ULONGLONG)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
 #endif
         break;
@@ -915,15 +999,15 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
     switch (nProcPlatform)
     {
       case NKTHOOKLIB_ProcessPlatformX86:
-        dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode + 5 * sizeof(DWORD), NULL, &hNewThread);
+        dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode + 7 * sizeof(DWORD), NULL, &hNewThread);
         break;
 
       case NKTHOOKLIB_ProcessPlatformX64:
 #if defined(_M_IX86)
-        dwOsErr = CreateThreadInRunningProcess64(hProcess, nRemCode64 + (ULONGLONG)(5 * sizeof(ULONGLONG)), NULL,
+        dwOsErr = CreateThreadInRunningProcess64(hProcess, nRemCode64 + (ULONGLONG)(7 * sizeof(ULONGLONG)), NULL,
                                                  &hNewThread);
 #elif defined(_M_X64)
-        dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode + 5 * sizeof(ULONGLONG), NULL, &hNewThread);
+        dwOsErr = CreateThreadInRunningProcess(hProcess, lpRemCode + 7 * sizeof(ULONGLONG), NULL, &hNewThread);
 #endif
         break;
     }
@@ -991,7 +1075,8 @@ static DWORD InjectDllInRunningProcess(__in HANDLE hProcess, __in_z LPCWSTR szDl
 }
 
 static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread, __in_z LPCWSTR szDllNameW,
-                                   __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent)
+                                   __in_z_opt LPCSTR szInitFunctionA, __in_opt HANDLE hCheckPointEvent,
+                                   __in_opt LPVOID lpInitFuncParams, __in_opt ULONG nInitFuncParamsSize)
 {
 #if defined(_M_IX86)
   NktHookLib::Internals::CONTEXT64 sCtx64;
@@ -1097,6 +1182,8 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
   nRemCodeSize += _DOALIGN(RelocatableCode::GetModuleAndProcAddr_GetSize(nProcPlatform), 8);
   nRemCodeSize += _DOALIGN(nDllNameLen+2, 8);
   nRemCodeSize += _DOALIGN(nInitFuncNameLen+1, 8);
+  if (nInitFuncNameLen > 0)
+    nRemCodeSize += _DOALIGN(nInitFuncParamsSize, 8);
   nRemCodeSize = _DOALIGN(nRemCodeSize, 4096);
 #if defined(_M_IX86)
   if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
@@ -1262,6 +1349,30 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
           }
 #endif //_M_IX86
         }
+        //write init function parameters, if provided
+        if (dwOsErr == ERROR_SUCCESS && nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+#if defined(_M_IX86)
+          if (nProcPlatform == NKTHOOKLIB_ProcessPlatformX64)
+          {
+            d64 += (ULONGLONG)_DOALIGN(nInitFuncNameLen+1, 8);
+            if (WriteMem64(hProcess, d64, lpInitFuncParams, nInitFuncParamsSize) == FALSE)
+            {
+              dwOsErr = ERROR_ACCESS_DENIED;
+            }
+          }
+          else
+          {
+#endif //_M_IX86
+            d += _DOALIGN(nInitFuncNameLen+1, 8);
+            if (NktHookLibHelpers::WriteMem(hProcess, d, lpInitFuncParams, nInitFuncParamsSize) == FALSE)
+            {
+              dwOsErr = ERROR_ACCESS_DENIED;
+            }
+#if defined(_M_IX86)
+          }
+#endif //_M_IX86
+        }
       }
     }
   }
@@ -1277,8 +1388,8 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
   if (dwOsErr == ERROR_SUCCESS)
   {
     union {
-      DWORD dw[6];
-      ULONGLONG ull[6];
+      DWORD dw[8];
+      ULONGLONG ull[8];
     };
 
     k = _DOALIGN(RelocatableCode::InjectDllInNewProcess_GetSize(nProcPlatform), 8);
@@ -1307,8 +1418,19 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
 #endif
         //checkpoint event
         dw[5] = (DWORD)((ULONG_PTR)hRemoteCheckPointEvent);
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          dw[6] = (DWORD)((ULONG_PTR)(lpRemCode + k));
+          dw[7] = (DWORD)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          dw[6] = dw[7] = 0;
+        }
         //write values
-        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, dw, 6*sizeof(DWORD)) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, dw, 8 * sizeof(DWORD)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
         break;
 
@@ -1332,8 +1454,19 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
         ull[4] = (ULONGLONG)sCtx64.Rip;
         //checkpoint event
         ull[5] = Handle2Ull(hRemoteCheckPointEvent);
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          ull[6] = nRemCode64 + (ULONGLONG)k;
+          ull[7] = (ULONGLONG)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          ull[6] = ull[7] = 0;
+        }
         //write values
-        if (WriteMem64(hProcess, nRemCode64, ull, 6 * sizeof(ULONGLONG)) == FALSE)
+        if (WriteMem64(hProcess, nRemCode64, ull, 8 * sizeof(ULONGLONG)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
 #elif defined(_M_X64)
         //GetProcedureAddress & GetModuleBaseAddress
@@ -1354,8 +1487,19 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
         ull[4] = (ULONGLONG)sCtx.Rip;
         //checkpoint event
         ull[5] = (ULONGLONG)hRemoteCheckPointEvent;
+        //initialize init function parameters
+        if (nInitFuncNameLen > 0 && nInitFuncParamsSize > 0)
+        {
+          ull[6] = (ULONGLONG)(lpRemCode + k);
+          ull[7] = (ULONGLONG)nInitFuncParamsSize;
+          k += _DOALIGN(nInitFuncParamsSize, 8);
+        }
+        else
+        {
+          ull[6] = ull[7] = 0;
+        }
         //write values
-        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, ull, 6*sizeof(ULONGLONG)) == FALSE)
+        if (NktHookLibHelpers::WriteMem(hProcess, lpRemCode, ull, 8 * sizeof(ULONGLONG)) == FALSE)
           dwOsErr = ERROR_ACCESS_DENIED;
 #endif
         break;
@@ -1389,10 +1533,10 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
     {
       case NKTHOOKLIB_ProcessPlatformX86:
 #if defined(_M_IX86)
-        sCtx.Eip = (DWORD)(lpRemCode + 6 * sizeof(DWORD));
+        sCtx.Eip = (DWORD)(lpRemCode + 8 * sizeof(DWORD));
         nNtStatus = NktNtSetContextThread(hMainThread, &sCtx);
 #elif defined(_M_X64)
-        sWow64Ctx.Eip = (DWORD)((ULONG_PTR)(lpRemCode + 6 * sizeof(DWORD)));
+        sWow64Ctx.Eip = (DWORD)((ULONG_PTR)(lpRemCode + 8 * sizeof(DWORD)));
         if (fnRtlWow64GetThreadContext != NULL && fnRtlWow64SetThreadContext != NULL)
         {
           nNtStatus = fnRtlWow64SetThreadContext(hMainThread, &sWow64Ctx);
@@ -1409,10 +1553,10 @@ static DWORD InjectDllInNewProcess(__in HANDLE hProcess, __in HANDLE hMainThread
 
       case NKTHOOKLIB_ProcessPlatformX64:
 #if defined(_M_IX86)
-        sCtx64.Rip = (DWORD64)(nRemCode64 + (ULONGLONG)(6 * sizeof(ULONGLONG)));
+        sCtx64.Rip = (DWORD64)(nRemCode64 + (ULONGLONG)(8 * sizeof(ULONGLONG)));
         nNtStatus = NktHookLib::Internals::NtSetContextThread64(hMainThread, &sCtx64);
 #elif defined(_M_X64)
-        sCtx.Rip = (DWORD64)(lpRemCode + 6 * sizeof(ULONGLONG));
+        sCtx.Rip = (DWORD64)(lpRemCode + 8 * sizeof(ULONGLONG));
         nNtStatus = NktNtSetContextThread(hMainThread, &sCtx);
 #endif
         if (!NT_SUCCESS(nNtStatus))

@@ -498,6 +498,8 @@ _DLLNAME_1                        EQU 8
 _INITFUNCTION_1                   EQU 12
 _ORIGINAL_ENTRYPOINT_1            EQU 16
 _CHECKPOINTEVENT_1                EQU 20
+_INITFUNCTIONPARAMSPTR_1          EQU 24
+_INITFUNCTIONPARAMSSIZE_1         EQU 28
 
 _ntdll_hinst$ = -4
 _ntterminateprocessAddr$ = -8
@@ -515,6 +517,8 @@ _initfunctionAddr$ = -36
     db   4 DUP (0h)                                                  ;offset 12: pointer to initialize function
     db   4 DUP (0h)                                                  ;offset 16: original entrypoint
     db   4 DUP (0h)                                                  ;offset 20: checkpoint event
+    db   4 DUP (0h)                                                  ;offset 24: pointer to initialize function params
+    db   4 DUP (0h)                                                  ;offset 28: length of initialize function params
     jmp @@start
 
 @@ntdll_dll:
@@ -658,8 +662,17 @@ ASSUME FS:ERROR
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@fail
 
+@@: ;get init function parameters
+    mov  ebx, eax
+    GetPtr edx, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTIONPARAMSPTR_1
+    mov  edx, DWORD PTR [edx]
+    test edx, edx
+    je   @F
+    GetPtr eax, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTIONPARAMSSIZE_1
+    push DWORD PTR [eax]
+    push edx
 @@: ;call init function
-    CALL eax
+    call ebx
     test eax, eax
     je   @@done
     ;if init function returns an error, first free library
@@ -753,6 +766,8 @@ _GETMODBASEADDR_2                 EQU 4
 _DLLNAME_2                        EQU 8
 _INITFUNCTION_2                   EQU 12
 _CONTINUEEVENT_2                  EQU 16
+_INITFUNCTIONPARAMSPTR_2          EQU 20
+_INITFUNCTIONPARAMSSIZE_2         EQU 24
 
 _ntdll_hinst$ = -4
 _ntseteventAddr$ = -8
@@ -767,6 +782,8 @@ _initfunctionAddr$ = -28
     db   4 DUP (0h)                                                  ;offset 8: pointer to dll name
     db   4 DUP (0h)                                                  ;offset 12: pointer to initialize function
     db   4 DUP (0h)                                                  ;offset 16: continue event handle
+    db   4 DUP (0h)                                                  ;offset 20: pointer to initialize function params
+    db   4 DUP (0h)                                                  ;offset 24: length of initialize function params
     jmp @@start
 
 @@ntdll_dll:
@@ -882,15 +899,24 @@ ASSUME FS:ERROR
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@exit
 
+@@: ;get init function parameters
+    mov  ebx, eax
+    GetPtr edx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTIONPARAMSPTR_2
+    mov  edx, DWORD PTR [edx]
+    test edx, edx
+    je   @F
+    GetPtr eax, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTIONPARAMSSIZE_2
+    push DWORD PTR [eax]
+    push edx
 @@: ;call init function
-    CALL eax
+    call ebx
     test eax, eax
     je   @@done
     ;if init function returns an error, first free library
     push eax ;save error code
     push DWORD PTR _injectdll_hinst$[ebp]
     call DWORD PTR _freelibraryAddr$[ebp]
-    pop eax  ;restore error code
+    pop  eax ;restore error code
     jmp  @@exit
 
 @@done:

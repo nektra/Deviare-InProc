@@ -571,6 +571,8 @@ _DLLNAME_1                        EQU 16
 _INITFUNCTION_1                   EQU 24
 _ORIGINAL_ENTRYPOINT_1            EQU 32
 _CHECKPOINTEVENT_1                EQU 40
+_INITFUNCTIONPARAMSPTR_1          EQU 48
+_INITFUNCTIONPARAMSSIZE_1         EQU 56
 
 _ntdll_hinst$ = 0
 _ntterminateprocessAddr$ = 8
@@ -588,6 +590,8 @@ _initfunctionAddr$ = 64
     db   8 DUP (0h)                                                  ;offset 24: pointer to initialize function
     db   8 DUP (0h)                                                  ;offset 32: original entrypoint
     db   8 DUP (0h)                                                  ;offset 40: checkpoint event
+    db   8 DUP (0h)                                                  ;offset 48: pointer to initialize function params
+    db   8 DUP (0h)                                                  ;offset 56: length of initialize function params
     jmp @@start
 
 @@ntdll_dll:
@@ -711,8 +715,14 @@ _initfunctionAddr$ = 64
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@fail
 
-@@: ;call init function
-    CALL rax
+@@: ;get init function parameters (becasue x64 calling convention, if values are null and init function
+    ;does not expects any parameters, they will be discarded)
+    GetPtr rcx, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTIONPARAMSPTR_1
+    GetPtr rdx, INJECTDLLINNEWPROCESS_SECTION_START, _INITFUNCTIONPARAMSSIZE_1
+    mov  rcx, QWORD PTR [rcx]
+    mov  rdx, QWORD PTR [rdx]
+    ;call init function
+    call rax
     test rax, rax
     je   @@done
     ;if init function returns an error, first free library
@@ -795,6 +805,8 @@ _GETMODBASEADDR_2                 EQU 8
 _DLLNAME_2                        EQU 16
 _INITFUNCTION_2                   EQU 24
 _CONTINUEEVENT_2                  EQU 32
+_INITFUNCTIONPARAMSPTR_2          EQU 40
+_INITFUNCTIONPARAMSSIZE_2         EQU 48
 
 _ntdll_hinst$ = 0
 _ntseteventAddr$ = 8
@@ -809,6 +821,8 @@ _initfunctionAddr$ = 48
     db   8 DUP (0h)                                                  ;offset 16: pointer to dll name
     db   8 DUP (0h)                                                  ;offset 24: pointer to initialize function
     db   8 DUP (0h)                                                  ;offset 32: continue event handle
+    db   8 DUP (0h)                                                  ;offset 40: pointer to initialize function params
+    db   8 DUP (0h)                                                  ;offset 48: length of initialize function params
     jmp @@start
 
 @@ntdll_dll:
@@ -908,8 +922,14 @@ _initfunctionAddr$ = 48
     mov  eax, ERROR_PROC_NOT_FOUND
     jmp  @@exit
 
-@@: ;call init function
-    CALL rax
+@@: ;get init function parameters (becasue x64 calling convention, if values are null and init function
+    ;does not expects any parameters, they will be discarded)
+    GetPtr rcx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTIONPARAMSPTR_2
+    GetPtr rdx, INJECTDLLINRUNNINGPROCESS_SECTION_START, _INITFUNCTIONPARAMSSIZE_2
+    mov  rcx, QWORD PTR [rcx]
+    mov  rdx, QWORD PTR [rdx]
+    ;call init function
+    call rax
     test rax, rax
     je   @@done
     ;if init function returns an error, first free library

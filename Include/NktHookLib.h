@@ -236,7 +236,8 @@ DWORD CreateProcessWithDllW(__in_z_opt LPCWSTR lpApplicationName, __inout_z_opt 
                             __in DWORD dwCreationFlags, __in_z_opt LPCWSTR lpEnvironment,
                             __in_z_opt LPCWSTR lpCurrentDirectory, __in LPSTARTUPINFOW lpStartupInfo,
                             __out LPPROCESS_INFORMATION lpProcessInformation, __in_z LPCWSTR szDllNameW,
-                            __in_opt HANDLE hSignalCompleted=NULL, __in_z_opt LPCSTR szInitFunctionA=NULL);
+                            __in_opt HANDLE hSignalCompleted=NULL, __in_z_opt LPCSTR szInitFunctionA=NULL,
+                            __in_opt LPVOID lpInitFuncParams=NULL, __in_opt ULONG nInitFuncParamsSize=0);
 
 DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWSTR lpDomain, __in_z LPCWSTR lpPassword,
                                     __in DWORD dwLogonFlags, __in_opt LPCWSTR lpApplicationName,
@@ -244,20 +245,24 @@ DWORD CreateProcessWithLogonAndDllW(__in_z LPCWSTR lpUsername, __in_z_opt LPCWST
                                     __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted=NULL,
-                                    __in_z_opt LPCSTR szInitFunctionA=NULL);
+                                    __in_z_opt LPCSTR szInitFunctionA=NULL, __in_opt LPVOID lpInitFuncParams=NULL,
+                                    __in_opt ULONG nInitFuncParamsSize=0);
 
 DWORD CreateProcessWithTokenAndDllW(__in HANDLE hToken, __in DWORD dwLogonFlags, __in_z_opt LPCWSTR lpApplicationName,
                                     __inout_opt LPWSTR lpCommandLine, __in DWORD dwCreationFlags,
                                     __in_z_opt LPCWSTR lpEnvironment, __in_z_opt LPCWSTR lpCurrentDirectory,
                                     __in LPSTARTUPINFOW lpStartupInfo, __out LPPROCESS_INFORMATION lpProcessInformation,
                                     __in_z LPCWSTR szDllNameW, __in_opt HANDLE hSignalCompleted=NULL,
-                                    __in_z_opt LPCSTR szInitFunctionA=NULL);
+                                    __in_z_opt LPCSTR szInitFunctionA=NULL, __in_opt LPVOID lpInitFuncParams=NULL,
+                                    __in_opt ULONG nInitFuncParamsSize=0);
 
 DWORD InjectDllByPidW(__in DWORD dwPid, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA=NULL,
-                      __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL);
+                      __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL,
+                      __in_opt LPVOID lpInitFuncParams=NULL, __in_opt ULONG nInitFuncParamsSize=0);
 
 DWORD InjectDllByHandleW(__in HANDLE hProcess, __in_z LPCWSTR szDllNameW, __in_z_opt LPCSTR szInitFunctionA=NULL,
-                         __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL);
+                         __in_opt DWORD dwProcessInitWaitTimeoutMs=5000, __out_opt LPHANDLE lphInjectorThread=NULL,
+                         __in_opt LPVOID lpInitFuncParams=NULL, __in_opt ULONG nInitFuncParamsSize=0);
 
 } //NktHookLibHelpers
 
