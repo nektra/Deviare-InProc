@@ -24,7 +24,7 @@ To use Deviare In-Proc you must have the following:
 
 - IBM PC or compatible.
 - Microsoft Windows 2000 or later.
-- Visual Studio 2008 or later (with latest available Service Pack recommended).
+- Visual Studio 2013 or later (with latest available Service Pack recommended).
 
 
 ----------------------
