@@ -18,101 +18,101 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Com\dlldatax.c">
+    <ClCompile Include="src\dlldatax.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\DllExports.cpp">
+    <ClCompile Include="src\DllExports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\dllmain.cpp">
+    <ClCompile Include="src\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\HookInfo.cpp">
+    <ClCompile Include="src\HookInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\HookLib.cpp">
+    <ClCompile Include="src\HookLib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\StdAfx.cpp">
+    <ClCompile Include="src\StdAfx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\HookProcessInfo.cpp">
+    <ClCompile Include="src\HookProcessInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Com\DotNetCoreHooks.cpp">
+    <ClCompile Include="src\DotNetCoreHooks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Com\DeviareLiteCOM.def">
+    <None Include="src\DeviareLiteCOM.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="..\Com\DeviareLiteCOM64.def">
+    <None Include="src\DeviareLiteCOM64.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="..\Com\DeviareLiteCOM.rgs">
+    <None Include="src\DeviareLiteCOM.rgs">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\Com\DeviareLiteCOM64.rgs">
+    <None Include="src\DeviareLiteCOM64.rgs">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\Com\InterfaceRegistrar.rgs">
+    <None Include="src\InterfaceRegistrar.rgs">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="..\Com\DeviareLiteCOM.idl">
+    <Midl Include="src\DeviareLiteCOM.idl">
       <Filter>Source Files</Filter>
     </Midl>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Com\CustomRegistryMap.h">
+    <ClInclude Include="src\CustomRegistryMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\disp_ids.h">
+    <ClInclude Include="src\disp_ids.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\dlldatax.h">
+    <ClInclude Include="src\dlldatax.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\dllmain.h">
+    <ClInclude Include="src\dllmain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\HookInfo.h">
+    <ClInclude Include="src\HookInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\HookLib.h">
+    <ClInclude Include="src\HookLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\idl_size_t.h">
+    <ClInclude Include="src\idl_size_t.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\StdAfx.h">
+    <ClInclude Include="src\StdAfx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\TargetVer.h">
+    <ClInclude Include="src\TargetVer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\Resource.h">
+    <ClInclude Include="src\Resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\HookProcessInfo.h">
+    <ClInclude Include="src\HookProcessInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Com\DotNetCoreHooks.h">
+    <ClInclude Include="src\DotNetCoreHooks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\Com\DeviareLiteCOM.rc">
+    <ResourceCompile Include="src\DeviareLiteCOM.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest">
+    <CustomBuild Include="src\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest">
       <Filter>RegFree COM</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest">
+    <CustomBuild Include="src\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest">
       <Filter>RegFree COM</Filter>
     </CustomBuild>
   </ItemGroup>

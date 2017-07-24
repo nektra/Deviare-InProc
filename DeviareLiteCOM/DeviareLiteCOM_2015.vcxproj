@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,33 +19,32 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{D7ED2AB0-91F6-4602-A4C5-925E0446F6AC}</ProjectGuid>
+    <ProjectGuid>{0F79BD19-F305-4C06-8EBD-8BD7251ADB22}</ProjectGuid>
     <RootNamespace>HookLib</RootNamespace>
     <Keyword>AtlProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <UseOfAtl>Static</UseOfAtl>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -69,27 +68,27 @@
     <_ProjectFileVersion>11.0.60610.1</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\..\bin\2017\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\2015\</OutDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>..\..\bin\2017\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\..\bin\2017\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\2015\</OutDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\..\bin\2017\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
+    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
@@ -119,14 +118,14 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <ModuleDefinitionFile>..\Com\DeviareLiteCOM.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>src\DeviareLiteCOM.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)src\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -155,14 +154,14 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <ModuleDefinitionFile>..\Com\DeviareLiteCOM64.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>src\DeviareLiteCOM64.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)src\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -190,7 +189,7 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <ModuleDefinitionFile>..\Com\DeviareLiteCOM.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>src\DeviareLiteCOM.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -199,7 +198,7 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)src\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
@@ -226,7 +225,7 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <ModuleDefinitionFile>..\Com\DeviareLiteCOM64.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>src\DeviareLiteCOM64.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -235,13 +234,13 @@
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
-      <Command>MT.EXE -manifest "$(ProjectDir)..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
+      <Command>MT.EXE -manifest "$(ProjectDir)src\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest" "-outputresource:$(TargetPath)%3b2"
 
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Com\dlldatax.c">
+    <ClCompile Include="src\dlldatax.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
@@ -255,8 +254,8 @@
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
-    <ClCompile Include="..\Com\DllExports.cpp" />
-    <ClCompile Include="..\Com\dllmain.cpp">
+    <ClCompile Include="src\DllExports.cpp" />
+    <ClCompile Include="src\dllmain.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
@@ -270,11 +269,11 @@
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
-    <ClCompile Include="..\Com\DotNetCoreHooks.cpp" />
-    <ClCompile Include="..\Com\HookInfo.cpp" />
-    <ClCompile Include="..\Com\HookLib.cpp" />
-    <ClCompile Include="..\Com\HookProcessInfo.cpp" />
-    <ClCompile Include="..\Com\StdAfx.cpp">
+    <ClCompile Include="src\DotNetCoreHooks.cpp" />
+    <ClCompile Include="src\HookInfo.cpp" />
+    <ClCompile Include="src\HookLib.cpp" />
+    <ClCompile Include="src\HookProcessInfo.cpp" />
+    <ClCompile Include="src\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -282,14 +281,14 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Com\DeviareLiteCOM.def" />
-    <None Include="..\Com\DeviareLiteCOM64.def" />
-    <None Include="..\Com\DeviareLiteCOM.rgs" />
-    <None Include="..\Com\DeviareLiteCOM64.rgs" />
-    <None Include="..\Com\InterfaceRegistrar.rgs" />
+    <None Include="src\DeviareLiteCOM.def" />
+    <None Include="src\DeviareLiteCOM64.def" />
+    <None Include="src\DeviareLiteCOM.rgs" />
+    <None Include="src\DeviareLiteCOM64.rgs" />
+    <None Include="src\InterfaceRegistrar.rgs" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="..\Com\DeviareLiteCOM.idl">
+    <Midl Include="src\DeviareLiteCOM.idl">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
@@ -313,21 +312,21 @@
     </Midl>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Com\CustomRegistryMap.h" />
-    <ClInclude Include="..\Com\disp_ids.h" />
-    <ClInclude Include="..\Com\dlldatax.h" />
-    <ClInclude Include="..\Com\dllmain.h" />
-    <ClInclude Include="..\Com\DotNetCoreHooks.h" />
-    <ClInclude Include="..\Com\HookInfo.h" />
-    <ClInclude Include="..\Com\HookLib.h" />
-    <ClInclude Include="..\Com\HookProcessInfo.h" />
-    <ClInclude Include="..\Com\idl_size_t.h" />
-    <ClInclude Include="..\Com\StdAfx.h" />
-    <ClInclude Include="..\Com\TargetVer.h" />
-    <ClInclude Include="..\Com\Resource.h" />
+    <ClInclude Include="src\CustomRegistryMap.h" />
+    <ClInclude Include="src\disp_ids.h" />
+    <ClInclude Include="src\dlldatax.h" />
+    <ClInclude Include="src\dllmain.h" />
+    <ClInclude Include="src\DotNetCoreHooks.h" />
+    <ClInclude Include="src\HookInfo.h" />
+    <ClInclude Include="src\HookLib.h" />
+    <ClInclude Include="src\HookProcessInfo.h" />
+    <ClInclude Include="src\idl_size_t.h" />
+    <ClInclude Include="src\StdAfx.h" />
+    <ClInclude Include="src\TargetVer.h" />
+    <ClInclude Include="src\Resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\Com\DeviareLiteCOM.rc">
+    <ResourceCompile Include="src\DeviareLiteCOM.rc">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">_DEBUG;ONLY32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG;ONLY64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NDEBUG;ONLY32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -335,13 +334,13 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest">
+    <CustomBuild Include="src\RegFreeCOM_Manifest_Files\DeviareLiteCOM.X.manifest">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
-    <CustomBuild Include="..\Com\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest">
+    <CustomBuild Include="src\RegFreeCOM_Manifest_Files\DeviareLiteCOM64.X.manifest">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
