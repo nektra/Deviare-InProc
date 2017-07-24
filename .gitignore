@@ -37,3 +37,8 @@ Samples/CSharp/ApiAndMethodsHook/*/.vs/
 Samples/CSharp/ApiAndMethodsHook/*/obj/
 Samples/CSharp/CreateProcessWithDllTest/*/.vs/
 Samples/CSharp/CreateProcessWithDllTest/*/obj/
+DeviareLiteCOM/src/DeviareLiteCOM.aps
+DeviareLiteCOM/src/DeviareLiteCOM_dlldata.c
+DeviareLiteCOM/src/DeviareLiteCOM_h.h
+DeviareLiteCOM/src/DeviareLiteCOM_i.c
+DeviareLiteCOM/src/DeviareLiteCOM_p.c

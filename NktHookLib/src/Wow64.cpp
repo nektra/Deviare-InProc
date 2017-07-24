@@ -27,7 +27,7 @@
  *
  **/
 
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 #include "Wow64.h"
 #include "WaitableObjects.h"
 

@@ -27,7 +27,7 @@
  *
  **/
 
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 #include "DynamicNtApi.h"
 
 #define ViewShare 1

@@ -27,7 +27,7 @@
  *
  **/
 
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 #include "LinkedList.h"
 #include "WaitableObjects.h"
 #include "ThreadSuspend.h"

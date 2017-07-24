@@ -27,7 +27,7 @@
  *
  **/
 
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 #include "DynamicNtApi.h"
 #include <intrin.h>
 #include "WaitableObjects.h"

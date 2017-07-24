@@ -33,7 +33,7 @@
 #include "CustomRegistryMap.h"
 #include "DeviareLiteCOM_h.h"
 #include "DotNetCoreHooks.h"
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 
 //-----------------------------------------------------------
 
