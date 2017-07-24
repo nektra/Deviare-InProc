@@ -42,3 +42,4 @@ DeviareLiteCOM/src/DeviareLiteCOM_dlldata.c
 DeviareLiteCOM/src/DeviareLiteCOM_h.h
 DeviareLiteCOM/src/DeviareLiteCOM_i.c
 DeviareLiteCOM/src/DeviareLiteCOM_p.c
+*.idb
