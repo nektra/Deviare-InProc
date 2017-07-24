@@ -1,3 +1,4 @@
-[submodule "Src/Lib/libudis86/source"]
-	path = Src/Lib/libudis86/source
+[submodule "NktHookLib/src/libudis86/source"]
+	path = NktHookLib/src/libudis86/source
 	url = https://github.com/vmt/udis86
+	branch = v1.7.2-84-g56ff6c8
