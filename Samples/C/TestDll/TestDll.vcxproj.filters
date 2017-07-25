@@ -11,20 +11,20 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\TestDll.cpp">
+    <ClCompile Include="TestDll.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\targetver.h">
+    <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\TestDll.h">
+    <ClInclude Include="TestDll.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\TestDll.def">
+    <None Include="TestDll.def">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
