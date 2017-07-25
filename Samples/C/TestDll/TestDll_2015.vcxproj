@@ -67,23 +67,23 @@
     <_ProjectFileVersion>11.0.61030.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>bin\</OutDir>
+    <OutDir>$(SolutionDir)bin\2015\</OutDir>
     <IntDir>obj\x86\Debug\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>bin\</OutDir>
+    <OutDir>$(SolutionDir)bin\2015\</OutDir>
     <IntDir>obj\x86\Release\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>bin\</OutDir>
+    <OutDir>$(SolutionDir)bin64\2015\</OutDir>
     <IntDir>obj\x64\Debug\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>bin\</OutDir>
+    <OutDir>$(SolutionDir)bin64\2015\</OutDir>
     <IntDir>obj\x64\Release\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)64</TargetName>

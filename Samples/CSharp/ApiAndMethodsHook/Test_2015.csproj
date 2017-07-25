@@ -20,7 +20,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x86\</OutputPath>
+    <OutputPath>$(SolutionDir)bin\2015\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x86</PlatformTarget>
@@ -31,7 +31,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <OutputPath>bin\x86\</OutputPath>
+    <OutputPath>$(SolutionDir)bin\2015\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -43,7 +43,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x64\</OutputPath>
+    <OutputPath>$(SolutionDir)bin64\2015\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
@@ -53,7 +53,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
-    <OutputPath>bin\x64\</OutputPath>
+    <OutputPath>$(SolutionDir)bin64\2015\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -68,7 +68,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DeviareLiteInterop">
-      <HintPath>..\..\..\..\bin\2013\DeviareLiteInterop.dll</HintPath>
+      <HintPath>$(SolutionDir)bin\2015\DeviareLiteInterop.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -77,12 +77,12 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Program.cs" />
-    <Compile Include="..\Properties\AssemblyInfo.cs" />
-    <Compile Include="..\SampleClass.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SampleClass.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\app.config" />
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -94,12 +94,12 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>IF "$(PlatformName)" == "x86" (
-  COPY /Y "$(SolutionDir)\..\..\..\..\bin\2013\DeviareLiteCOM.dll" "$(TargetDir)"
-  COPY /Y "$(SolutionDir)\..\Manifests\Test.embed.manifest" "$(TargetDir)\Test.exe.manifest"
+  COPY /Y "$(SolutionDir)bin\2015\DeviareLiteCOM.dll" "$(TargetDir)"
+  COPY /Y "$(ProjectDir)Manifests\Test.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 IF "$(PlatformName)" == "x64" (
-  COPY /Y "$(SolutionDir)\..\..\..\..\bin\2013\DeviareLiteCOM64.dll" "$(TargetDir)"
-  COPY /Y "$(SolutionDir)\..\Manifests\Test64.embed.manifest" "$(TargetDir)\Test.exe.manifest"
+  COPY /Y "$(SolutionDir)bin64\2015\DeviareLiteCOM64.dll" "$(TargetDir)"
+  COPY /Y "$(ProjectDir)Manifests\Test64.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 </PostBuildEvent>
   </PropertyGroup>

@@ -45,3 +45,5 @@ DeviareLiteCOM/src/DeviareLiteCOM_p.c
 *.idb
 *.iobj
 *.ipdb
+bin64/
+bin/
