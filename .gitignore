@@ -47,3 +47,4 @@ DeviareLiteCOM/src/DeviareLiteCOM_p.c
 *.ipdb
 bin64/
 bin/
+.vs/
