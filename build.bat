@@ -2,59 +2,33 @@
 SETLOCAL
 
 SET __ComnTools=-
-SET __SolutionDir=
+SET __Version=0
 IF [%~1] == [] (
-    ECHO Use: BUILD.BAT [options]
-    ECHO Where 'options' can be
-    ECHO    /MSVCVERSION ^(2010^|2012^|2013^|2015^)
+    ECHO Use: BUILD.BAT ^(2013^|2015^)
     ENDLOCAL
     PAUSE
     EXIT /B 1
 )
 
-:paramsLoop
-IF [%~1] == [] GOTO paramsEnd
-
-IF /I [%~1] == [/MSVCVERSION] (
-    IF [%__ComnTools%] NEQ [-] (
-        ECHO Error: Visual Studio version already specified
-        ENDLOCAL
-        PAUSE
-        EXIT /B 1
-    )
-    IF [%~2%] == [] (
-        ECHO Error: Missing argument for /MSVCVERSION parameter
-        ENDLOCAL
-        PAUSE
-        EXIT /B 1
-    )
-    IF /I [%~2] == [2010] (
-        SET "__ComnTools=%VS100COMNTOOLS%"
-        SET __SolutionDir=vs2010
-    ) ELSE IF /I [%~2] == [2012] (
-        SET "__ComnTools=%VS110COMNTOOLS%"
-        SET __SolutionDir=vs2012
-    ) ELSE IF /I [%~2] == [2013] (
-        SET "__ComnTools=%VS120COMNTOOLS%"
-        SET __SolutionDir=vs2013
-    ) ELSE IF /I [%~2] == [2015] (
-        SET "__ComnTools=%VS140COMNTOOLS%"
-        SET __SolutionDir=vs2015
-    ) ELSE (
-        ECHO Error: Unsupported Visual Studio version
-        ENDLOCAL
-        PAUSE
-        EXIT /B 1
-    )
-    SHIFT
+IF [%~1%] == [] (
+	ECHO Error: Missing argument for /MSVCVERSION parameter
+	ENDLOCAL
+	PAUSE
+	EXIT /B 1
+)
+IF /I [%~1] == [2013] (
+	SET "__ComnTools=%VS120COMNTOOLS%"
+	SET __Version=2013
+) ELSE IF /I [%~1] == [2015] (
+	SET "__ComnTools=%VS140COMNTOOLS%"
+	SET __Version=2015
 ) ELSE (
-    ECHO Error: Invalid parameter
-    ENDLOCAL
-    PAUSE
-    EXIT /B 1
+	ECHO Error: Unsupported Visual Studio version
+	ENDLOCAL
+	PAUSE
+	EXIT /B 1
 )
-SHIFT & GOTO paramsLoop
-:paramsEnd
+
 IF [__ComnTools] == [-] (
     ECHO Error: /MSVCVERSION parameter not specified
     ENDLOCAL
@@ -81,11 +55,11 @@ IF "%VCINSTALLDIR%" == "" (
     PAUSE
     EXIT /B 1
 )
-DEVENV "%__SolutionDir%\NktHookLib.sln" /rebuild "Debug|Win32" /project "NktHookLib"
+DEVENV "NktHookLib_%__Version%.sln" /rebuild "Debug|Win32"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 REM DeviareLiteInterop depends on DeviareLiteCOM
 REM DeviareLiteCOM depends on NktHookLib
-DEVENV "%__SolutionDir%\NktHookLib.sln" /rebuild "Release|Win32" /project "DeviareLiteInterop" 
+DEVENV "NktHookLib_%__Version%.sln" /rebuild "Release|Win32"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 
@@ -97,11 +71,11 @@ IF "%VCINSTALLDIR%" == "" (
     PAUSE
     EXIT /B 1
 )
-DEVENV "%__SolutionDir%\NktHookLib.sln" /rebuild "Debug|x64" /project "NktHookLib"
+DEVENV "NktHookLib_%__Version%.sln" /rebuild "Debug|x64"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 REM DeviareLiteInterop depends on DeviareLiteCOM
 REM DeviareLiteCOM depends on NktHookLib
-DEVENV "%__SolutionDir%\NktHookLib.sln" /rebuild "Release|x64" /project "DeviareLiteInterop"
+DEVENV "NktHookLib_%__Version%.sln" /rebuild "Release|x64"
 IF NOT %ERRORLEVEL% == 0 goto bad_compile
 ENDLOCAL
 
