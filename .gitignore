@@ -48,3 +48,4 @@ DeviareLiteCOM/src/DeviareLiteCOM_p.c
 bin64/
 bin/
 .vs/
+*.opensdf
