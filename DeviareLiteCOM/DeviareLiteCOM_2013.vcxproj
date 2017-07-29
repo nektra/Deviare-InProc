@@ -202,7 +202,7 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2013\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
@@ -241,7 +241,7 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2013\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
@@ -279,7 +279,7 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2013\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib64_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>
@@ -317,7 +317,7 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2013\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib64_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Message>Updating manifest...</Message>

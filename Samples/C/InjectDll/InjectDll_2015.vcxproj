@@ -175,7 +175,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>NktHookLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2015\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -197,7 +197,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalDependencies>NktHookLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2015\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -223,7 +223,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2015\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib64_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
@@ -248,7 +248,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\2015\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>NktHookLib64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>NktHookLib64_Debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
