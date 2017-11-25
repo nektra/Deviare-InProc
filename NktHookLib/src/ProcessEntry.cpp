@@ -27,7 +27,7 @@
  *
  **/
 
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 #include "ProcessEntry.h"
 
 #pragma intrinsic (_InterlockedExchange)

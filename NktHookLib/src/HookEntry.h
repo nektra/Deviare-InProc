@@ -30,7 +30,7 @@
 #ifndef _NKT_HOOKLIB_HOOKENTRY_H
 #define _NKT_HOOKLIB_HOOKENTRY_H
 
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 #include "LinkedList.h"
 #include "ProcessEntry.h"
 #include "NtHeapBaseObj.h"

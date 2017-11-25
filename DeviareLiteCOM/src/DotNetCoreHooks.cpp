@@ -29,7 +29,7 @@
 
 #include "StdAfx.h"
 #include "DotNetCoreHooks.h"
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 #include <intrin.h>
 
 #if defined(_M_X64) || defined(_M_IA64) || defined(_M_AMD64)

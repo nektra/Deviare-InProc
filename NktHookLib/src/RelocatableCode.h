@@ -30,7 +30,7 @@
 #ifndef _NKT_HOOKLIB_RELOCATABLECODE_H
 #define _NKT_HOOKLIB_RELOCATABLECODE_H
 
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 
 namespace NktHookLib {
 namespace Internals {

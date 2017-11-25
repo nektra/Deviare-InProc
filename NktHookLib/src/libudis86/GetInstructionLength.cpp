@@ -27,7 +27,7 @@
  *
  **/
 
-#include <NktHookLib.h>
+#include "..\..\..\Include\NktHookLib.h"
 
 extern "C" {
   #include "stdint.h"

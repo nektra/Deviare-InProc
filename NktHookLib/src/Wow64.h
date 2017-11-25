@@ -30,7 +30,7 @@
 #ifndef _NKT_HOOKLIB_WOW64_H
 #define _NKT_HOOKLIB_WOW64_H
 
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 #include "DynamicNtApi.h"
 #include "NtHeapBaseObj.h"
 

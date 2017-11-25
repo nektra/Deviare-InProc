@@ -28,7 +28,7 @@
  **/
 
 #include "DynamicNtApi.h"
-#include <NktHookLib.h>
+#include "..\..\Include\NktHookLib.h"
 
 using namespace NktHookLib::Internals;
 using namespace NktHookLibHelpers;
