@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CreateProcessWithDllTest</RootNamespace>
     <AssemblyName>CreateProcessWithDllTest</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NoWin32Manifest>true</NoWin32Manifest>
     <PublishUrl>publish\</PublishUrl>
@@ -142,15 +142,11 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>IF "$(PlatformName)" == "x86" (
-  COPY /Y "$(SolutionDir)bin\2017\DeviareLiteCOM.dll" "$(TargetDir)"
-  COPY /Y "$(SolutionDir)bin\2017\TestDll.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\CreateProcessWithDllTest.embed.manifest" "$(TargetDir)\CreateProcessWithDllTest.exe.manifest"
 )
 IF "$(PlatformName)" == "x64" (
-  COPY /Y "$(SolutionDir)bin64\2017\DeviareLiteCOM64.dll" "$(TargetDir)"
-  COPY /Y "$(SolutionDir)bin64\2017\TestDll64.dll" "$(TargetDir)\TestDll.dll"
+  COPY /Y "$(SolutionDir)bin\2017\TestDll.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\CreateProcessWithDllTest64.embed.manifest" "$(TargetDir)\CreateProcessWithDllTest.exe.manifest"
-)
-</PostBuildEvent>
+)</PostBuildEvent>
   </PropertyGroup>
 </Project>

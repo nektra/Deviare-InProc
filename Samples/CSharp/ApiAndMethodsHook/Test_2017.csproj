@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Test</RootNamespace>
     <AssemblyName>Test</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -99,11 +99,9 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>IF "$(PlatformName)" == "x86" (
-  COPY /Y "$(SolutionDir)bin\2017\DeviareLiteCOM.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\Test.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 IF "$(PlatformName)" == "x64" (
-  COPY /Y "$(SolutionDir)bin64\2017\DeviareLiteCOM64.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\Test64.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 </PostBuildEvent>

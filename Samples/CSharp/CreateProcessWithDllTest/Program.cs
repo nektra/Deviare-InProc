@@ -89,7 +89,6 @@ namespace CreateProcessWithDllTest
         {
             DeviareLiteInterop.HookLib.STARTUPINFO si;
             DeviareLiteInterop.HookLib.ProcessInfo pi;
-            uint exitCode;
 
             MessageBox.Show("Launching NOTEPAD and injecting DLL after startup\r\r(close Notepad to next test)",
                             "Dll Inject Test", MessageBoxButtons.OK);

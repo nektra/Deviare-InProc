@@ -287,12 +287,12 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
                                 __in LPBYTE lpData, __in IMAGE_SECTION_HEADER *lpFileImgSect, __in SIZE_T nSecCount)
 {
   SIZE_T k, nSrcOfs, nInstrLen, nCurrSize, nExtraSize, nDestSize, nMainCodeSize;
-  DWORD dwRawAddr, dwOsVerMajor, dwOsVerMinor;
+  DWORD dwRawAddr, dwOsVerMajor, dwOsVerMinor, dwOsVerBuildNumber;
   LPBYTE lpSrc, d, lpStub;
 
   //check OS version
-  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor, &dwOsVerMinor) == FALSE)
-    dwOsVerMajor = dwOsVerMinor = 0;
+  if (NktHookLibHelpers::GetOsVersion(&dwOsVerMajor, &dwOsVerMinor, &dwOsVerBuildNumber) == FALSE)
+    dwOsVerMajor = dwOsVerMinor = dwOsVerBuildNumber = 0;
   //stage 1: scan for a return
   nSrcOfs = nCurrSize = nExtraSize = 0;
   while (nCurrSize < 128)
@@ -305,7 +305,7 @@ static SIZE_T GenerateNtSysCall(__in LPVOID lpDest, __in LPBYTE lpFileFuncAddr, 
     }
     if (lpFileFuncAddr[nSrcOfs] == 0xC3)
     {
-      //handle special case for Windows 10 x64 anniversary
+      //handle special case for Windows 10 x64 Anniversary to Fall Creators Update
       if (nPlatformBits == 64 && dwOsVerMajor >= 10 &&
           lpFileFuncAddr[nSrcOfs + 1] == 0xCD && lpFileFuncAddr[nSrcOfs + 2] == 0x2E)
       {

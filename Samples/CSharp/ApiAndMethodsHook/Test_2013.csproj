@@ -94,11 +94,9 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>IF "$(PlatformName)" == "x86" (
-  COPY /Y "$(SolutionDir)bin\2013\DeviareLiteCOM.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\Test.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 IF "$(PlatformName)" == "x64" (
-  COPY /Y "$(SolutionDir)bin64\2013\DeviareLiteCOM64.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\Test64.embed.manifest" "$(TargetDir)\Test.exe.manifest"
 )
 </PostBuildEvent>

@@ -38,7 +38,6 @@
     <ProjectGuid>{0F79BD19-F305-4C06-8EBD-8BD7251ADB22}</ProjectGuid>
     <RootNamespace>HookLib</RootNamespace>
     <Keyword>AtlProj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -122,55 +121,59 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>DeviareLiteCOM</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>DeviareLiteCOMXP</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>DeviareLiteCOM64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>DeviareLiteCOMXP64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>DeviareLiteCOM</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>DeviareLiteCOMXP</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>DeviareLiteCOM64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>$(ProjectName)64</TargetName>
+    <TargetName>DeviareLiteCOMXP64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
@@ -179,6 +182,8 @@
       <TargetEnvironment>Win32</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
       <ValidateAllParameters>true</ValidateAllParameters>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -218,6 +223,8 @@
       <TargetEnvironment>Win32</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
       <ValidateAllParameters>true</ValidateAllParameters>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -256,6 +263,8 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -294,6 +303,8 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -333,6 +344,8 @@
       <TargetEnvironment>Win32</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
       <ValidateAllParameters>true</ValidateAllParameters>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -372,6 +385,8 @@
       <TargetEnvironment>Win32</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
       <ValidateAllParameters>true</ValidateAllParameters>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -410,6 +425,8 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -448,6 +465,8 @@
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>false</GenerateStublessProxies>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -566,54 +585,6 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src\%(Filename)_h.h</HeaderFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <DllDataFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src\%(Filename)_dlldata.c</DllDataFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <InterfaceIdentifierFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src\%(Filename)_i.c</InterfaceIdentifierFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <ProxyFileName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src\%(Filename)_p.c</ProxyFileName>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src</OutputDirectory>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
-      <TypeLibraryName Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(ProjectDir)\src\%(Filename).tlb</TypeLibraryName>
     </Midl>
   </ItemGroup>
   <ItemGroup>

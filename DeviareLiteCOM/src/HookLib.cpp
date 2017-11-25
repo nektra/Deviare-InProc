@@ -32,6 +32,8 @@
 #include "HookInfo.h"
 #include "HookProcessInfo.h"
 
+#pragma warning(disable: 4302 4311)
+
 //-----------------------------------------------------------
 
 __inline HRESULT NKT_HRESULT_FROM_WIN32(DWORD dwOsErr)

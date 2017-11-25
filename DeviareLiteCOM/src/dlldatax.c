@@ -12,7 +12,7 @@
 
 #define ENTRY_PREFIX	Prx
 
-#include "DeviareLiteCOM_dlldata.c"
+#include "dlldata.c"
 #include "DeviareLiteCOM_p.c"
 
 #endif //_MERGE_PROXYSTUB

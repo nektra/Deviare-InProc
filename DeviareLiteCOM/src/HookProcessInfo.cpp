@@ -31,6 +31,8 @@
 #include "HookLib.h"
 #include "HookProcessInfo.h"
 
+#pragma warning(disable: 4302 4311)
+
 //-----------------------------------------------------------
 
 STDMETHODIMP CNktHookProcessInfoImpl::InterfaceSupportsErrorInfo(REFIID riid)

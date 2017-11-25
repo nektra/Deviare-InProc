@@ -14,7 +14,6 @@
     <ProjectGuid>{E36F841B-7542-4C90-A9B6-7FC53B533A14}</ProjectGuid>
     <RootNamespace>Obj2Inc</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
     <ProjectName>Obj2Inc</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -44,13 +43,13 @@
     <_ProjectFileVersion>11.0.61030.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)\bin</OutDir>
-    <IntDir>.\obj\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\2017\</OutDir>
+    <IntDir>.\obj\2017\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)\bin</OutDir>
-    <IntDir>.\obj\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\bin\2017\</OutDir>
+    <IntDir>.\obj\2017\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

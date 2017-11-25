@@ -46,6 +46,11 @@
     <Compile Include="src\Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>MD "$(TargetDir)\..\..\bin64\2013" &gt;NUL 2&gt;NUL
+COPY /Y "$(TargetPath)" "..\..\bin64\2013"
+</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

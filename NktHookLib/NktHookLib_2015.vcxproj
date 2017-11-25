@@ -38,7 +38,6 @@
     <ProjectGuid>{854B69BD-B848-453d-ACF9-FF75EA628DAA}</ProjectGuid>
     <RootNamespace>NktHookLib</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -114,43 +113,43 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>NktHookLib_Debug</TargetName>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>NktHookLibXP_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib64_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>NktHookLib64_Debug</TargetName>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>NktHookLibXP64_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>NktHookLib</TargetName>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>NktHookLibXP</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">
     <OutDir>$(SolutionDir)\lib\2015\</OutDir>
-    <IntDir>obj\$(Configuration)\$(Platform)\</IntDir>
-    <TargetName>NktHookLib64</TargetName>
+    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <TargetName>NktHookLibXP64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -435,7 +434,7 @@
     <CustomBuild Include="src\Asm\RelocatableCode_x64.asm">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -444,7 +443,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -453,7 +452,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -462,7 +461,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -488,7 +487,7 @@ EXIT 1
       <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">$(IntDir)\%(Filename).inl</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -497,7 +496,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -506,7 +505,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -515,7 +514,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">"$(VCInstallDir)bin\x86_amd64\ML64.EXE" /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX64
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -538,7 +537,7 @@ EXIT 1
       <Message Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">Compiling assembler code...</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -547,7 +546,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -556,7 +555,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -565,7 +564,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -586,7 +585,7 @@ EXIT 1
       <Outputs Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">$(IntDir)\%(Filename).inl</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -595,7 +594,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -604,7 +603,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed
@@ -613,7 +612,7 @@ EXIT 1
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">"$(VCInstallDir)bin\ML.EXE" /safeseh /c /nologo /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
 IF ERRORLEVEL 1 GOTO BuildEventFailed
-"$(SolutionDir)\bin\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
+"$(SolutionDir)\bin\2015\Obj2Inc.exe" "$(IntDir)%(Filename).obj" /out "$(IntDir)%(Filename).inl" /var RelocatableCodeX86
 IF ERRORLEVEL 1 GOTO BuildEventFailed
 GOTO BuildEventOK
 :BuildEventFailed

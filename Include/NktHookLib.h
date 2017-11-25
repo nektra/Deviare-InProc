@@ -222,7 +222,7 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread=NULL);
 //--------------------------------
 
 BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor=NULL, __out_opt LPDWORD lpdwVerMinor=NULL,
-                  __out_opt LPDWORD lpdwdwBuildNumber=NULL);
+                  __out_opt LPDWORD lpdwBuildNumber=NULL);
 
 //--------------------------------
 

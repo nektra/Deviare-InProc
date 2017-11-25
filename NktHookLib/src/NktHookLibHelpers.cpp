@@ -691,7 +691,7 @@ BOOL SetWin32LastError(__in DWORD dwErrorCode, __in_opt HANDLE hThread)
 
 //--------------------------------
 
-BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor, __out_opt LPDWORD lpdwVerMinor, __out_opt LPDWORD lpdwdwBuildNumber)
+BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor, __out_opt LPDWORD lpdwVerMinor, __out_opt LPDWORD lpdwBuildNumber)
 {
   static DWORD dwVersion[3] = { 0xFFFFFFFFUL, 0, 0 };
   static LONG volatile nMutex = 0;
@@ -712,8 +712,8 @@ BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor, __out_opt LPDWORD lpdwVerMinor
           *lpdwVerMajor = 0;
         if (lpdwVerMinor != NULL)
           *lpdwVerMinor = 0;
-        if (lpdwdwBuildNumber != NULL)
-          *lpdwdwBuildNumber = 0;
+        if (lpdwBuildNumber != NULL)
+          *lpdwBuildNumber = 0;
         return FALSE;
       }
       if (sOviW.dwPlatformId != VER_PLATFORM_WIN32_NT)
@@ -727,8 +727,8 @@ BOOL GetOsVersion(__out_opt LPDWORD lpdwVerMajor, __out_opt LPDWORD lpdwVerMinor
     *lpdwVerMajor = dwVersion[0];
   if (lpdwVerMinor != NULL)
     *lpdwVerMinor = dwVersion[1];
-  if (lpdwdwBuildNumber != NULL)
-    *lpdwdwBuildNumber = dwVersion[2];
+  if (lpdwBuildNumber != NULL)
+    *lpdwBuildNumber = dwVersion[2];
   return TRUE;
 }
 
