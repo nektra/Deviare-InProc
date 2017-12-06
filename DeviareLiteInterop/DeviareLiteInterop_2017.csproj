@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DeviareLiteInterop</RootNamespace>
     <AssemblyName>DeviareLiteInterop</AssemblyName>
-    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <BaseIntermediateOutputPath>obj\$(Configuration)\$(Platform)\Interop</BaseIntermediateOutputPath>

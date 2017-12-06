@@ -184,10 +184,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>Win32</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
-      <ValidateAllParameters>true</ValidateAllParameters>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -225,10 +224,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>Win32</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
-      <ValidateAllParameters>true</ValidateAllParameters>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -266,9 +264,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -306,9 +304,9 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -346,10 +344,9 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>Win32</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
-      <ValidateAllParameters>true</ValidateAllParameters>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -387,10 +384,9 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>Win32</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
-      <ValidateAllParameters>true</ValidateAllParameters>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -428,9 +424,9 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -468,9 +464,9 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
-      <GenerateStublessProxies>false</GenerateStublessProxies>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <MinimumTargetSystem>NT51</MinimumTargetSystem>
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
@@ -580,16 +576,7 @@
     <None Include="src\InterfaceRegistrar.rgs" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="src\DeviareLiteCOM.idl">
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">/Os %(AdditionalOptions)</AdditionalOptions>
-    </Midl>
+    <Midl Include="src\DeviareLiteCOM.idl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\CustomRegistryMap.h" />
