@@ -209,7 +209,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />

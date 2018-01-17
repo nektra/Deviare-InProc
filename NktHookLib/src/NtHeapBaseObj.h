@@ -30,7 +30,7 @@
 #ifndef _NKT_HOOKLIB_NTHEAPBASEOBJ_H
 #define _NKT_HOOKLIB_NTHEAPBASEOBJ_H
 
-#include "..\..\Include\NktHookLib.h"
+#include <NktHookLib.h>
 
 namespace NktHookLib {
 namespace Internals {

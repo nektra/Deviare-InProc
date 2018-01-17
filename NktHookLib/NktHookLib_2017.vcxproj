@@ -170,7 +170,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -190,7 +190,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -213,7 +213,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -236,7 +236,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -256,7 +256,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -276,7 +276,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -299,7 +299,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
@@ -322,7 +322,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <AdditionalOptions>/Gs999999 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib />
     <PreBuildEvent />
