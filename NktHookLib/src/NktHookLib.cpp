@@ -904,7 +904,7 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
             }
             *p++ = 0x5A;                                                         //pop   rdx
             //----
-            *p++ = 0xFF;  *p++ = 0x25;                                           //jmp   hooked proc
+            *p++ = 0x48;  *p++ = 0xFF;  *p++ = 0x25;                             //jmp   hooked proc
             *((ULONG NKT_UNALIGNED*)p) = 0;
             p += sizeof(ULONG);
             *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpNewProc);
@@ -928,7 +928,7 @@ DWORD CNktHookLib::HookCommon(__in LPVOID _lpInfo, __in SIZE_T nCount, __in DWOR
             MemCopy(p, lpHookEntry->aNewStub, lpHookEntry->nNewStubSize); //new stub
             p += lpHookEntry->nNewStubSize;
             //----
-            *p++ = 0xFF;  *p++ = 0x25;                                          //jmp original proc after stub
+            *p++ = 0x48;  *p++ = 0xFF;  *p++ = 0x25;                             //jmp original proc after stub
             *((ULONG NKT_UNALIGNED*)p) = 0;
             p += sizeof(ULONG);
             *((ULONGLONG NKT_UNALIGNED*)p) = (ULONGLONG)(lpHookEntry->lpOrigProc + lpHookEntry->nOriginalStubSize);

@@ -206,10 +206,10 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
 #if defined(_M_X64)
         case NKTHOOKLIB_ProcessPlatformX64:
           //jmp to original call (JMP QWORD PTR [RIP+0h])
-          lpDest[0] = 0xFF;  lpDest[1] = 0x25;
-          *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
-          *((ULONGLONG NKT_UNALIGNED*)(lpDest+6)) = (ULONGLONG)(s[1]);
-          nDestInstrLen = 14;
+          lpDest[0] = 0x48;  lpDest[1] = 0xFF;  lpDest[2] = 0x25;
+          *((ULONG NKT_UNALIGNED*)(lpDest+3)) = 0;
+          *((ULONGLONG NKT_UNALIGNED*)(lpDest+7)) = (ULONGLONG)(s[1]);
+          nDestInstrLen = 15;
           break;
 #endif //_M_X64
       }
@@ -287,19 +287,19 @@ static SIZE_T ProcessCALLs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
 
 #if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
-            //...increment return address (ADD QWORD PTR [rsp], 5+14)
+            //...increment return address (ADD QWORD PTR [rsp], 5+15)
             lpDest[5] = 0x48;
             lpDest[6] = 0x83;
             lpDest[7] = 0x04;
             lpDest[8] = 0x24;
-            lpDest[9] = 5 + 14;
+            lpDest[9] = 5 + 15;
             //jmp to original call (JMP QWORD PTR [RIP+0h])
-            lpDest[10] = 0xFF;  lpDest[11] = 0x25;
-            *((ULONG NKT_UNALIGNED*)(lpDest+12)) = 0;
+            lpDest[10] = 0x48;  lpDest[11] = 0xFF;  lpDest[12] = 0x25;
+            *((ULONG NKT_UNALIGNED*)(lpDest+13)) = 0;
             ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+1));
             k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
-            *((ULONGLONG NKT_UNALIGNED*)(lpDest+16)) = k;
-            return 24;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+17)) = k;
+            return 25;
 #endif //_M_X64
         }
       }
