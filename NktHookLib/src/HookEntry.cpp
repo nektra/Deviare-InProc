@@ -224,7 +224,7 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
         NktHookLibHelpers::DebugPrint("NktHookLib: Disassembly 0x%IX -> %s\r\n", (SIZE_T)lpOrigProc+nOriginalStubSize,
                                       szBufA);
       }
-      nNextSrcIP = (SIZE_T)lpOrigProc+nOriginalStubSize+nSrcInstrLen;
+      nNextSrcIP = (SIZE_T)lpOrigProc + nOriginalStubSize + nSrcInstrLen;
       nDestInstrLen = ProcessCALLs(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
       if (nDestInstrLen == 0)
         nDestInstrLen = ProcessMOVs(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
@@ -1412,6 +1412,7 @@ static SIZE_T ProcessJUMPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
                            __in HANDLE hProc, __out LPBYTE lpDest)
 {
   LONG nOfs32;
+  BYTE nOpcodeInfo = 0;
   SIZE_T nDest;
 
   switch (nSrcInstrLen)
@@ -1420,25 +1421,117 @@ static SIZE_T ProcessJUMPs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T n
       if (lpSrc[0] == 0xEB)
       {
         nOfs32 = (LONG)*((signed char*)(lpSrc+1));
-        nDest = (SIZE_T)(lpSrc+nOfs32+2);
+        nDest = nNextSrcIP + (SSIZE_T)(LONG)nOfs32; //add displacement
         //setup far jump
 pj_setupfarjump:
         switch (nPlatform)
         {
           case NKTHOOKLIB_ProcessPlatformX86:
-            lpDest[0] = 0xFF;
-            lpDest[1] = 0x25;
-            *((ULONG NKT_UNALIGNED*)(lpDest+2)) = 0;
-            *((ULONGLONG NKT_UNALIGNED*)(lpDest+6)) = nDest;
-            return 14;
+            //...convert to PUSH imm32/RET
+            lpDest[0] = 0x68;
+            *((ULONG NKT_UNALIGNED*)(lpDest + 1)) = (ULONG)nDest;
+            lpDest[5] = 0xC3; //ret
+            return 6;
+
 #if defined(_M_X64)
           case NKTHOOKLIB_ProcessPlatformX64:
+            //... convert to JMP QWORD PTR [RIP+0h]
             lpDest[0] = 0x48;
             lpDest[1] = 0xFF;
             lpDest[2] = 0x25;
             *((ULONG NKT_UNALIGNED*)(lpDest+3)) = 0;
-            *((ULONGLONG NKT_UNALIGNED*)(lpDest+7)) = nDest;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+7)) = (ULONGLONG)nDest;
             return 15;
+#endif // _M_X64
+        }
+      }
+      if (lpSrc[0] == 0xE3)
+      {
+        //calculate target of JECXZ/JRCXZ
+        nOfs32 = (LONG)*((signed char*)(lpSrc + 1));
+        nDest = nNextSrcIP + (SSIZE_T)(LONG)nOfs32; //add displacement
+        //NOTE: because of the lack of a JECXNZ/JRCXNZ opcode we have to simulate a series of jumps
+        //a) JECXZ $+2 (to skip next jump
+        lpDest[0] = 0xE3;
+        lpDest[1] = 0x02;
+        //b) JMP $+n
+        lpDest[2] = 0xEB;
+        switch (nPlatform)
+        {
+          case NKTHOOKLIB_ProcessPlatformX86:
+            lpDest[3] = 0x06;
+            break;
+#if defined(_M_X64)
+          case NKTHOOKLIB_ProcessPlatformX64:
+            lpDest[3] = 0x0F;
+            break;
+#endif // _M_X64
+        }
+        //c) JMP far to real destination of original JECXZ/JRCXZ
+        switch (nPlatform)
+        {
+          case NKTHOOKLIB_ProcessPlatformX86:
+            lpDest[4] = 0x68;
+            *((ULONG NKT_UNALIGNED*)(lpDest + 5)) = (ULONG)nDest;
+            lpDest[9] = 0xC3; //ret
+            return 10;
+
+#if defined(_M_X64)
+          case NKTHOOKLIB_ProcessPlatformX64:
+            lpDest[4] = 0x48;
+            lpDest[5] = 0xFF;
+            lpDest[6] = 0x25;
+            *((ULONG NKT_UNALIGNED*)(lpDest + 7)) = 0;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest + 11)) = nDest;
+            return 19;
+#endif // _M_X64
+        }
+      }
+      if ((lpSrc[0] & 0xF0) == 0x70)
+      {
+        //conditional 8-bit jump
+        nOfs32 = (LONG)*((signed char*)(lpSrc+1));
+        nOpcodeInfo = lpSrc[0] & 0x0F;
+pj_setupconditionaljump:
+        nDest = nNextSrcIP + (SSIZE_T)(LONG)nOfs32; //add displacement
+        //IMPORTANT: As stated on Intel manuals, we assume:
+        //           1) 0F 8x (Jcc rel-32) maps to their rel-8 counterparts (opcodes 7x).
+        //              I.e.: 0F 86 cd (JBE rel-32) => 76 cb (JBE rel-8)
+        //           2) A Jcc rel-8 opcode has this format 0111xxxy, let z = !y, then opcode 0111xxxz maps to
+        //              the opposite jump. I.e.: 01111010 (7A) is JP (jump if parity) so 01111011 (7B) is JNP
+        //              (jump if not parity)
+        //
+        //NOTE: We need to replace a conditional jump with a series of jumps
+        //a) build a short jump using the opposite rel-8 jump
+        lpDest[0] = 0x70 | (nOpcodeInfo ^ 1);
+        switch (nPlatform)
+        {
+          case NKTHOOKLIB_ProcessPlatformX86:
+            lpDest[1] = 0x06;
+            break;
+#if defined(_M_X64)
+          case NKTHOOKLIB_ProcessPlatformX64:
+            lpDest[1] = 0x0F;
+            break;
+#endif // _M_X64
+        }
+        //c) JMP far to real destination of original Jcc
+        switch (nPlatform)
+        {
+          case NKTHOOKLIB_ProcessPlatformX86:
+            lpDest[2] = 0x68;
+            *((ULONG NKT_UNALIGNED*)(lpDest + 3)) = (ULONG)nDest;
+            lpDest[7] = 0xC3; //ret
+            return 8;
+
+#if defined(_M_X64)
+          case NKTHOOKLIB_ProcessPlatformX64:
+            lpDest[2] = 0x48;
+            lpDest[3] = 0xFF;
+            lpDest[4] = 0x25;
+            *((ULONG NKT_UNALIGNED*)(lpDest + 5)) = 0;
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest + 9)) = nDest;
+            return 17;
 #endif // _M_X64
         }
       }
@@ -1447,7 +1540,7 @@ pj_setupfarjump:
     case 5:
       if (lpSrc[0] == 0xE9)
       {
-        NktHookLibHelpers::MemCopy(&nOfs32, lpSrc+1, sizeof(LONG));
+        nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+1));
         nDest = (SIZE_T)(lpSrc+nOfs32+5);
         goto pj_setupfarjump;
       }
@@ -1498,6 +1591,13 @@ pj_setupfarjump2_x64:
             return 21;
 #endif //_M_X64
         }
+      }
+      if (lpSrc[0] == 0x0F && (lpSrc[1] & 0xF0) == 0x80)
+      {
+        //conditional jump with 32-bit offset
+        nOfs32 = *((LONG NKT_UNALIGNED*)(lpSrc+2));
+        nOpcodeInfo = lpSrc[1] & 0x0F;
+        goto pj_setupconditionaljump;
       }
       break;
 
