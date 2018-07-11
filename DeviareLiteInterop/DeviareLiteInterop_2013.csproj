@@ -12,7 +12,7 @@
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
-    <BaseIntermediateOutputPath>obj\$(Configuration)\$(Platform)\Interop</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\obj\2013\Interop\$(Configuration)\$(Platform)</BaseIntermediateOutputPath>
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -24,7 +24,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
-    <BaseIntermediateOutputPath>obj\$(Configuration)\$(Platform)\Interop</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\obj\2013\Interop\$(Configuration)\$(Platform)</BaseIntermediateOutputPath>
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -35,7 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
-    <BaseIntermediateOutputPath>obj\$(Configuration)\$(Platform)\Interop</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>..\obj\2013\Interop\$(Configuration)\$(Platform)</BaseIntermediateOutputPath>
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)\</IntermediateOutputPath>
   </PropertyGroup>
   <ItemGroup>

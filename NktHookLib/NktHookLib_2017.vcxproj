@@ -113,45 +113,45 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLibXP_Debug</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib64_Debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLibXP64_Debug</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLibXP</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLib64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">
     <OutDir>$(SolutionDir)\lib\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>NktHookLibXP64</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>

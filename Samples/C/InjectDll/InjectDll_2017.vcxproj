@@ -118,49 +118,49 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)bin\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>InjectDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">
     <OutDir>$(SolutionDir)bin\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>InjectDllXP</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)bin64\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>InjectDll64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
     <OutDir>$(SolutionDir)bin64\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>InjectDllXP64</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)bin\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>InjectDll</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <OutDir>$(SolutionDir)bin\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>InjectDllXP</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin64\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>InjectDll64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">
     <OutDir>$(SolutionDir)bin64\2017\</OutDir>
-    <IntDir>.\obj\2017\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\..\..\obj\2017\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>InjectDllXP64</TargetName>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>

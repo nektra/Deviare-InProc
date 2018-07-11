@@ -121,56 +121,56 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>DeviareLiteCOM</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>DeviareLiteCOMXP</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>DeviareLiteCOM64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugXP|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>true</LinkIncremental>
     <TargetName>DeviareLiteCOMXP64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>DeviareLiteCOM</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <OutDir>$(SolutionDir)\bin\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>DeviareLiteCOMXP</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>DeviareLiteCOM64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">
     <OutDir>$(SolutionDir)\bin64\2015\</OutDir>
-    <IntDir>.\obj\2015\$(Configuration)\$(Platform)\</IntDir>
+    <IntDir>..\obj\2015\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>DeviareLiteCOMXP64</TargetName>
