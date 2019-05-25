@@ -46,6 +46,8 @@ static SIZE_T ProcessMOVs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
                           __out LPBYTE lpDest);
 static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                           __out LPBYTE lpDest);
+static SIZE_T ProcessTESTs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
+                           __out LPBYTE lpDest);
 static SIZE_T ProcessSPECIAL1s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
                                __out LPBYTE lpDest);
 static SIZE_T ProcessSPECIAL2s(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
@@ -230,6 +232,8 @@ DWORD CHookEntry::CreateStub(__in BOOL bOutputDebug)
         nDestInstrLen = ProcessMOVs(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
       if (nDestInstrLen == 0)
         nDestInstrLen = ProcessLEAs(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
+      if (nDestInstrLen == 0)
+        nDestInstrLen = ProcessTESTs(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
       if (nDestInstrLen == 0)
         nDestInstrLen = ProcessSPECIAL1s(nPlatform, lpSrc, nSrcInstrLen, nNextSrcIP, lpDest);
       if (nDestInstrLen == 0)
@@ -688,6 +692,145 @@ static SIZE_T ProcessLEAs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nS
             k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
             *((ULONGLONG NKT_UNALIGNED*)(lpDest+2)) = k;
             return 10;
+          }
+          break;
+      }
+#endif //_M_X64
+      break;
+  }
+  return 0;
+}
+
+//Thanks to Bo3b Johnson for pointing out the issue.
+static SIZE_T ProcessTESTs(__in LONG nPlatform, __in LPBYTE lpSrc, __in SIZE_T nSrcInstrLen, __in SIZE_T nNextSrcIP,
+                           __out LPBYTE lpDest)
+{
+#if defined(_M_X64)
+  ULONG ulTemp;
+  SIZE_T k;
+#endif
+
+  switch (nSrcInstrLen)
+  {
+    case 7:
+#if defined(_M_X64)
+      switch (nPlatform)
+      {
+        case NKTHOOKLIB_ProcessPlatformX64:
+          if (lpSrc[0] == 0xF6 && lpSrc[1] == 0x05)
+          {
+            //convert TEST BYTE PTR [mofs32], imm8 into...
+            //...PUSH rax
+            lpDest[0] = 0x50;
+            //...MOV rax, dest
+            lpDest[1] = 0x48;
+            lpDest[2] = 0xB8;
+            ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+2));
+            k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)k;
+            //...MOV BYTE PTR [rax], imm8
+            lpDest[11] = 0xF6;
+            lpDest[12] = 0x00;
+            lpDest[13] = lpSrc[6];
+            //...POP rax
+            lpDest[14] = 0x58;
+            return 15;
+          }
+          break;
+      }
+#endif //_M_X64
+      break;
+
+    case 9:
+#if defined(_M_X64)
+      switch (nPlatform)
+      {
+        case NKTHOOKLIB_ProcessPlatformX64:
+          if (lpSrc[0] == 0x66 && lpSrc[1] == 0xF7 && lpSrc[2] == 0x05)
+          {
+            //convert TEST WORD PTR [mofs32], imm16 into...
+            //...PUSH rax
+            lpDest[0] = 0x50;
+            //...MOV rax, dest
+            lpDest[1] = 0x48;
+            lpDest[2] = 0xB8;
+            ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+3));
+            k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)k;
+            //...MOV WORD PTR [rax], imm16
+            lpDest[11] = 0x66;
+            lpDest[12] = 0xF7;
+            lpDest[13] = 0x00;
+            lpDest[14] = lpSrc[7];
+            lpDest[15] = lpSrc[8];
+            //...POP rax
+            lpDest[16] = 0x58;
+            return 17;
+          }
+          break;
+      }
+#endif //_M_X64
+      break;
+
+    case 10:
+#if defined(_M_X64)
+      switch (nPlatform)
+      {
+        case NKTHOOKLIB_ProcessPlatformX64:
+          if (lpSrc[0] == 0xF7 && lpSrc[1] == 0x05)
+          {
+            //convert TEST DWORD PTR [mofs32], imm32 into...
+            //...PUSH rax
+            lpDest[0] = 0x50;
+            //...MOV rax, dest
+            lpDest[1] = 0x48;
+            lpDest[2] = 0xB8;
+            ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+2));
+            k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)k;
+            //...MOV DWORD PTR [rax], imm32
+            lpDest[11] = 0xF7;
+            lpDest[12] = 0x00;
+            lpDest[13] = lpSrc[6];
+            lpDest[14] = lpSrc[7];
+            lpDest[15] = lpSrc[8];
+            lpDest[16] = lpSrc[9];
+            //...POP rax
+            lpDest[17] = 0x58;
+            return 18;
+          }
+          break;
+      }
+#endif //_M_X64
+      break;
+
+    case 11:
+#if defined(_M_X64)
+      switch (nPlatform)
+      {
+        case NKTHOOKLIB_ProcessPlatformX64:
+          if (lpSrc[0] == 0x48 && lpSrc[1] == 0xF7 && lpSrc[2] == 0x05)
+          {
+            //convert TEST QWORD PTR [mofs32], imm32 into...
+            //...PUSH rax
+            lpDest[0] = 0x50;
+            //...MOV rax, dest
+            lpDest[1] = 0x48;
+            lpDest[2] = 0xB8;
+            ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+3));
+            k = nNextSrcIP + (SSIZE_T)(LONG)ulTemp; //add displacement
+            *((ULONGLONG NKT_UNALIGNED*)(lpDest+3)) = (ULONGLONG)k;
+            //...MOV DWORD PTR [rax], imm32
+            lpDest[11] = 0x48;
+            lpDest[12] = 0xF7;
+            lpDest[13] = 0x00;
+            lpDest[14] = lpSrc[7];
+            lpDest[15] = lpSrc[8];
+            lpDest[16] = lpSrc[9];
+            lpDest[17] = lpSrc[10];
+            //...POP rax
+            lpDest[18] = 0x58;
+            return 19;
           }
           break;
       }
