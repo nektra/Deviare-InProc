@@ -349,7 +349,7 @@ pj_setupfarcall_x64:
       switch (nPlatform)
       {
         case NKTHOOKLIB_ProcessPlatformX64:
-          if (lpSrc[0] == 0x48 && lpSrc[1] == 0xFF && lpSrc[1] == 0x15)
+          if (lpSrc[0] == 0x48 && lpSrc[1] == 0xFF && lpSrc[2] == 0x15)
           {
             //convert "indirect 64-bit CALL" (CALL [mofs64]) [48 FF 15 xxyyzzww] into...
             ulTemp = *((ULONG NKT_UNALIGNED*)(lpSrc+3));
