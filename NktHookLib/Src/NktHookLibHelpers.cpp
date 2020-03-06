@@ -391,6 +391,9 @@ VOID MemFree(__in LPVOID lpPtr)
   return;
 }
 
+#pragma optimize("", off)
+//NOOTE: The following code is not fully optimized on purpose just but avoid VC compiler to insert undesired
+//       "_memset" calls
 VOID MemSet(__out void *lpDest, __in int nVal, __in SIZE_T nCount)
 {
   LPBYTE d;
@@ -412,7 +415,6 @@ VOID MemSet(__out void *lpDest, __in int nVal, __in SIZE_T nCount)
       nCount -= sizeof(SIZE_T);
     }
   }
-  //the following code is not fully optimized on purpose just but avoid VC compiler to insert undesired "_memset" calls
   if (nCount > 0)
   {
     do
@@ -423,6 +425,7 @@ VOID MemSet(__out void *lpDest, __in int nVal, __in SIZE_T nCount)
   }
   return;
 }
+#pragma optimize("", on)
 
 VOID MemCopy(__out void *lpDest, __in const void *lpSrc, __in SIZE_T nCount)
 {

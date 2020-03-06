@@ -151,7 +151,7 @@
   COPY /Y "$(ProjectDir)Manifests\CreateProcessWithDllTest.embed.manifest" "$(TargetDir)\CreateProcessWithDllTest.exe.manifest"
 )
 IF "$(PlatformName)" == "x64" (
-  COPY /Y "..\..\..\bin\2015\TestDll.dll" "$(TargetDir)"
+  COPY /Y "$(TargetDir)..\..\bin\2015\TestDll.dll" "$(TargetDir)"
   COPY /Y "$(ProjectDir)Manifests\CreateProcessWithDllTest64.embed.manifest" "$(TargetDir)\CreateProcessWithDllTest.exe.manifest"
 )
 </PostBuildEvent>

@@ -38,7 +38,6 @@
     <ProjectGuid>{C8F7BD67-9FBC-4F86-9A87-C04A09006B81}</ProjectGuid>
     <RootNamespace>HookTest</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>HookTest_2017</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
